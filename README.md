@@ -1,6 +1,6 @@
 # css-var-kit
 
-A simple, lightweight, single-purpose tool to help building design system using raw CSS.
+A simple, lightweight tool to help build design systems using raw CSS.
 
 ## Features
 
