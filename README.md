@@ -1,21 +1,23 @@
 # css-var-kit
 
-A simple, lightweight tool to help build design systems using raw CSS.
+A simple, lightweight toolkit to help build design systems using raw CSS.
 
 ## Features
 
-### Language Server
+### `cvk lsp`
 
-⚠️WIP⚠️
+Language Server Protocol server for CSS custom properties.
 
-```
-cvk language-server
-```
+⚠️ WIP ⚠️
 
-### Linter
+### `cvk lint`
 
-⚠️WIP⚠️
+Lints CSS custom properties and their usage.
 
-```
-cvk lint
-```
+⚠️ WIP ⚠️
+
+### `cvk prune`
+
+Strips unused CSS custom properties from the final build output.
+
+⚠️ WIP ⚠️
