@@ -1,0 +1,11 @@
+[package]
+name = "css-var-kit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "A simple, lightweight toolkit to help build design systems using raw CSS."
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords = ["css", "css-variables", "language-server"]
+categories = ["development-tools", "web-programming"]
