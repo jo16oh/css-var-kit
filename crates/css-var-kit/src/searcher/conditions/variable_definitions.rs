@@ -40,11 +40,18 @@ impl<'a> VariableDefinitionMap<'a> {
 mod tests {
     use super::*;
     use crate::parser;
-    use crate::parser::css::{Property, PropertyIdent, PropertyValue};
+    use std::path::Path;
+
+    use crate::parser::css::{ParseResult, Property, PropertyIdent, PropertyValue};
     use crate::searcher::SearcherBuilder;
+
+    fn test_parse(css: &str) -> ParseResult<'_> {
+        parser::css::parse(css, Path::new("test.css"))
+    }
 
     fn prop(name: &str) -> Property<'_> {
         Property {
+            file_path: Path::new("test.css"),
             name: PropertyIdent {
                 raw: name,
                 offset: 0,
@@ -86,7 +93,7 @@ mod tests {
     #[test]
     fn get_by_name() {
         let css = ":root { --color: red; --size: 16px; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(VariableDefinitions)
             .build();
@@ -106,7 +113,7 @@ mod tests {
     #[test]
     fn get_nonexistent_returns_none() {
         let css = ":root { --color: red; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(VariableDefinitions)
             .build();
@@ -120,7 +127,7 @@ mod tests {
     #[test]
     fn has_returns_correct_bool() {
         let css = ":root { --color: red; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(VariableDefinitions)
             .build();
@@ -135,7 +142,7 @@ mod tests {
     #[test]
     fn duplicate_definitions_grouped() {
         let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(VariableDefinitions)
             .build();

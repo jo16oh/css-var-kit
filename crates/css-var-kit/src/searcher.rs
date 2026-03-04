@@ -86,9 +86,15 @@ impl<'a, T: SearchCondition> Deref for SearchResultFor<'a, T> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use crate::parser;
 
     use super::*;
+
+    fn test_parse(css: &str) -> crate::parser::css::ParseResult<'_> {
+        parser::css::parse(css, Path::new("test.css"))
+    }
 
     struct All;
     impl SearchCondition for All {
@@ -128,7 +134,7 @@ mod tests {
     #[test]
     fn match_all_properties() {
         let css = ".a { color: red; font-size: 16px; margin: 0; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(All)
             .build();
@@ -145,7 +151,7 @@ mod tests {
     #[test]
     fn match_none_returns_empty() {
         let css = ".a { color: red; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(None)
             .build();
@@ -159,7 +165,7 @@ mod tests {
     #[test]
     fn filter_by_name() {
         let css = ".a { color: red; font-size: 16px; color: blue; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(NameEquals("color"))
             .build();
@@ -175,7 +181,7 @@ mod tests {
     #[test]
     fn filter_by_value() {
         let css = ".a { color: red; background: red; font-size: 16px; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(ValueEquals("red"))
             .build();
@@ -191,7 +197,7 @@ mod tests {
     #[test]
     fn multiple_conditions() {
         let css = ".a { color: red; font-size: 16px; background: blue; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(NameEquals("color"))
             .add_condition(ValueEquals("16px"))
@@ -212,7 +218,7 @@ mod tests {
     #[should_panic(expected = "condition not registered in SearcherBuilder")]
     fn unregistered_condition_panics() {
         let css = ".a { color: red; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result).build();
 
         let search_result = searcher.search();
@@ -222,7 +228,7 @@ mod tests {
     #[test]
     fn empty_css() {
         let css = ".a { }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(All)
             .build();
@@ -236,7 +242,7 @@ mod tests {
     #[test]
     fn css_variables() {
         let css = ":root { --primary: #ff0000; --secondary: #00ff00; color: black; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
 
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(IsVariable)
@@ -255,7 +261,7 @@ mod tests {
     #[test]
     fn multiple_selectors() {
         let css = ".a { color: red; } .b { color: blue; margin: 0; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(NameEquals("color"))
             .build();
@@ -271,7 +277,7 @@ mod tests {
     #[test]
     fn condition_with_no_matches() {
         let css = ".a { color: red; font-size: 16px; }";
-        let parse_result = parser::css::parse(css);
+        let parse_result = test_parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
             .add_condition(NameEquals("background"))
             .build();

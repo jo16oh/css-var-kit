@@ -1,3 +1,5 @@
+use std::path::Path;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyIdent<'a> {
     pub raw: &'a str,
@@ -16,12 +18,14 @@ pub struct PropertyValue<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Property<'a> {
+    pub file_path: &'a Path,
     pub name: PropertyIdent<'a>,
     pub value: PropertyValue<'a>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ParseResult<'a> {
+    pub file_path: &'a Path,
     pub properties: Vec<Property<'a>>,
 }
 
@@ -192,15 +196,15 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn parse(css: &str) -> ParseResult<'_> {
-    parse_impl(css, 0)
+pub fn parse<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
+    parse_impl(css, file_path, 0)
 }
 
-pub fn parse_style_attr(css: &str) -> ParseResult<'_> {
-    parse_impl(css, 1)
+pub fn parse_style_attr<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
+    parse_impl(css, file_path, 1)
 }
 
-fn parse_impl(css: &str, initial_brace_depth: i32) -> ParseResult<'_> {
+fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -> ParseResult<'a> {
     let mut s = Scanner::new(css);
     let mut properties = Vec::new();
 
@@ -255,6 +259,7 @@ fn parse_impl(css: &str, initial_brace_depth: i32) -> ParseResult<'_> {
                     let raw_value = css[value_start..value_end].trim();
 
                     properties.push(Property {
+                        file_path,
                         name: PropertyIdent {
                             raw: &css[name_start..name_end],
                             offset: name_start,
@@ -277,7 +282,7 @@ fn parse_impl(css: &str, initial_brace_depth: i32) -> ParseResult<'_> {
         }
     }
 
-    ParseResult { properties }
+    ParseResult { file_path, properties }
 }
 
 fn is_ident_start(b: u8) -> bool {
@@ -308,10 +313,20 @@ fn looks_like_property_start(bytes: &[u8]) -> bool {
 mod tests {
     use super::*;
 
+    const TEST_PATH: &str = "test.css";
+
+    fn test_parse(css: &str) -> ParseResult<'_> {
+        parse(css, Path::new(TEST_PATH))
+    }
+
+    fn test_parse_style_attr(css: &str) -> ParseResult<'_> {
+        parse_style_attr(css, Path::new(TEST_PATH))
+    }
+
     #[test]
     fn basic_var_def() {
         let css = ":root {\n    --main-color: red;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "--main-color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -321,7 +336,7 @@ mod tests {
     #[test]
     fn multiple_var_defs() {
         let css = ":root {\n    --color: red;\n    --size: 16px;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -332,7 +347,7 @@ mod tests {
     #[test]
     fn single_line_multiple_defs() {
         let css = ":root { --a: 1; --b: 2; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--a");
         assert_eq!(result.properties[0].value.raw, "1");
@@ -343,7 +358,7 @@ mod tests {
     #[test]
     fn incomplete_input() {
         let css = ":root {\n    --color: red";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
@@ -351,7 +366,7 @@ mod tests {
     #[test]
     fn regular_property() {
         let css = ".btn { color: red; font-size: 16px; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -362,7 +377,7 @@ mod tests {
     #[test]
     fn var_usage_in_value() {
         let css = ".btn { color: var(--main-color); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "var(--main-color)");
@@ -371,7 +386,7 @@ mod tests {
     #[test]
     fn def_and_regular_property() {
         let css = ":root { --c: red; }\n.a { color: var(--c); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--c");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -382,7 +397,7 @@ mod tests {
     #[test]
     fn property_after_string_literal() {
         let css = ".a::before { content: \"hello\"; color: var(--c); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, "\"hello\"");
@@ -393,7 +408,7 @@ mod tests {
     #[test]
     fn ignore_content_in_comment() {
         let css = ".a { /* --not-a-var */ color: var(--c); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "var(--c)");
@@ -402,7 +417,7 @@ mod tests {
     #[test]
     fn strip_inline_comment_from_value() {
         let css = ":root {\n    --color: red /* main color */;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
@@ -410,7 +425,7 @@ mod tests {
     #[test]
     fn strip_inline_comment_no_semicolon() {
         let css = ":root {\n    --color: red /* main color */\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
@@ -418,7 +433,7 @@ mod tests {
     #[test]
     fn missing_semicolon_next_property() {
         let css = ":root {\n    --a: red\n    --b: blue;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--a");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -429,7 +444,7 @@ mod tests {
     #[test]
     fn missing_semicolon_regular_property() {
         let css = ".a {\n    --color: red\n    font-size: 16px;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -441,7 +456,7 @@ mod tests {
     fn missing_semicolon_cr_only() {
         // standalone \r should also trigger missing-semicolon detection
         let css = ":root {\r    --a: red\r    --b: blue;\r}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--a");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -452,7 +467,7 @@ mod tests {
     #[test]
     fn ignore_content_in_multiline_comment() {
         let css = "/*\n  --not-a-var: red;\n*/\n.a { color: var(--c); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "var(--c)");
@@ -461,7 +476,7 @@ mod tests {
     #[test]
     fn multiline_function_value() {
         let css = ".a {\n    background: linear-gradient(\n        red,\n        blue\n    );\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "background");
         assert_eq!(
@@ -473,7 +488,7 @@ mod tests {
     #[test]
     fn paren_depth_nested() {
         let css = ".a { color: rgb(calc(100 + 50), 0, 0); }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "rgb(calc(100 + 50), 0, 0)");
@@ -482,7 +497,7 @@ mod tests {
     #[test]
     fn value_position_tracking() {
         let css = ":root {\n    --color: red;\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties[0].name.offset, 12);
         assert_eq!(result.properties[0].name.line, 1);
         assert_eq!(result.properties[0].name.column, 4);
@@ -496,7 +511,7 @@ mod tests {
         // \r\n should be treated as a single newline, same positions as \n
         // compared to \n version: each \r\n adds 1 extra byte
         let css = ":root {\r\n    --color: red;\r\n}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties[0].name.offset, 13);
         assert_eq!(result.properties[0].name.line, 1);
         assert_eq!(result.properties[0].name.column, 4);
@@ -509,7 +524,7 @@ mod tests {
     fn standalone_cr_position_tracking() {
         // standalone \r (old Mac) should also be treated as a newline
         let css = ":root {\r    --color: red;\r}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties[0].name.offset, 12);
         assert_eq!(result.properties[0].name.line, 1);
         assert_eq!(result.properties[0].name.column, 4);
@@ -522,7 +537,7 @@ mod tests {
 
     #[test]
     fn inline_single_property() {
-        let result = parse_style_attr("color: red;");
+        let result = test_parse_style_attr("color: red;");
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -530,7 +545,7 @@ mod tests {
 
     #[test]
     fn inline_multiple_properties() {
-        let result = parse_style_attr("color: red; font-size: 16px;");
+        let result = test_parse_style_attr("color: red; font-size: 16px;");
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -540,21 +555,21 @@ mod tests {
 
     #[test]
     fn inline_no_trailing_semicolon() {
-        let result = parse_style_attr("color: red");
+        let result = test_parse_style_attr("color: red");
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
 
     #[test]
     fn inline_var_usage() {
-        let result = parse_style_attr("color: var(--main-color);");
+        let result = test_parse_style_attr("color: var(--main-color);");
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "var(--main-color)");
     }
 
     #[test]
     fn inline_var_def() {
-        let result = parse_style_attr("--color: red; --size: 16px;");
+        let result = test_parse_style_attr("--color: red; --size: 16px;");
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -564,13 +579,13 @@ mod tests {
 
     #[test]
     fn inline_empty() {
-        let result = parse_style_attr("");
+        let result = test_parse_style_attr("");
         assert_eq!(result.properties.len(), 0);
     }
 
     #[test]
     fn parse_ignores_bare_properties() {
-        let result = parse("color: red; font-size: 16px;");
+        let result = test_parse("color: red; font-size: 16px;");
         assert_eq!(result.properties.len(), 0);
     }
 
@@ -579,7 +594,7 @@ mod tests {
     #[test]
     fn semicolon_inside_string_value() {
         let css = ".a { content: \"a;b\"; color: red; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, "\"a;b\"");
@@ -590,7 +605,7 @@ mod tests {
     #[test]
     fn closing_brace_inside_string_value() {
         let css = ".a { content: \"}\"; color: red; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, "\"}\"");
@@ -601,7 +616,7 @@ mod tests {
     #[test]
     fn escaped_quote_in_string_value() {
         let css = r#".a { content: "he said \"hello\""; }"#;
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, r#""he said \"hello\"""#);
@@ -610,7 +625,7 @@ mod tests {
     #[test]
     fn unterminated_string_at_eof() {
         let css = ".a { content: \"hello";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, "\"hello");
@@ -619,7 +634,7 @@ mod tests {
     #[test]
     fn unterminated_comment() {
         let css = ".a { color: red; } /* never closed";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -628,7 +643,7 @@ mod tests {
     #[test]
     fn unterminated_comment_inside_value() {
         let css = ".a { color: red /* unclosed";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
@@ -636,7 +651,7 @@ mod tests {
     #[test]
     fn empty_value() {
         let css = ".a { --empty: ; --next: blue; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "--empty");
         assert_eq!(result.properties[0].value.raw, "");
@@ -647,7 +662,7 @@ mod tests {
     #[test]
     fn no_spaces_around_colon() {
         let css = ".a{color:red;font-size:16px}";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -658,7 +673,7 @@ mod tests {
     #[test]
     fn nested_blocks() {
         let css = ".a { .b { color: red; } font-size: 16px; }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].name.raw, "color");
         assert_eq!(result.properties[0].value.raw, "red");
@@ -669,7 +684,7 @@ mod tests {
     #[test]
     fn backslash_at_eof_in_string() {
         let css = ".a { content: \"test\\";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].name.raw, "content");
         assert_eq!(result.properties[0].value.raw, "\"test\\");
@@ -678,7 +693,7 @@ mod tests {
     #[test]
     fn value_terminated_by_closing_brace() {
         let css = ".a { color: red }";
-        let result = parse(css);
+        let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
     }
