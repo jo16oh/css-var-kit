@@ -6,7 +6,7 @@ use std::ops::Deref;
 use crate::parser::css::{ParseResult, Property};
 
 pub trait SearchCondition: 'static {
-    fn judge(&self, prop: &Property) -> bool;
+    fn matches(&self, prop: &Property) -> bool;
 }
 
 pub struct SearcherBuilder<'a> {
@@ -44,10 +44,14 @@ impl<'a> Searcher<'a> {
     pub fn search(&'_ self) -> SearchResult<'_> {
         let mut results = HashMap::<TypeId, Vec<&'a Property<'a>>>::new();
 
+        for type_id in self.conditions.keys() {
+            results.insert(*type_id, Vec::new());
+        }
+
         for prop in self.parse_result.properties.iter() {
             for (type_id, cond) in self.conditions.iter() {
-                if cond.judge(prop) {
-                    results.entry(*type_id).or_default().push(prop);
+                if cond.matches(prop) {
+                    results.get_mut(type_id).unwrap().push(prop);
                 }
             }
         }
@@ -59,10 +63,12 @@ impl<'a> Searcher<'a> {
 pub struct SearchResult<'a>(HashMap<TypeId, Vec<&'a Property<'a>>>);
 
 impl<'a> SearchResult<'a> {
-    pub fn get_result_for<T: SearchCondition>(&'a self, cond: T) -> Option<SearchResultFor<'a, T>> {
-        self.0
+    pub fn get_result_for<T: SearchCondition>(&'a self, cond: T) -> SearchResultFor<'a, T> {
+        let props = self
+            .0
             .get(&cond.type_id())
-            .map(|r| SearchResultFor(r, PhantomData::<T>))
+            .expect("condition not registered in SearcherBuilder");
+        SearchResultFor(props, PhantomData::<T>)
     }
 }
 
@@ -84,35 +90,35 @@ mod tests {
 
     struct All;
     impl SearchCondition for All {
-        fn judge(&self, _prop: &Property) -> bool {
+        fn matches(&self, _prop: &Property) -> bool {
             true
         }
     }
 
     struct None;
     impl SearchCondition for None {
-        fn judge(&self, _prop: &Property) -> bool {
+        fn matches(&self, _prop: &Property) -> bool {
             false
         }
     }
 
     struct NameEquals(&'static str);
     impl SearchCondition for NameEquals {
-        fn judge(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &Property) -> bool {
             prop.name.raw == self.0
         }
     }
 
     struct ValueEquals(&'static str);
     impl SearchCondition for ValueEquals {
-        fn judge(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &Property) -> bool {
             prop.value.raw == self.0
         }
     }
 
     struct IsVariable;
     impl SearchCondition for IsVariable {
-        fn judge(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &Property) -> bool {
             prop.name.raw.starts_with("--")
         }
     }
@@ -126,7 +132,7 @@ mod tests {
             .build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(All).unwrap();
+        let result = search_result.get_result_for(All);
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0].name.raw, "color");
@@ -135,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn match_none_returns_none() {
+    fn match_none_returns_empty() {
         let css = ".a { color: red; }";
         let parse_result = parser::css::parse(css);
         let searcher = SearcherBuilder::new(&parse_result)
@@ -145,7 +151,7 @@ mod tests {
         let search_result = searcher.search();
         let result = search_result.get_result_for(None);
 
-        assert!(result.is_none());
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -157,7 +163,7 @@ mod tests {
             .build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(NameEquals("color")).unwrap();
+        let result = search_result.get_result_for(NameEquals("color"));
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].value.raw, "red");
@@ -173,7 +179,7 @@ mod tests {
             .build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(ValueEquals("red")).unwrap();
+        let result = search_result.get_result_for(ValueEquals("red"));
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name.raw, "color");
@@ -191,25 +197,24 @@ mod tests {
 
         let search_result = searcher.search();
 
-        let by_name = search_result.get_result_for(NameEquals("color")).unwrap();
+        let by_name = search_result.get_result_for(NameEquals("color"));
         assert_eq!(by_name.len(), 1);
         assert_eq!(by_name[0].value.raw, "red");
 
-        let by_value = search_result.get_result_for(ValueEquals("16px")).unwrap();
+        let by_value = search_result.get_result_for(ValueEquals("16px"));
         assert_eq!(by_value.len(), 1);
         assert_eq!(by_value[0].name.raw, "font-size");
     }
 
     #[test]
-    fn no_conditions_returns_empty() {
+    #[should_panic(expected = "condition not registered in SearcherBuilder")]
+    fn unregistered_condition_panics() {
         let css = ".a { color: red; }";
         let parse_result = parser::css::parse(css);
         let searcher = SearcherBuilder::new(&parse_result).build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(All);
-
-        assert!(result.is_none());
+        search_result.get_result_for(All);
     }
 
     #[test]
@@ -223,7 +228,7 @@ mod tests {
         let search_result = searcher.search();
         let result = search_result.get_result_for(All);
 
-        assert!(result.is_none());
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -236,7 +241,7 @@ mod tests {
             .build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(IsVariable).unwrap();
+        let result = search_result.get_result_for(IsVariable);
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name.raw, "--primary");
@@ -254,7 +259,7 @@ mod tests {
             .build();
 
         let search_result = searcher.search();
-        let result = search_result.get_result_for(NameEquals("color")).unwrap();
+        let result = search_result.get_result_for(NameEquals("color"));
 
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].value.raw, "red");
@@ -272,6 +277,6 @@ mod tests {
         let search_result = searcher.search();
         let result = search_result.get_result_for(NameEquals("background"));
 
-        assert!(result.is_none());
+        assert!(result.is_empty());
     }
 }
