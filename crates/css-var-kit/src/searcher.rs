@@ -5,6 +5,8 @@ use std::ops::Deref;
 
 use crate::parser::css::{ParseResult, Property};
 
+pub mod conditions;
+
 pub trait SearchCondition: 'static {
     fn matches(&self, prop: &Property) -> bool;
 }
