@@ -43,8 +43,5 @@ fn find_ancestor_with(start: &Path, name: &str) -> Option<PathBuf> {
 }
 
 fn print_help() {
-    eprintln!("Usage: cvk <command>");
-    eprintln!();
-    eprintln!("Commands:");
-    eprintln!("  lint    Lint CSS files for undefined variables");
+    eprint!("{}", include_str!("help.txt"));
 }
