@@ -33,28 +33,17 @@ pub fn run(dir: &Path, _args: &[String]) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let search_results: Vec<_> = parse_results
-        .iter()
-        .map(|parse_result| {
-            let searcher = SearcherBuilder::new(parse_result)
-                .add_condition(VariableDefinitions)
-                .add_condition(VariableUsages)
-                .build();
-            searcher.search()
-        })
-        .collect();
+    let searcher = SearcherBuilder::new(&parse_results)
+        .add_condition(VariableDefinitions)
+        .add_condition(VariableUsages)
+        .build();
+    let search_result = searcher.search();
 
-    let mut def_map = VariableDefinitionMap::default();
-    for search_result in &search_results {
-        let defs = search_result.get_result_for(VariableDefinitions);
-        def_map.merge(VariableDefinitionMap::from(&defs));
-    }
+    let defs = search_result.get_result_for(VariableDefinitions);
+    let def_map = VariableDefinitionMap::from(&defs);
 
-    let mut diagnostics = Vec::new();
-    for search_result in &search_results {
-        let usages = search_result.get_result_for(VariableUsages);
-        diagnostics.extend(UndefinedVariables.check(&def_map, &usages));
-    }
+    let usages = search_result.get_result_for(VariableUsages);
+    let diagnostics = UndefinedVariables.check(&def_map, &usages);
 
     if diagnostics.is_empty() {
         return;

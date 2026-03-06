@@ -12,7 +12,6 @@ impl SearchCondition for VariableDefinitions {
     }
 }
 
-#[derive(Default)]
 pub struct VariableDefinitionMap<'src> {
     map: HashMap<&'src str, Vec<&'src Property<'src>>>,
 }
@@ -36,11 +35,6 @@ impl<'src> VariableDefinitionMap<'src> {
         self.map.contains_key(name)
     }
 
-    pub fn merge(&mut self, other: VariableDefinitionMap<'src>) {
-        for (name, props) in other.map {
-            self.map.entry(name).or_default().extend(props);
-        }
-    }
 }
 
 #[cfg(test)]
@@ -101,8 +95,8 @@ mod tests {
     #[test]
     fn get_by_name() {
         let css = ":root { --color: red; --size: 16px; }";
-        let parse_result = test_parse(css);
-        let searcher = SearcherBuilder::new(&parse_result)
+        let parse_results = [test_parse(css)];
+        let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
@@ -121,8 +115,8 @@ mod tests {
     #[test]
     fn get_nonexistent_returns_none() {
         let css = ":root { --color: red; }";
-        let parse_result = test_parse(css);
-        let searcher = SearcherBuilder::new(&parse_result)
+        let parse_results = [test_parse(css)];
+        let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
@@ -135,8 +129,8 @@ mod tests {
     #[test]
     fn has_returns_correct_bool() {
         let css = ":root { --color: red; }";
-        let parse_result = test_parse(css);
-        let searcher = SearcherBuilder::new(&parse_result)
+        let parse_results = [test_parse(css)];
+        let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
@@ -150,8 +144,8 @@ mod tests {
     #[test]
     fn duplicate_definitions_grouped() {
         let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_result = test_parse(css);
-        let searcher = SearcherBuilder::new(&parse_result)
+        let parse_results = [test_parse(css)];
+        let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();

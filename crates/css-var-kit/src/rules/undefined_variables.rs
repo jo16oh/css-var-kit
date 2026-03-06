@@ -79,8 +79,8 @@ mod tests {
     use std::path::Path;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_result = parser::css::parse(css, Path::new("test.css"));
-        let searcher = SearcherBuilder::new(&parse_result)
+        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .add_condition(VariableUsages)
             .build();
