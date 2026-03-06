@@ -1,6 +1,4 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
-use lightningcss::stylesheet::ParserOptions;
-use lightningcss::traits::ParseWithOptions;
 
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Severity};
@@ -19,12 +17,9 @@ impl UndefinedVariables {
         let mut diagnostics = Vec::new();
 
         for prop in usages.iter() {
-            let Ok(token_list) =
-                TokenList::parse_string_with_options(prop.value.raw, ParserOptions::default())
-            else {
-                continue;
-            };
-            collect_undefined(&token_list, definitions, prop, &mut diagnostics);
+            if let Some(token_list) = &prop.value.token_list {
+                collect_undefined(token_list, definitions, prop, &mut diagnostics);
+            }
         }
 
         diagnostics

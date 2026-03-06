@@ -60,6 +60,7 @@ mod tests {
             },
             value: PropertyValue {
                 raw: "",
+                token_list: None,
                 offset: 0,
                 line: 0,
                 column: 0,

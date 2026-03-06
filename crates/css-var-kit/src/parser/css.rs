@@ -1,5 +1,9 @@
 use std::path::Path;
 
+use lightningcss::properties::custom::TokenList;
+use lightningcss::stylesheet::ParserOptions;
+use lightningcss::traits::ParseWithOptions;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyIdent<'a> {
     pub raw: &'a str,
@@ -11,6 +15,7 @@ pub struct PropertyIdent<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyValue<'a> {
     pub raw: &'a str,
+    pub token_list: Option<TokenList<'a>>,
     pub offset: usize,
     pub line: u32,
     pub column: u32,
@@ -257,6 +262,11 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                     let value_end = s.scan_value_end();
 
                     let raw_value = css[value_start..value_end].trim();
+                    let token_list = TokenList::parse_string_with_options(
+                        raw_value,
+                        ParserOptions::default(),
+                    )
+                    .ok();
 
                     properties.push(Property {
                         file_path,
@@ -268,6 +278,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                         },
                         value: PropertyValue {
                             raw: raw_value,
+                            token_list,
                             offset: value_start,
                             line: value_line,
                             column: value_col,
