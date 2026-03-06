@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use crate::parser;
-use crate::rules::undefined_variables::UndefinedVariables;
+use crate::rules::undefined_variables;
 use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::{
@@ -43,7 +43,7 @@ pub fn run(dir: &Path, _args: &[String]) {
     let def_map = VariableDefinitionMap::from(&defs);
 
     let usages = search_result.get_result_for(VariableUsages);
-    let diagnostics = UndefinedVariables.check(&def_map, &usages);
+    let diagnostics = undefined_variables::check(&def_map, &usages);
 
     if diagnostics.is_empty() {
         return;

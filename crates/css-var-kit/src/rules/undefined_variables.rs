@@ -6,24 +6,19 @@ use crate::searcher::SearchResultFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitionMap;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 
-pub struct UndefinedVariables;
+pub fn check<'src>(
+    definitions: &VariableDefinitionMap<'src>,
+    usages: &SearchResultFor<'src, '_, VariableUsages>,
+) -> Vec<Diagnostic<'src>> {
+    let mut diagnostics = Vec::new();
 
-impl UndefinedVariables {
-    pub fn check<'src>(
-        &self,
-        definitions: &VariableDefinitionMap<'src>,
-        usages: &SearchResultFor<'src, '_, VariableUsages>,
-    ) -> Vec<Diagnostic<'src>> {
-        let mut diagnostics = Vec::new();
-
-        for prop in usages.iter() {
-            if let Some(token_list) = &prop.value.token_list {
-                collect_undefined(token_list, definitions, prop, &mut diagnostics);
-            }
+    for prop in usages.iter() {
+        if let Some(token_list) = &prop.value.token_list {
+            collect_undefined(token_list, definitions, prop, &mut diagnostics);
         }
-
-        diagnostics
     }
+
+    diagnostics
 }
 
 fn collect_undefined<'src>(
@@ -90,7 +85,7 @@ mod tests {
         let def_map = VariableDefinitionMap::from(&defs_result);
         let usages_result = search_result.get_result_for(VariableUsages);
 
-        let diagnostics = UndefinedVariables.check(&def_map, &usages_result);
+        let diagnostics = check(&def_map, &usages_result);
         let messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();
         assert_eq!(messages, expected);
     }
