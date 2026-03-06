@@ -24,7 +24,8 @@ pub fn run(dir: &Path, _args: &[String]) {
         .into_iter()
         .filter_map(|path| {
             let content = fs::read_to_string(&path).ok()?;
-            Some((path, content))
+            let rel_path = path.strip_prefix(dir).unwrap_or(&path).to_path_buf();
+            Some((rel_path, content))
         })
         .collect();
 
@@ -73,12 +74,12 @@ fn print_diagnostic(d: &Diagnostic) {
 
 fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
-    collect_css_files_recursive(dir, dir, &mut files);
+    collect_css_files_recursive(dir, &mut files);
     files.sort();
     files
 }
 
-fn collect_css_files_recursive(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) {
+fn collect_css_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(_) => return,
@@ -92,9 +93,9 @@ fn collect_css_files_recursive(root: &Path, dir: &Path, files: &mut Vec<PathBuf>
                     continue;
                 }
             }
-            collect_css_files_recursive(root, &path, files);
+            collect_css_files_recursive(&path, files);
         } else if path.extension().is_some_and(|ext| ext == "css") {
-            files.push(path.strip_prefix(root).unwrap_or(&path).to_path_buf());
+            files.push(path);
         }
     }
 }
