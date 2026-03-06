@@ -12,6 +12,7 @@ impl SearchCondition for VariableDefinitions {
     }
 }
 
+#[derive(Default)]
 pub struct VariableDefinitionMap<'src> {
     map: HashMap<&'src str, Vec<&'src Property<'src>>>,
 }
@@ -33,6 +34,12 @@ impl<'src> VariableDefinitionMap<'src> {
 
     pub fn has(&self, name: &str) -> bool {
         self.map.contains_key(name)
+    }
+
+    pub fn merge(&mut self, other: VariableDefinitionMap<'src>) {
+        for (name, props) in other.map {
+            self.map.entry(name).or_default().extend(props);
+        }
     }
 }
 
