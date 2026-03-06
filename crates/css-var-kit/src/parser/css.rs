@@ -117,6 +117,43 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn skip_at_rule(&mut self) {
+        self.advance(1); // skip '@'
+        // Skip until ';' (statement) or matched '{...}' (block)
+        while !self.is_eof() {
+            match self.bytes[self.pos] {
+                b'"' | b'\'' => self.skip_string_literal(),
+                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                b';' => {
+                    self.advance(1);
+                    return;
+                }
+                b'{' => {
+                    // Skip the block including nested braces
+                    self.advance(1);
+                    let mut depth = 1i32;
+                    while !self.is_eof() && depth > 0 {
+                        match self.bytes[self.pos] {
+                            b'"' | b'\'' => self.skip_string_literal(),
+                            b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                            b'{' => {
+                                depth += 1;
+                                self.advance(1);
+                            }
+                            b'}' => {
+                                depth -= 1;
+                                self.advance(1);
+                            }
+                            _ => self.advance(1),
+                        }
+                    }
+                    return;
+                }
+                _ => self.advance(1),
+            }
+        }
+    }
+
     fn scan_value_end(&mut self) -> usize {
         let mut paren_depth = 0i32;
 
@@ -224,6 +261,10 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
             // Skip comments
             b'/' if s.peek_at(1) == Some(b'*') => {
                 s.skip_comment();
+            }
+            // Skip @-rules at top level (e.g. @property, @import, @charset)
+            b'@' if brace_depth == initial_brace_depth => {
+                s.skip_at_rule();
             }
             b'{' => {
                 brace_depth += 1;
@@ -707,6 +748,32 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].value.raw, "red");
+    }
+
+    #[test]
+    fn at_property_rule_skipped() {
+        let css = "@property --my-color {\n  syntax: \"<color>\";\n  inherits: false;\n  initial-value: red;\n}\n.a { color: var(--my-color); }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].name.raw, "color");
+        assert_eq!(result.properties[0].value.raw, "var(--my-color)");
+    }
+
+    #[test]
+    fn at_property_between_selectors() {
+        let css = ".before { margin: 0; }\n@property --x {\n  syntax: \"*\";\n  inherits: true;\n}\n.after { padding: 0; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].name.raw, "margin");
+        assert_eq!(result.properties[1].name.raw, "padding");
+    }
+
+    #[test]
+    fn at_import_skipped() {
+        let css = "@import url(\"reset.css\");\n.a { color: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].name.raw, "color");
     }
 
     #[test]
