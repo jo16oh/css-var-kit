@@ -9,11 +9,11 @@ use crate::searcher::conditions::variable_usages::VariableUsages;
 pub struct UndefinedVariables;
 
 impl UndefinedVariables {
-    pub fn check<'a>(
+    pub fn check<'src>(
         &self,
-        definitions: &VariableDefinitionMap<'a>,
-        usages: &SearchResultFor<'a, VariableUsages>,
-    ) -> Vec<Diagnostic<'a>> {
+        definitions: &VariableDefinitionMap<'src>,
+        usages: &SearchResultFor<'src, '_, VariableUsages>,
+    ) -> Vec<Diagnostic<'src>> {
         let mut diagnostics = Vec::new();
 
         for prop in usages.iter() {
@@ -26,11 +26,11 @@ impl UndefinedVariables {
     }
 }
 
-fn collect_undefined<'a>(
+fn collect_undefined<'src>(
     token_list: &TokenList<'_>,
     definitions: &VariableDefinitionMap<'_>,
-    prop: &'a Property<'a>,
-    diagnostics: &mut Vec<Diagnostic<'a>>,
+    prop: &'src Property<'src>,
+    diagnostics: &mut Vec<Diagnostic<'src>>,
 ) {
     for token in &token_list.0 {
         match token {
@@ -75,6 +75,7 @@ mod tests {
     use crate::parser;
     use crate::searcher::SearcherBuilder;
     use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+    use crate::searcher::conditions::variable_usages::VariableUsages;
     use std::path::Path;
 
     fn assert_messages(css: &str, expected: &[&str]) {

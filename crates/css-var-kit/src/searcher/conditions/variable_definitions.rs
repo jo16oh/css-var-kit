@@ -12,13 +12,13 @@ impl SearchCondition for VariableDefinitions {
     }
 }
 
-pub struct VariableDefinitionMap<'a> {
-    map: HashMap<&'a str, Vec<&'a Property<'a>>>,
+pub struct VariableDefinitionMap<'src> {
+    map: HashMap<&'src str, Vec<&'src Property<'src>>>,
 }
 
-impl<'a> From<&SearchResultFor<'a, VariableDefinitions>> for VariableDefinitionMap<'a> {
-    fn from(result: &SearchResultFor<'a, VariableDefinitions>) -> Self {
-        let mut map = HashMap::<&'a str, Vec<&'a Property<'a>>>::new();
+impl<'src> From<&SearchResultFor<'src, '_, VariableDefinitions>> for VariableDefinitionMap<'src> {
+    fn from(result: &SearchResultFor<'src, '_, VariableDefinitions>) -> Self {
+        let mut map = HashMap::<&'src str, Vec<&'src Property<'src>>>::new();
         for prop in result.iter() {
             map.entry(prop.name.raw).or_default().push(prop);
         }
@@ -26,8 +26,8 @@ impl<'a> From<&SearchResultFor<'a, VariableDefinitions>> for VariableDefinitionM
     }
 }
 
-impl<'a> VariableDefinitionMap<'a> {
-    pub fn get(&self, name: &str) -> Option<&[&'a Property<'a>]> {
+impl<'src> VariableDefinitionMap<'src> {
+    pub fn get(&self, name: &str) -> Option<&[&'src Property<'src>]> {
         self.map.get(name).map(|v| v.as_slice())
     }
 

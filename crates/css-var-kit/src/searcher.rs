@@ -11,25 +11,25 @@ pub trait SearchCondition: 'static {
     fn matches(&self, prop: &Property) -> bool;
 }
 
-pub struct SearcherBuilder<'a> {
-    parse_result: &'a ParseResult<'a>,
+pub struct SearcherBuilder<'src> {
+    parse_result: &'src ParseResult<'src>,
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
 }
 
-impl<'a> SearcherBuilder<'a> {
-    pub fn new(parse_result: &'a ParseResult) -> Self {
+impl<'src> SearcherBuilder<'src> {
+    pub fn new(parse_result: &'src ParseResult) -> Self {
         Self {
             parse_result,
             conditions: HashMap::new(),
         }
     }
 
-    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> SearcherBuilder<'a> {
+    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> SearcherBuilder<'src> {
         self.conditions.insert(TypeId::of::<T>(), Box::new(cond));
         self
     }
 
-    pub fn build(self) -> Searcher<'a> {
+    pub fn build(self) -> Searcher<'src> {
         Searcher {
             parse_result: self.parse_result,
             conditions: self.conditions,
@@ -37,14 +37,14 @@ impl<'a> SearcherBuilder<'a> {
     }
 }
 
-pub struct Searcher<'a> {
-    parse_result: &'a ParseResult<'a>,
+pub struct Searcher<'src> {
+    parse_result: &'src ParseResult<'src>,
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
 }
 
-impl<'a> Searcher<'a> {
-    pub fn search(&'_ self) -> SearchResult<'_> {
-        let mut results = HashMap::<TypeId, Vec<&'a Property<'a>>>::new();
+impl<'src> Searcher<'src> {
+    pub fn search(&self) -> SearchResult<'src> {
+        let mut results = HashMap::<TypeId, Vec<&'src Property<'src>>>::new();
 
         for type_id in self.conditions.keys() {
             results.insert(*type_id, Vec::new());
@@ -62,10 +62,10 @@ impl<'a> Searcher<'a> {
     }
 }
 
-pub struct SearchResult<'a>(HashMap<TypeId, Vec<&'a Property<'a>>>);
+pub struct SearchResult<'src>(HashMap<TypeId, Vec<&'src Property<'src>>>);
 
-impl<'a> SearchResult<'a> {
-    pub fn get_result_for<T: SearchCondition>(&'a self, cond: T) -> SearchResultFor<'a, T> {
+impl<'src> SearchResult<'src> {
+    pub fn get_result_for<T: SearchCondition>(&self, cond: T) -> SearchResultFor<'src, '_, T> {
         let props = self
             .0
             .get(&cond.type_id())
@@ -74,10 +74,10 @@ impl<'a> SearchResult<'a> {
     }
 }
 
-pub struct SearchResultFor<'a, T: SearchCondition>(&'a [&'a Property<'a>], PhantomData<T>);
+pub struct SearchResultFor<'src, 'result, T: SearchCondition>(&'result [&'src Property<'src>], PhantomData<T>);
 
-impl<'a, T: SearchCondition> Deref for SearchResultFor<'a, T> {
-    type Target = [&'a Property<'a>];
+impl<'src, T: SearchCondition> Deref for SearchResultFor<'src, '_, T> {
+    type Target = [&'src Property<'src>];
 
     fn deref(&self) -> &Self::Target {
         self.0
