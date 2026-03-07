@@ -38,17 +38,25 @@ pub fn run(config: &Config, _args: &[String]) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let searcher = SearcherBuilder::new(&parse_results)
-        .add_condition(VariableDefinitions)
-        .add_condition(VariableUsages)
-        .build();
-    let search_result = searcher.search();
+    let mut searcher = SearcherBuilder::new(&parse_results);
 
-    let defs = search_result.get_result_for(VariableDefinitions);
-    let def_map = VariableDefinitionMap::from(&defs);
+    if config.rules.no_undefined_variable_use {
+        searcher = searcher
+            .add_condition(VariableDefinitions)
+            .add_condition(VariableUsages);
+    }
 
-    let usages = search_result.get_result_for(VariableUsages);
-    let diagnostics = undefined_variables::check(&def_map, &usages);
+    let search_result = searcher.build().search();
+
+    let mut diagnostics: Vec<Diagnostic> = vec![];
+
+    if config.rules.no_undefined_variable_use {
+        let defs = search_result.get_result_for(VariableDefinitions);
+        let def_map = VariableDefinitionMap::from(&defs);
+        let usages = search_result.get_result_for(VariableUsages);
+        let results = undefined_variables::check(&def_map, &usages);
+        diagnostics.extend(results);
+    }
 
     if diagnostics.is_empty() {
         return;
