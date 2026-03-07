@@ -1,26 +1,9 @@
-use assert_cmd::Command;
+mod common;
 
-const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
-
-fn cvk() -> Command {
-    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
-    cmd.current_dir(FIXTURES);
-    cmd
-}
+use common::cvk;
 
 #[test]
-fn lint_default_reports_undefined_variables() {
-    cvk()
-        .args(["lint"])
-        .assert()
-        .failure()
-        .stderr(predicates::str::contains("--spacing-md"))
-        .stderr(predicates::str::contains("--border-color"))
-        .stderr(predicates::str::contains("--radius-lg"));
-}
-
-#[test]
-fn lint_rule_off_disables_rule() {
+fn rule_off_disables_rule() {
     cvk()
         .args(["lint", "--rule", "no-undefined-variable-use=off"])
         .assert()
@@ -29,7 +12,7 @@ fn lint_rule_off_disables_rule() {
 }
 
 #[test]
-fn lint_rule_unknown_name_errors() {
+fn unknown_rule_name_errors() {
     cvk()
         .args(["lint", "--rule", "bad-rule=on"])
         .assert()
@@ -38,7 +21,7 @@ fn lint_rule_unknown_name_errors() {
 }
 
 #[test]
-fn lint_rule_invalid_format_errors() {
+fn invalid_format_errors() {
     cvk()
         .args(["lint", "--rule", "no-value"])
         .assert()
@@ -47,7 +30,7 @@ fn lint_rule_invalid_format_errors() {
 }
 
 #[test]
-fn lint_rule_invalid_toggle_value_errors() {
+fn invalid_toggle_value_errors() {
     cvk()
         .args(["lint", "--rule", "no-undefined-variable-use=yes"])
         .assert()
@@ -56,9 +39,7 @@ fn lint_rule_invalid_toggle_value_errors() {
 }
 
 #[test]
-fn lint_rule_enforce_variable_use_json() {
-    // With JSON config, lint should still run (enforce-variable-use doesn't produce
-    // diagnostics yet, but it shouldn't error on valid JSON)
+fn enforce_variable_use_json() {
     cvk()
         .args([
             "lint",
@@ -70,8 +51,7 @@ fn lint_rule_enforce_variable_use_json() {
 }
 
 #[test]
-fn lint_rule_enforce_variable_use_off() {
-    // enforce-variable-use=off with no-undefined-variable-use=off should succeed
+fn enforce_variable_use_off() {
     cvk()
         .args([
             "lint",
@@ -85,7 +65,7 @@ fn lint_rule_enforce_variable_use_off() {
 }
 
 #[test]
-fn lint_rule_enforce_variable_use_invalid_json_errors() {
+fn enforce_variable_use_invalid_json_errors() {
     cvk()
         .args(["lint", "--rule", "enforce-variable-use={bad json}"])
         .assert()
@@ -94,7 +74,7 @@ fn lint_rule_enforce_variable_use_invalid_json_errors() {
 }
 
 #[test]
-fn lint_rule_enforce_variable_use_invalid_value_errors() {
+fn enforce_variable_use_invalid_value_errors() {
     cvk()
         .args(["lint", "--rule", "enforce-variable-use=yes"])
         .assert()
@@ -105,7 +85,7 @@ fn lint_rule_enforce_variable_use_invalid_value_errors() {
 }
 
 #[test]
-fn lint_multiple_rule_overrides() {
+fn multiple_rule_overrides() {
     cvk()
         .args([
             "lint",
@@ -116,18 +96,6 @@ fn lint_multiple_rule_overrides() {
             "--rule",
             "no-type-mismatch=off",
         ])
-        .assert()
-        .success();
-}
-
-#[test]
-fn lint_config_root_dir_is_relative_to_config_file() {
-    // config-base-test/configs/cvk.json has rootDir: "../css"
-    // This should resolve to config-base-test/css/ (relative to the config file),
-    // which contains only style.css with no undefined variables.
-    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
-    cmd.current_dir(format!("{FIXTURES}/config-base-test"));
-    cmd.args(["lint", "-c", "configs/cvk.json"])
         .assert()
         .success();
 }
