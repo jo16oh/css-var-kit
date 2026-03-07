@@ -54,6 +54,7 @@ fn collect_undefined<'src>(
                 if !definitions.has(name) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
+                        source: prop.source,
                         line: prop.value.line,
                         column: prop.value.column,
                         message: format!("undefined variable `{}`", name),
@@ -69,6 +70,7 @@ fn collect_undefined<'src>(
                 if !definitions.has(name) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
+                        source: prop.source,
                         line: prop.value.line,
                         column: prop.value.column,
                         message: format!("undefined variable `{}`", name),

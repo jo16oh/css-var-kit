@@ -53,6 +53,7 @@ mod tests {
     fn prop(name: &str) -> Property<'_> {
         Property {
             file_path: Path::new("test.css"),
+            source: "",
             name: PropertyIdent {
                 raw: name,
                 offset: 0,

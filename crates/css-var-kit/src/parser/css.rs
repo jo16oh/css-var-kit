@@ -24,6 +24,7 @@ pub struct PropertyValue<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Property<'a> {
     pub file_path: &'a Path,
+    pub source: &'a str,
     pub name: PropertyIdent<'a>,
     pub value: PropertyValue<'a>,
 }
@@ -311,6 +312,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
 
                     properties.push(Property {
                         file_path,
+                        source: css,
                         name: PropertyIdent {
                             raw: &css[name_start..name_end],
                             offset: name_start,
@@ -570,6 +572,16 @@ mod tests {
         assert_eq!(result.properties[0].value.offset, 22);
         assert_eq!(result.properties[0].value.line, 1);
         assert_eq!(result.properties[0].value.column, 13);
+    }
+
+    #[test]
+    fn multibyte_char_column_is_byte_based() {
+        // Scanner column is byte-based; "あ" is 3 bytes in UTF-8
+        let css = ".あ { --color: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties[0].name.line, 0);
+        // ".あ { " = 1 + 3 + 1 + 1 + 1 = 7 bytes
+        assert_eq!(result.properties[0].name.column, 7);
     }
 
     #[test]
