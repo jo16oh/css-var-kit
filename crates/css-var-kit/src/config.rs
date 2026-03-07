@@ -76,16 +76,22 @@ impl LookupFilesMatcher {
 
 impl Config {
     pub fn load(cwd: &Path, args: &LintArgs) -> Result<Self, ConfigError> {
-        let project_root = find_project_root(cwd);
-
-        let raw = match &args.config {
-            Some(path) => file::RawConfig::load_from(Path::new(path))?,
-            None => file::RawConfig::load(&project_root)?,
+        let (config_base, raw) = match &args.config {
+            Some(path) => {
+                let abs = cwd.join(path);
+                let base = abs.parent().unwrap_or(cwd).to_path_buf();
+                (base, file::RawConfig::load_from(&abs)?)
+            }
+            None => {
+                let base = find_project_root(cwd);
+                let raw = file::RawConfig::load(&base)?;
+                (base, raw)
+            }
         };
 
         let root_dir = match &args.root_dir {
             Some(dir) => cwd.join(dir),
-            None => project_root.join(&raw.root_dir),
+            None => config_base.join(&raw.root_dir),
         };
 
         let lookup_patterns = if args.files.is_empty() {
