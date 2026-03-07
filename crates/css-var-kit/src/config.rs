@@ -6,7 +6,10 @@ use std::path::{Path, PathBuf};
 use globset::{Glob, GlobMatcher};
 use thiserror::Error;
 
-use crate::cli::LintArgs;
+use crate::{
+    cli::LintArgs,
+    config::file::{RawEnforceVariableUse, RawRules, Toggle},
+};
 pub use rules::{EnforceVariableUse, Rules};
 
 #[derive(Debug, Error)]
@@ -94,8 +97,8 @@ impl Config {
         let lookup_files = LookupFilesMatcher::compile(lookup_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let mut rules = Rules::from_raw(raw.rules);
-        apply_rule_overrides(&mut rules, &args.rule)?;
+        let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
+        let rules = Rules::from_raw(raw_rules);
 
         Ok(Self {
             root_dir,
@@ -105,70 +108,55 @@ impl Config {
     }
 }
 
-fn apply_rule_overrides(rules: &mut Rules, overrides: &[String]) -> Result<(), ConfigError> {
-    for entry in overrides {
-        let (name, value) =
-            entry
+impl RawRules {
+    fn override_raw_rules_by_args(mut self, args: &LintArgs) -> Result<RawRules, ConfigError> {
+        for entry in &args.rule {
+            let err = |reason: String| ConfigError::InvalidRuleOption {
+                raw: entry.clone(),
+                reason,
+            };
+            let (name, value) = entry
                 .split_once('=')
-                .ok_or_else(|| ConfigError::InvalidRuleOption {
-                    raw: entry.clone(),
-                    reason: "expected format NAME=VALUE".to_string(),
-                })?;
+                .ok_or_else(|| err("expected format NAME=VALUE".into()))?;
 
-        match name {
-            "no-undefined-variable-use" => {
-                rules.no_undefined_variable_use = parse_toggle(value, entry)?;
-            }
-            "no-compound-value-in-definition" => {
-                rules.no_compound_value_in_definition = parse_toggle(value, entry)?;
-            }
-            "no-type-mismatch" => {
-                rules.no_type_mismatch = parse_toggle(value, entry)?;
-            }
-            "enforce-variable-use" => {
-                if value == "off" {
-                    rules.enforce_variable_use = None;
-                } else if value == "on" {
-                    // on keeps existing config; if none exists, rule stays effectively disabled
-                    // (no types configured)
-                } else if value.starts_with('{') {
-                    let raw: file::RawEnforceVariableUseConfig = serde_json::from_str(value)
-                        .map_err(|e| ConfigError::InvalidRuleOption {
-                            raw: entry.clone(),
-                            reason: e.to_string(),
-                        })?;
-                    let config = EnforceVariableUse::from_raw(raw);
-                    if config.types.is_empty() {
-                        rules.enforce_variable_use = None;
-                    } else {
-                        rules.enforce_variable_use = Some(config);
-                    }
-                } else {
-                    return Err(ConfigError::InvalidRuleOption {
-                        raw: entry.clone(),
-                        reason: "expected 'on', 'off', or a JSON object".to_string(),
-                    });
+            match name {
+                "no-undefined-variable-use" => {
+                    self.no_undefined_variable_use = Self::parse_toggle(value).map_err(&err)?;
                 }
-            }
-            _ => {
-                return Err(ConfigError::InvalidRuleOption {
-                    raw: entry.clone(),
-                    reason: format!("unknown rule '{name}'"),
-                });
+                "no-compound-value-in-definition" => {
+                    self.no_compound_value_in_definition =
+                        Self::parse_toggle(value).map_err(&err)?;
+                }
+                "no-type-mismatch" => {
+                    self.no_type_mismatch = Self::parse_toggle(value).map_err(&err)?;
+                }
+                "enforce-variable-use" => {
+                    self.enforce_variable_use = Self::parse_enforce(value).map_err(&err)?;
+                }
+                _ => return Err(err(format!("unknown rule '{name}'"))),
             }
         }
-    }
-    Ok(())
-}
 
-fn parse_toggle(value: &str, raw: &str) -> Result<bool, ConfigError> {
-    match value {
-        "on" => Ok(true),
-        "off" => Ok(false),
-        _ => Err(ConfigError::InvalidRuleOption {
-            raw: raw.to_string(),
-            reason: "expected 'on' or 'off'".to_string(),
-        }),
+        Ok(self)
+    }
+
+    fn parse_toggle(value: &str) -> Result<Toggle, String> {
+        match value {
+            "on" => Ok(Toggle::On),
+            "off" => Ok(Toggle::Off),
+            _ => Err("expected 'on' or 'off'".into()),
+        }
+    }
+
+    fn parse_enforce(value: &str) -> Result<RawEnforceVariableUse, String> {
+        match value {
+            "on" => Ok(RawEnforceVariableUse::default_on()),
+            "off" => Ok(RawEnforceVariableUse::Off),
+            v if v.starts_with('{') => serde_json::from_str(v)
+                .map(RawEnforceVariableUse::Config)
+                .map_err(|e| e.to_string()),
+            _ => Err("expected 'on', 'off', or a JSON object".into()),
+        }
     }
 }
 

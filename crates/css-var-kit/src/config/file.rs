@@ -89,6 +89,10 @@ pub(in crate::config) enum RawEnforceVariableUse {
 }
 
 impl RawEnforceVariableUse {
+    pub(in crate::config) fn default_on() -> Self {
+        Self::Config(RawEnforceVariableUseConfig::default())
+    }
+
     pub(in crate::config) fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
         match self {
             Self::Off => None,
@@ -106,6 +110,16 @@ pub(in crate::config) struct RawEnforceVariableUseConfig {
     pub(in crate::config) allowed_functions: Vec<String>,
     #[serde(default = "default_allowed_values")]
     pub(in crate::config) allowed_values: Vec<String>,
+}
+
+impl Default for RawEnforceVariableUseConfig {
+    fn default() -> Self {
+        Self {
+            types: Vec::new(),
+            allowed_functions: default_allowed_functions(),
+            allowed_values: default_allowed_values(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
