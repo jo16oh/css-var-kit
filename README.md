@@ -6,18 +6,18 @@ A simple, lightweight toolkit to help build design systems using raw CSS.
 
 ### `cvk lsp`
 
-Language Server Protocol server for CSS custom properties.
+Language Server Protocol server for CSS variables.
 
 ⚠️ WIP ⚠️
 
 ### `cvk lint`
 
-Lints CSS custom properties and their usage.
+Lints CSS variables and their usage.
 
 ⚠️ WIP ⚠️
 
 ### `cvk prune`
 
-Strips unused CSS custom properties from the final build output.
+Strips unused CSS variables from the final build output.
 
 ⚠️ WIP ⚠️
