@@ -1,9 +1,12 @@
 mod file;
+mod rules;
 
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobMatcher};
 use thiserror::Error;
+
+pub use rules::{EnforceVariableUse, Rules};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -19,6 +22,7 @@ pub enum ConfigError {
 pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
+    pub rules: Rules,
 }
 
 pub struct LookupFilesMatcher {
@@ -67,10 +71,12 @@ impl Config {
         let root_dir = project_root.join(&raw.root_dir);
         let lookup_files = LookupFilesMatcher::compile(&raw.lookup_files)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+        let rules = Rules::from_raw(raw.rules);
 
         Ok(Self {
             root_dir,
             lookup_files,
+            rules,
         })
     }
 }

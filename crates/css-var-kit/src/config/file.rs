@@ -12,6 +12,8 @@ pub(super) struct RawConfig {
     pub(super) root_dir: String,
     #[serde(default = "default_lookup_files")]
     pub(super) lookup_files: Vec<String>,
+    #[serde(default)]
+    pub(super) rules: RawRules,
 }
 
 impl Default for RawConfig {
@@ -19,16 +21,9 @@ impl Default for RawConfig {
         Self {
             root_dir: default_root_dir(),
             lookup_files: default_lookup_files(),
+            rules: RawRules::default(),
         }
     }
-}
-
-fn default_root_dir() -> String {
-    ".".to_string()
-}
-
-fn default_lookup_files() -> Vec<String> {
-    vec!["**/*.css".to_string()]
 }
 
 impl RawConfig {
@@ -46,4 +41,104 @@ impl RawConfig {
 
         Ok(Self::default())
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(in crate::config) struct RawRules {
+    #[serde(default = "default_on")]
+    pub(in crate::config) no_undefined_variable_use: Toggle,
+    #[serde(default = "default_on")]
+    pub(in crate::config) no_compound_value_in_definition: Toggle,
+    #[serde(default = "default_on")]
+    pub(in crate::config) no_type_mismatch: Toggle,
+    #[serde(default)]
+    pub(in crate::config) enforce_variable_use: RawEnforceVariableUse,
+}
+
+impl Default for RawRules {
+    fn default() -> Self {
+        Self {
+            no_undefined_variable_use: Toggle::On,
+            enforce_variable_use: RawEnforceVariableUse::Off,
+            no_compound_value_in_definition: Toggle::On,
+            no_type_mismatch: Toggle::On,
+        }
+    }
+}
+
+#[derive(Default, Debug, Deserialize)]
+#[serde(untagged)]
+pub(in crate::config) enum RawEnforceVariableUse {
+    #[serde(rename = "off")]
+    #[default]
+    Off,
+    Config(RawEnforceVariableUseConfig),
+}
+
+impl RawEnforceVariableUse {
+    pub(in crate::config) fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
+        match self {
+            Self::Off => None,
+            Self::Config(config) => Some(config),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(in crate::config) struct RawEnforceVariableUseConfig {
+    #[serde(default)]
+    pub(in crate::config) types: Vec<String>,
+    #[serde(default = "default_allowed_functions")]
+    pub(in crate::config) allowed_functions: Vec<String>,
+    #[serde(default = "default_allowed_values")]
+    pub(in crate::config) allowed_values: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(in crate::config) enum Toggle {
+    On,
+    Off,
+}
+
+impl Toggle {
+    pub(in crate::config) fn is_on(&self) -> bool {
+        matches!(self, Toggle::On)
+    }
+}
+
+fn default_root_dir() -> String {
+    ".".to_string()
+}
+
+fn default_lookup_files() -> Vec<String> {
+    vec!["**/*.css".to_string()]
+}
+
+fn default_on() -> Toggle {
+    Toggle::On
+}
+
+fn default_allowed_functions() -> Vec<String> {
+    ["calc", "min", "max", "clamp", "env"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn default_allowed_values() -> Vec<String> {
+    [
+        "inherit",
+        "initial",
+        "unset",
+        "revert",
+        "revert-layer",
+        "currentColor",
+        "transparent",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
 }
