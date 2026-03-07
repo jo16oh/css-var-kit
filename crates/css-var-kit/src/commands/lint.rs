@@ -5,8 +5,6 @@ use std::process;
 use crate::config::Config;
 use crate::parser;
 use crate::rules::Diagnostic;
-use crate::rules::Rule;
-use crate::rules::undefined_variables::NoUndefinedVariableUse;
 use crate::searcher::SearcherBuilder;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
