@@ -1,7 +1,7 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::parser::css::Property;
-use crate::rules::{Diagnostic, Rule, Severity};
+use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::{VariableDefinitionMap, VariableDefinitions};
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{SearchResult, SearcherBuilder};
@@ -33,6 +33,9 @@ fn check_undefined<'src>(
     let mut diagnostics = Vec::new();
 
     for prop in usages.iter() {
+        if is_ignored(&prop.ignore_comments, "no-undefined-variable-use") {
+            continue;
+        }
         if let Some(token_list) = &prop.value.token_list {
             collect_undefined(token_list, definitions, prop, &mut diagnostics);
         }
@@ -151,4 +154,21 @@ mod tests {
     fn no_definitions_no_usages() {
         assert_messages(".a { color: red; }", &[]);
     }
+
+    #[test]
+    fn cvk_ignore_suppresses_warning() {
+        assert_messages(
+            ".a {\n    /* cvk-ignore */\n    color: var(--undefined);\n}",
+            &[],
+        );
+    }
+
+    #[test]
+    fn cvk_ignore_only_suppresses_next_property() {
+        assert_messages(
+            ".a {\n    /* cvk-ignore */\n    color: var(--a);\n    margin: var(--b);\n}",
+            &["undefined variable `--b`"],
+        );
+    }
+
 }

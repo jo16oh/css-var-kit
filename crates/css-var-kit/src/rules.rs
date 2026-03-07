@@ -13,6 +13,18 @@ pub trait Rule {
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>>;
 }
 
+pub fn is_ignored(ignore_comments: &[&str], rule_name: &str) -> bool {
+    ignore_comments.iter().any(|&comment| {
+        if comment == "cvk-ignore" {
+            return true;
+        }
+        if let Some(rest) = comment.strip_prefix("cvk-ignore:") {
+            return rest.trim() == rule_name;
+        }
+        false
+    })
+}
+
 pub struct Diagnostic<'src> {
     pub file_path: &'src Path,
     pub source: &'src str,
@@ -120,5 +132,33 @@ mod tests {
         let d = make_diagnostic(".🎨 { --c: red; }", 0, 7);
         // ".🎨 { " = 1 + 4 + 1 + 1 = 7 bytes, 1 + 1 + 1 + 1 = 4 chars
         assert_eq!(d.byte_column_to_char_column(), 4);
+    }
+
+    #[test]
+    fn is_ignored_bare_cvk_ignore() {
+        assert!(is_ignored(&["cvk-ignore"], "any-rule"));
+    }
+
+    #[test]
+    fn is_ignored_matching_rule_name() {
+        assert!(is_ignored(&["cvk-ignore: my-rule"], "my-rule"));
+    }
+
+    #[test]
+    fn is_ignored_non_matching_rule_name() {
+        assert!(!is_ignored(&["cvk-ignore: other-rule"], "my-rule"));
+    }
+
+    #[test]
+    fn is_ignored_empty() {
+        assert!(!is_ignored(&[], "my-rule"));
+    }
+
+    #[test]
+    fn is_ignored_multiple_comments() {
+        assert!(is_ignored(
+            &["cvk-ignore: rule-a", "cvk-ignore: rule-b"],
+            "rule-b"
+        ));
     }
 }

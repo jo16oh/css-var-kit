@@ -27,6 +27,7 @@ pub struct Property<'a> {
     pub source: &'a str,
     pub name: PropertyIdent<'a>,
     pub value: PropertyValue<'a>,
+    pub ignore_comments: Vec<&'a str>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -116,6 +117,21 @@ impl<'a> Scanner<'a> {
             }
             self.advance(1);
         }
+    }
+
+    fn scan_comment(&mut self, css: &'a str) -> &'a str {
+        self.advance(2); // skip /*
+        let content_start = self.pos;
+        while !self.is_eof() {
+            if self.bytes[self.pos] == b'*' && self.peek_at(1) == Some(b'/') {
+                let content_end = self.pos;
+                self.advance(2);
+                return css[content_start..content_end].trim();
+            }
+            self.advance(1);
+        }
+        // Unterminated comment
+        css[content_start..self.pos].trim()
     }
 
     fn skip_at_rule(&mut self) {
@@ -250,6 +266,8 @@ pub fn parse_style_attr<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a
 fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -> ParseResult<'a> {
     let mut s = Scanner::new(css);
     let mut properties = Vec::new();
+    let mut pending_ignores: Vec<&'a str> = Vec::new();
+    let mut last_comment_end_line: u32 = 0;
 
     let mut brace_depth = initial_brace_depth;
 
@@ -259,19 +277,33 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
             b'"' | b'\'' => {
                 s.skip_string_literal();
             }
-            // Skip comments
+            // Scan comments for cvk-ignore directives
             b'/' if s.peek_at(1) == Some(b'*') => {
-                s.skip_comment();
+                let comment_start_line = s.line;
+                // Blank line between previous comment and this one breaks the chain
+                if !pending_ignores.is_empty()
+                    && comment_start_line > last_comment_end_line + 1
+                {
+                    pending_ignores.clear();
+                }
+                let content = s.scan_comment(css);
+                last_comment_end_line = s.line;
+                if content.starts_with("cvk-ignore") {
+                    pending_ignores.push(content);
+                }
             }
             // Skip @-rules at top level (e.g. @property, @import, @charset)
             b'@' if brace_depth == initial_brace_depth => {
+                pending_ignores.clear();
                 s.skip_at_rule();
             }
             b'{' => {
+                pending_ignores.clear();
                 brace_depth += 1;
                 s.advance(1);
             }
             b'}' => {
+                pending_ignores.clear();
                 brace_depth -= 1;
                 s.advance(1);
             }
@@ -280,6 +312,13 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                 let name_start = s.pos;
                 let name_line = s.line;
                 let name_col = s.col;
+
+                // Blank line between last comment and property breaks the chain
+                if !pending_ignores.is_empty()
+                    && name_line > last_comment_end_line + 1
+                {
+                    pending_ignores.clear();
+                }
 
                 // Read the identifier
                 while !s.is_eof() && is_ident_char(s.bytes[s.pos]) {
@@ -310,6 +349,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                     )
                     .ok();
 
+                    let ignore_comments = std::mem::take(&mut pending_ignores);
                     properties.push(Property {
                         file_path,
                         source: css,
@@ -326,6 +366,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                             line: value_line,
                             column: value_col,
                         },
+                        ignore_comments,
                     });
                 }
                 // If no ':', it's not a property (e.g. a selector), just continue
@@ -793,5 +834,110 @@ mod tests {
         let mut s = Scanner::new("/* {");
         s.skip_comment();
         assert!(s.is_eof(), "skip_comment should consume all bytes of an unterminated comment, but pos={} len={}", s.pos, s.bytes.len());
+    }
+
+    // cvk-ignore tests
+
+    #[test]
+    fn cvk_ignore_sets_ignore_comments() {
+        let css = ".a {\n    /* cvk-ignore */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
+    }
+
+    #[test]
+    fn no_cvk_ignore_leaves_empty() {
+        let css = ".a {\n    /* just a comment */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_with_rule_name() {
+        let css = ".a {\n    /* cvk-ignore: no-undefined-variable-use */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            vec!["cvk-ignore: no-undefined-variable-use"]
+        );
+    }
+
+    #[test]
+    fn cvk_ignore_persists_through_other_comments() {
+        let css = ".a {\n    /* cvk-ignore */\n    /* stylelint-disable */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
+    }
+
+    #[test]
+    fn multiple_cvk_ignore_comments() {
+        let css = ".a {\n    /* cvk-ignore */\n    /* cvk-ignore: rule-a */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            vec!["cvk-ignore", "cvk-ignore: rule-a"]
+        );
+    }
+
+    #[test]
+    fn cvk_ignore_resets_after_brace() {
+        let css = "/* cvk-ignore */\n.a {\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_resets_after_closing_brace() {
+        let css = ".a { /* cvk-ignore */ } .b { color: var(--c); }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_only_applies_to_next_property() {
+        let css = ".a {\n    /* cvk-ignore */\n    color: var(--c);\n    font-size: var(--s);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
+        assert!(result.properties[1].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_resets_after_at_rule() {
+        let css = "/* cvk-ignore */\n@import url(\"reset.css\");\n.a { color: var(--c); }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_resets_after_blank_line() {
+        let css = ".a {\n    /* cvk-ignore */\n\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_blank_line_between_comments() {
+        let css = ".a {\n    /* cvk-ignore */\n\n    /* other comment */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn cvk_ignore_no_blank_line_applies() {
+        let css = ".a {\n    /* cvk-ignore */\n    color: var(--c);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
     }
 }
