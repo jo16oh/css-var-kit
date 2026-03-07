@@ -1,6 +1,17 @@
 use std::path::Path;
 
+use crate::searcher::{SearchResult, SearcherBuilder};
+
 pub mod undefined_variables;
+
+pub trait Rule {
+    fn register_conditions<'src>(
+        &self,
+        searcher: SearcherBuilder<'src>,
+    ) -> SearcherBuilder<'src>;
+
+    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>>;
+}
 
 pub struct Diagnostic<'src> {
     pub file_path: &'src Path,

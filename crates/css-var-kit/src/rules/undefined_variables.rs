@@ -1,14 +1,34 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::parser::css::Property;
-use crate::rules::{Diagnostic, Severity};
-use crate::searcher::SearchResultFor;
-use crate::searcher::conditions::variable_definitions::VariableDefinitionMap;
+use crate::rules::{Diagnostic, Rule, Severity};
+use crate::searcher::conditions::variable_definitions::{VariableDefinitionMap, VariableDefinitions};
 use crate::searcher::conditions::variable_usages::VariableUsages;
+use crate::searcher::{SearchResult, SearcherBuilder};
 
-pub fn check<'src>(
+pub struct NoUndefinedVariableUse;
+
+impl Rule for NoUndefinedVariableUse {
+    fn register_conditions<'src>(
+        &self,
+        searcher: SearcherBuilder<'src>,
+    ) -> SearcherBuilder<'src> {
+        searcher
+            .add_condition(VariableDefinitions)
+            .add_condition(VariableUsages)
+    }
+
+    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
+        let defs = search_result.get_result_for(VariableDefinitions);
+        let def_map = VariableDefinitionMap::from(&defs);
+        let usages = search_result.get_result_for(VariableUsages);
+        check_undefined(&def_map, &usages)
+    }
+}
+
+fn check_undefined<'src>(
     definitions: &VariableDefinitionMap<'src>,
-    usages: &SearchResultFor<'src, '_, VariableUsages>,
+    usages: &[&'src Property<'src>],
 ) -> Vec<Diagnostic<'src>> {
     let mut diagnostics = Vec::new();
 
@@ -68,24 +88,17 @@ fn collect_undefined<'src>(
 mod tests {
     use super::*;
     use crate::parser;
-    use crate::searcher::SearcherBuilder;
-    use crate::searcher::conditions::variable_definitions::VariableDefinitions;
-    use crate::searcher::conditions::variable_usages::VariableUsages;
     use std::path::Path;
 
     fn assert_messages(css: &str, expected: &[&str]) {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
-        let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
-            .add_condition(VariableUsages)
+        let rule = NoUndefinedVariableUse;
+        let searcher = rule
+            .register_conditions(SearcherBuilder::new(&parse_results))
             .build();
         let search_result = searcher.search();
 
-        let defs_result = search_result.get_result_for(VariableDefinitions);
-        let def_map = VariableDefinitionMap::from(&defs_result);
-        let usages_result = search_result.get_result_for(VariableUsages);
-
-        let diagnostics = check(&def_map, &usages_result);
+        let diagnostics = rule.check(&search_result);
         let messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();
         assert_eq!(messages, expected);
     }

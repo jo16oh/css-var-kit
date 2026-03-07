@@ -5,12 +5,9 @@ use std::process;
 use crate::config::Config;
 use crate::parser;
 use crate::rules::Diagnostic;
-use crate::rules::undefined_variables;
+use crate::rules::Rule;
+use crate::rules::undefined_variables::NoUndefinedVariableUse;
 use crate::searcher::SearcherBuilder;
-use crate::searcher::conditions::variable_definitions::{
-    VariableDefinitionMap, VariableDefinitions,
-};
-use crate::searcher::conditions::variable_usages::VariableUsages;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
 
@@ -38,24 +35,22 @@ pub fn run(config: &Config, _args: &[String]) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let mut searcher = SearcherBuilder::new(&parse_results);
+    let mut rules: Vec<Box<dyn Rule>> = Vec::new();
 
     if config.rules.no_undefined_variable_use {
-        searcher = searcher
-            .add_condition(VariableDefinitions)
-            .add_condition(VariableUsages);
+        rules.push(Box::new(NoUndefinedVariableUse));
+    }
+
+    let mut searcher = SearcherBuilder::new(&parse_results);
+    for rule in &rules {
+        searcher = rule.register_conditions(searcher);
     }
 
     let search_result = searcher.build().search();
 
-    let mut diagnostics: Vec<Diagnostic> = vec![];
-
-    if config.rules.no_undefined_variable_use {
-        let defs = search_result.get_result_for(VariableDefinitions);
-        let def_map = VariableDefinitionMap::from(&defs);
-        let usages = search_result.get_result_for(VariableUsages);
-        let results = undefined_variables::check(&def_map, &usages);
-        diagnostics.extend(results);
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
+    for rule in &rules {
+        diagnostics.extend(rule.check(&search_result));
     }
 
     if diagnostics.is_empty() {
