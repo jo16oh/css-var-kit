@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
+use crate::config::Config;
 use crate::parser;
 use crate::rules::undefined_variables;
 use crate::rules::{Diagnostic, Severity};
@@ -13,8 +14,8 @@ use crate::searcher::conditions::variable_usages::VariableUsages;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
 
-pub fn run(dir: &Path, _args: &[String]) {
-    let css_files = collect_css_files(dir);
+pub fn run(config: &Config, _args: &[String]) {
+    let css_files = collect_css_files(config.root_dir.as_path());
 
     if css_files.is_empty() {
         return;
@@ -24,7 +25,10 @@ pub fn run(dir: &Path, _args: &[String]) {
         .into_iter()
         .filter_map(|path| {
             let content = fs::read_to_string(&path).ok()?;
-            let rel_path = path.strip_prefix(dir).unwrap_or(&path).to_path_buf();
+            let rel_path = path
+                .strip_prefix(config.root_dir.as_path())
+                .unwrap_or(&path)
+                .to_path_buf();
             Some((rel_path, content))
         })
         .collect();

@@ -14,7 +14,7 @@ fn main() {
 
     match args.get(1).map(|s| s.as_str()) {
         Some("lint") => {
-            commands::lint::run(&cfg.root_dir, &args[2..]);
+            commands::lint::run(&cfg, &args[2..]);
         }
         _ => {
             print_help();
