@@ -1,4 +1,0 @@
-Usage: cvk <command>
-
-Commands:
-  lint    Lint CSS files for undefined variables

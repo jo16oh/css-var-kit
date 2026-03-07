@@ -33,7 +33,7 @@ impl Rules {
 }
 
 impl EnforceVariableUse {
-    fn from_raw(raw: RawEnforceVariableUseConfig) -> Self {
+    pub(in crate::config) fn from_raw(raw: RawEnforceVariableUseConfig) -> Self {
         Self {
             types: raw.types,
             allowed_functions: raw.allowed_functions,

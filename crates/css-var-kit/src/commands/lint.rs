@@ -11,7 +11,7 @@ use crate::searcher::SearcherBuilder;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
 
-pub fn run(config: &Config, _args: &[String]) {
+pub fn run(config: &Config) {
     let css_files = collect_css_files(config.root_dir.as_path());
 
     if css_files.is_empty() {

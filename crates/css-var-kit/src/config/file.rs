@@ -41,6 +41,18 @@ impl RawConfig {
 
         Ok(Self::default())
     }
+
+    pub(in crate::config) fn load_from(path: &Path) -> Result<Self, ConfigError> {
+        let raw = fs::read_to_string(path).map_err(|e| ConfigError::ReadFile {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+        let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
+        serde_json::from_reader(stripped).map_err(|e| ConfigError::Parse {
+            path: path.to_path_buf(),
+            source: e,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
