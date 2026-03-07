@@ -1,59 +1,78 @@
-use std::fs;
+mod file;
+
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use globset::{Glob, GlobMatcher};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("failed to parse {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
+    #[error("invalid lookupFiles pattern: {source}")]
+    InvalidPattern { source: globset::Error },
+}
 
 pub struct Config {
     pub root_dir: PathBuf,
+    pub lookup_files: LookupFilesMatcher,
 }
 
-#[derive(Debug, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-struct RawConfig {
-    #[serde(default)]
-    root_dir: Option<String>,
+pub struct LookupFilesMatcher {
+    patterns: Vec<LookupPattern>,
 }
 
-impl RawConfig {
-    fn load(project_root: &Path) -> Self {
-        let candidates = ["cvk.json", "cvk.jsonc"];
+struct LookupPattern {
+    negated: bool,
+    matcher: GlobMatcher,
+}
 
-        for name in candidates {
-            let path = project_root.join(name);
-            if let Ok(raw) = fs::read_to_string(&path) {
-                let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-                match serde_json::from_reader(stripped) {
-                    Ok(config) => return config,
-                    Err(e) => {
-                        eprintln!("warning: failed to parse {}: {e}", path.display());
-                    }
-                }
+impl LookupFilesMatcher {
+    fn compile(raw_patterns: &[String]) -> Result<Self, globset::Error> {
+        raw_patterns
+            .iter()
+            .map(|raw| {
+                let (negated, pat) = match raw.strip_prefix('!') {
+                    Some(rest) => (true, rest),
+                    None => (false, raw.as_str()),
+                };
+                Ok(LookupPattern {
+                    negated,
+                    matcher: Glob::new(pat)?.compile_matcher(),
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|patterns| Self { patterns })
+    }
+
+    pub fn matches(&self, path: &Path) -> bool {
+        let mut matched = false;
+        for pattern in &self.patterns {
+            if pattern.matcher.is_match(path) {
+                matched = !pattern.negated;
             }
         }
-
-        Self::default()
-    }
-
-    fn resolve(self, project_root: PathBuf) -> Config {
-        let root_dir = match &self.root_dir {
-            Some(dir) => {
-                let p = Path::new(dir);
-                if p.is_absolute() {
-                    p.to_path_buf()
-                } else {
-                    project_root.join(p)
-                }
-            }
-            None => project_root,
-        };
-
-        Config { root_dir }
+        matched
     }
 }
 
-pub fn load(cwd: &Path) -> Config {
-    let project_root = find_project_root(cwd);
-    RawConfig::load(&project_root).resolve(project_root)
+impl Config {
+    pub fn load(cwd: &Path) -> Result<Self, ConfigError> {
+        let project_root = find_project_root(cwd);
+        let raw = file::RawConfig::load(&project_root)?;
+
+        let root_dir = project_root.join(&raw.root_dir);
+        let lookup_files = LookupFilesMatcher::compile(&raw.lookup_files)
+            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+
+        Ok(Self {
+            root_dir,
+            lookup_files,
+        })
+    }
 }
 
 fn find_project_root(cwd: &Path) -> PathBuf {
@@ -74,4 +93,3 @@ fn find_project_root(cwd: &Path) -> PathBuf {
 
     cwd.to_path_buf()
 }
-

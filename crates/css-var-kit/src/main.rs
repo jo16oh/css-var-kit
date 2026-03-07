@@ -2,12 +2,15 @@ use std::env;
 use std::process;
 
 use css_var_kit::commands;
-use css_var_kit::config;
+use css_var_kit::config::Config;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let cwd = env::current_dir().expect("failed to get current directory");
-    let cfg = config::load(&cwd);
+    let cfg = Config::load(&cwd).unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        process::exit(1);
+    });
 
     match args.get(1).map(|s| s.as_str()) {
         Some("lint") => {
