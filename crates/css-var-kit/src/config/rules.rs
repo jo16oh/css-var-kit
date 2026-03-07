@@ -1,4 +1,4 @@
-use crate::rules::{Rule, undefined_variables::NoUndefinedVariableUse};
+use crate::rules::{Rule, no_undefined_variable_use::NoUndefinedVariableUse};
 
 use super::file::{RawEnforceVariableUseConfig, RawRules};
 

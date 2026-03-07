@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::searcher::{SearchResult, SearcherBuilder};
 
-pub mod undefined_variables;
+pub mod no_undefined_variable_use;
 
 pub trait Rule {
     fn register_conditions<'src>(
