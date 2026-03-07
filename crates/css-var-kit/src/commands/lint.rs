@@ -35,11 +35,7 @@ pub fn run(config: &Config) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let mut rules: Vec<Box<dyn Rule>> = Vec::new();
-
-    if config.rules.no_undefined_variable_use {
-        rules.push(Box::new(NoUndefinedVariableUse));
-    }
+    let rules = config.rules.compile();
 
     let mut searcher = SearcherBuilder::new(&parse_results);
     for rule in &rules {

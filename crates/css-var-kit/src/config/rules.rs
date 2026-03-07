@@ -1,3 +1,5 @@
+use crate::rules::{Rule, undefined_variables::NoUndefinedVariableUse};
+
 use super::file::{RawEnforceVariableUseConfig, RawRules};
 
 #[derive(Debug, Clone)]
@@ -29,6 +31,18 @@ impl Rules {
             no_compound_value_in_definition: raw.no_compound_value_in_definition.is_on(),
             no_type_mismatch: raw.no_type_mismatch.is_on(),
         }
+    }
+
+    pub fn compile(&self) -> Vec<Box<dyn Rule>> {
+        let mut rules: Vec<Box<dyn Rule>> = vec![];
+
+        if self.no_undefined_variable_use {
+            rules.push(Box::new(NoUndefinedVariableUse));
+        }
+
+        // more rules...
+
+        rules
     }
 }
 
