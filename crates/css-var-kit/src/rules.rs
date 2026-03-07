@@ -14,3 +14,20 @@ pub enum Severity {
     Error,
     Warning,
 }
+
+impl<'src> Diagnostic<'src> {
+    pub fn print(&self) {
+        let severity = match self.severity {
+            Severity::Error => "error",
+            Severity::Warning => "warning",
+        };
+        eprintln!(
+            "{}:{}:{}: {}: {}",
+            self.file_path.display(),
+            self.line + 1,
+            self.column + 1,
+            severity,
+            self.message,
+        );
+    }
+}

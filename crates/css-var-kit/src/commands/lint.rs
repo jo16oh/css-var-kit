@@ -4,8 +4,8 @@ use std::process;
 
 use crate::config::Config;
 use crate::parser;
+use crate::rules::Diagnostic;
 use crate::rules::undefined_variables;
-use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::{
     VariableDefinitionMap, VariableDefinitions,
@@ -63,25 +63,10 @@ pub fn run(config: &Config, _args: &[String]) {
     }
 
     for d in &diagnostics {
-        print_diagnostic(d);
+        d.print();
     }
 
     process::exit(1);
-}
-
-fn print_diagnostic(d: &Diagnostic) {
-    let severity = match d.severity {
-        Severity::Error => "error",
-        Severity::Warning => "warning",
-    };
-    eprintln!(
-        "{}:{}:{}: {}: {}",
-        d.file_path.display(),
-        d.line + 1,
-        d.column + 1,
-        severity,
-        d.message,
-    );
 }
 
 fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
