@@ -163,6 +163,22 @@ mod tests {
     }
 
     #[test]
+    fn valid_compound_value_in_shorthand() {
+        assert_messages(
+            ":root { --my-border: solid 1px black; } .a { border: var(--my-border); }",
+            &[],
+        );
+    }
+
+    #[test]
+    fn mismatch_compound_value_in_wrong_property() {
+        assert_messages(
+            ":root { --my-border: solid 1px black; } .a { color: var(--my-border); }",
+            &["type mismatch: resolved value of `var(--my-border)` is not valid for property `color`"],
+        );
+    }
+
+    #[test]
     fn multiple_usages_mixed() {
         assert_messages(
             ":root { --color: red; --size: 16px; } .a { color: var(--color); width: var(--color); }",
