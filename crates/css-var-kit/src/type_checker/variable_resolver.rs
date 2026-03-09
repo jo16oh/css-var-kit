@@ -36,7 +36,7 @@ pub enum ResolveResult {
 /// resolve_vars("var(--missing, blue)", |_| None)
 /// // => Resolved("blue")
 /// ```
-pub fn resolve_vars(value: &str, lookup: impl Fn(&str) -> Option<&str>) -> ResolveResult {
+pub fn resolve_vars<'src>(value: &'src str, lookup: impl Fn(&str) -> Option<&'src str>) -> ResolveResult {
     match resolve_inner(value, &lookup) {
         Some(result) => ResolveResult::Resolved(result),
         None => ResolveResult::Unresolved,
@@ -44,7 +44,7 @@ pub fn resolve_vars(value: &str, lookup: impl Fn(&str) -> Option<&str>) -> Resol
 }
 
 /// Inner recursive resolver. Returns `None` if any var() could not be resolved.
-fn resolve_inner(value: &str, lookup: &dyn Fn(&str) -> Option<&str>) -> Option<String> {
+fn resolve_inner<'src>(value: &'src str, lookup: &impl Fn(&str) -> Option<&'src str>) -> Option<String> {
     let Some(var_start) = value.find("var(") else {
         return Some(value.to_string());
     };
@@ -131,7 +131,7 @@ fn skip_string(bytes: &[u8], start: usize) -> usize {
 mod tests {
     use super::*;
 
-    fn lookup(name: &str) -> Option<&str> {
+    fn lookup(name: &str) -> Option<&'static str> {
         match name {
             "--color" => Some("red"),
             "--size" => Some("16px"),

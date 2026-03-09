@@ -23,10 +23,10 @@ pub enum TypeCheckResult {
 ///
 /// Returns `Mismatch` if lightningcss considers the resolved value unparseable
 /// for the given property (i.e. `Property::Unparsed`).
-pub fn check_property_type(
+pub fn check_property_type<'src>(
     property_name: &str,
-    value: &str,
-    lookup: impl Fn(&str) -> Option<&str>,
+    value: &'src str,
+    lookup: impl Fn(&str) -> Option<&'src str>,
 ) -> TypeCheckResult {
     if property_name.starts_with("--") {
         return TypeCheckResult::Valid;
@@ -50,7 +50,7 @@ pub fn check_property_type(
 mod tests {
     use super::*;
 
-    fn lookup(name: &str) -> Option<&str> {
+    fn lookup(name: &str) -> Option<&'static str> {
         match name {
             "--color" => Some("red"),
             "--size" => Some("16px"),

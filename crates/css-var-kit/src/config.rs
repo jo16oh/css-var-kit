@@ -133,8 +133,9 @@ impl RawRules {
                     self.no_compound_value_in_definition =
                         Self::parse_toggle(value).map_err(&err)?;
                 }
-                "no-type-mismatch" => {
-                    self.no_type_mismatch = Self::parse_toggle(value).map_err(&err)?;
+                "no-variable-type-mismatch" => {
+                    self.no_variable_type_mismatch =
+                        Self::parse_toggle(value).map_err(&err)?;
                 }
                 "enforce-variable-use" => {
                     self.enforce_variable_use = Self::parse_enforce(value).map_err(&err)?;

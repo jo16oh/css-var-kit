@@ -1,4 +1,8 @@
-use crate::rules::{Rule, no_undefined_variable_use::NoUndefinedVariableUse};
+use crate::rules::{
+    Rule,
+    no_undefined_variable_use::NoUndefinedVariableUse,
+    no_variable_type_mismatch::NoVariableTypeMismatch,
+};
 
 use super::file::{RawEnforceVariableUseConfig, RawRules};
 
@@ -7,7 +11,7 @@ pub struct Rules {
     pub no_undefined_variable_use: bool,
     pub enforce_variable_use: Option<EnforceVariableUse>,
     pub no_compound_value_in_definition: bool,
-    pub no_type_mismatch: bool,
+    pub no_variable_type_mismatch: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +33,7 @@ impl Rules {
             no_undefined_variable_use: raw.no_undefined_variable_use.is_on(),
             enforce_variable_use,
             no_compound_value_in_definition: raw.no_compound_value_in_definition.is_on(),
-            no_type_mismatch: raw.no_type_mismatch.is_on(),
+            no_variable_type_mismatch: raw.no_variable_type_mismatch.is_on(),
         }
     }
 
@@ -40,7 +44,9 @@ impl Rules {
             rules.push(Box::new(NoUndefinedVariableUse));
         }
 
-        // more rules...
+        if self.no_variable_type_mismatch {
+            rules.push(Box::new(NoVariableTypeMismatch));
+        }
 
         rules
     }

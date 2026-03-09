@@ -35,6 +35,12 @@ impl<'src> VariableDefinitionMap<'src> {
         self.map.contains_key(name)
     }
 
+    pub fn lookup(&self, name: &str) -> Option<&'src str> {
+        self.map
+            .get(name)
+            .and_then(|props| props.last())
+            .map(|p| p.value.raw)
+    }
 }
 
 #[cfg(test)]

@@ -63,7 +63,7 @@ pub(in crate::config) struct RawRules {
     #[serde(default = "default_on")]
     pub(in crate::config) no_compound_value_in_definition: Toggle,
     #[serde(default = "default_on")]
-    pub(in crate::config) no_type_mismatch: Toggle,
+    pub(in crate::config) no_variable_type_mismatch: Toggle,
     #[serde(default)]
     pub(in crate::config) enforce_variable_use: RawEnforceVariableUse,
 }
@@ -74,7 +74,7 @@ impl Default for RawRules {
             no_undefined_variable_use: Toggle::On,
             enforce_variable_use: RawEnforceVariableUse::Off,
             no_compound_value_in_definition: Toggle::On,
-            no_type_mismatch: Toggle::On,
+            no_variable_type_mismatch: Toggle::On,
         }
     }
 }

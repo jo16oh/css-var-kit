@@ -94,7 +94,7 @@ fn multiple_rule_overrides() {
             "--rule",
             "no-compound-value-in-definition=off",
             "--rule",
-            "no-type-mismatch=off",
+            "no-variable-type-mismatch=off",
         ])
         .assert()
         .success();
