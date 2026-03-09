@@ -1,0 +1,6 @@
+:root {
+    --color: #3490dc;
+    --size: 16px;
+    --alias-color: var(--color);
+    --alias-size: var(--size);
+}
