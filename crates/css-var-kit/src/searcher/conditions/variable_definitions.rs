@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use crate::parser::css::Property;
-use crate::searcher::SearchCondition;
-use crate::searcher::SearchResultFor;
+use crate::searcher::{PropMapFor, SearchCondition};
 
 pub struct VariableDefinitions;
 
@@ -12,39 +9,13 @@ impl SearchCondition for VariableDefinitions {
     }
 }
 
-pub struct VariableDefinitionMap<'src> {
-    map: HashMap<&'src str, Vec<&'src Property<'src>>>,
-}
-
-impl<'src> From<&SearchResultFor<'src, '_, VariableDefinitions>> for VariableDefinitionMap<'src> {
-    fn from(result: &SearchResultFor<'src, '_, VariableDefinitions>) -> Self {
-        let mut map = HashMap::<&'src str, Vec<&'src Property<'src>>>::new();
-        for prop in result.iter() {
-            map.entry(prop.name.raw).or_default().push(prop);
-        }
-        Self { map }
-    }
-}
-
-impl<'src> VariableDefinitionMap<'src> {
-    pub fn get(&self, name: &str) -> Option<&[&'src Property<'src>]> {
-        self.map.get(name).map(|v| v.as_slice())
-    }
-
-    pub fn has(&self, name: &str) -> bool {
-        self.map.contains_key(name)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&str, &[&'src Property<'src>])> {
-        self.map.iter().map(|(k, v)| (*k, v.as_slice()))
-    }
-
-    pub fn lookup(&self, name: &str) -> Option<&'src str> {
-        self.map
-            .get(name)
-            .and_then(|props| props.last())
-            .map(|p| p.value.raw)
-    }
+pub fn lookup_variable<'src>(
+    map: &PropMapFor<'src, '_, VariableDefinitions>,
+    name: &str,
+) -> Option<&'src str> {
+    map.get(name)
+        .and_then(|props| props.last())
+        .map(|p| p.value.raw)
 }
 
 #[cfg(test)]
@@ -112,8 +83,7 @@ mod tests {
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
-        let result = search_result.get_result_for(VariableDefinitions);
-        let map = VariableDefinitionMap::from(&result);
+        let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let props = map.get("--color").unwrap();
         assert_eq!(props.len(), 1);
@@ -132,25 +102,23 @@ mod tests {
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
-        let result = search_result.get_result_for(VariableDefinitions);
-        let map = VariableDefinitionMap::from(&result);
+        let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         assert!(map.get("--missing").is_none());
     }
 
     #[test]
-    fn has_returns_correct_bool() {
+    fn contains_key_returns_correct_bool() {
         let css = ":root { --color: red; }";
         let parse_results = [test_parse(css)];
         let searcher = SearcherBuilder::new(&parse_results)
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
-        let result = search_result.get_result_for(VariableDefinitions);
-        let map = VariableDefinitionMap::from(&result);
+        let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        assert!(map.has("--color"));
-        assert!(!map.has("--missing"));
+        assert!(map.contains_key("--color"));
+        assert!(!map.contains_key("--missing"));
     }
 
     #[test]
@@ -161,12 +129,25 @@ mod tests {
             .add_condition(VariableDefinitions)
             .build();
         let search_result = searcher.search();
-        let result = search_result.get_result_for(VariableDefinitions);
-        let map = VariableDefinitionMap::from(&result);
+        let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let props = map.get("--color").unwrap();
         assert_eq!(props.len(), 2);
         assert_eq!(props[0].value.raw, "red");
         assert_eq!(props[1].value.raw, "blue");
+    }
+
+    #[test]
+    fn lookup_variable_returns_last_value() {
+        let css = ":root { --color: red; } .dark { --color: blue; }";
+        let parse_results = [test_parse(css)];
+        let searcher = SearcherBuilder::new(&parse_results)
+            .add_condition(VariableDefinitions)
+            .build();
+        let search_result = searcher.search();
+        let map = search_result.get_prop_map_for::<VariableDefinitions>();
+
+        assert_eq!(lookup_variable(&map, "--color"), Some("blue"));
+        assert_eq!(lookup_variable(&map, "--missing"), None);
     }
 }

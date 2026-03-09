@@ -1,4 +1,5 @@
 use std::any::{Any, TypeId};
+use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -44,42 +45,85 @@ pub struct Searcher<'src> {
 
 impl<'src> Searcher<'src> {
     pub fn search(&self) -> SearchResult<'src> {
-        let mut results = HashMap::<TypeId, Vec<&'src Property<'src>>>::new();
+        let mut results = HashMap::<TypeId, ConditionResult<'src>>::new();
 
         for type_id in self.conditions.keys() {
-            results.insert(*type_id, Vec::new());
+            results.insert(
+                *type_id,
+                ConditionResult {
+                    props: Vec::new(),
+                    prop_map: OnceCell::new(),
+                },
+            );
         }
 
         for parse_result in self.parse_results {
             for prop in parse_result.properties.iter() {
                 for (type_id, cond) in self.conditions.iter() {
                     if cond.matches(prop) {
-                        results.get_mut(type_id).unwrap().push(prop);
+                        results.get_mut(type_id).unwrap().props.push(prop);
                     }
                 }
             }
         }
 
-        SearchResult(results)
+        SearchResult { results }
     }
 }
 
-pub struct SearchResult<'src>(HashMap<TypeId, Vec<&'src Property<'src>>>);
+type PropMap<'src> = HashMap<&'src str, Vec<&'src Property<'src>>>;
+
+struct ConditionResult<'src> {
+    props: Vec<&'src Property<'src>>,
+    prop_map: OnceCell<PropMap<'src>>,
+}
+
+pub struct SearchResult<'src> {
+    results: HashMap<TypeId, ConditionResult<'src>>,
+}
 
 impl<'src> SearchResult<'src> {
     pub fn get_result_for<T: SearchCondition>(&self, cond: T) -> SearchResultFor<'src, '_, T> {
-        let props = self
-            .0
+        let entry = self
+            .results
             .get(&cond.type_id())
             .expect("condition not registered in SearcherBuilder");
-        SearchResultFor(props, PhantomData::<T>)
+        SearchResultFor(&entry.props, PhantomData::<T>)
+    }
+
+    pub fn get_prop_map_for<T: SearchCondition>(&self) -> PropMapFor<'src, '_, T> {
+        let entry = self
+            .results
+            .get(&TypeId::of::<T>())
+            .expect("condition not registered in SearcherBuilder");
+        let map = entry.prop_map.get_or_init(|| {
+            let mut map = PropMap::new();
+            for prop in &entry.props {
+                map.entry(prop.name.raw).or_default().push(prop);
+            }
+            map
+        });
+        PropMapFor(map, PhantomData::<T>)
     }
 }
 
-pub struct SearchResultFor<'src, 'result, T: SearchCondition>(&'result [&'src Property<'src>], PhantomData<T>);
+pub struct SearchResultFor<'src, 'result, T: SearchCondition>(
+    &'result [&'src Property<'src>],
+    PhantomData<T>,
+);
 
 impl<'src, T: SearchCondition> Deref for SearchResultFor<'src, '_, T> {
     type Target = [&'src Property<'src>];
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+pub struct PropMapFor<'src, 'result, T: SearchCondition>(&'result PropMap<'src>, PhantomData<T>);
+
+impl<'src, T: SearchCondition> Deref for PropMapFor<'src, '_, T> {
+    type Target = PropMap<'src>;
 
     fn deref(&self) -> &Self::Target {
         self.0

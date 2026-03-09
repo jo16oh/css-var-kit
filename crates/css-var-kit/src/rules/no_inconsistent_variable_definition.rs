@@ -1,9 +1,7 @@
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::conditions::variable_definitions::{
-    VariableDefinitionMap, VariableDefinitions,
-};
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::conditions::variable_definitions::{VariableDefinitions, lookup_variable};
+use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 use crate::type_checker::value_classifier::classify_value;
 use crate::type_checker::variable_resolver::{ResolveResult, resolve_vars};
 use lightningcss::values::syntax::SyntaxComponentKind;
@@ -18,19 +16,18 @@ impl Rule for NoInconsistentVariableDefinition {
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
-        let defs = search_result.get_result_for(VariableDefinitions);
-        let def_map = VariableDefinitionMap::from(&defs);
+        let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         def_map
             .iter()
             .filter(|(_, props)| props.len() >= 2)
-            .flat_map(|(_, props)| check_variable_definitions(props, &def_map))
+            .flat_map(|(_, props)| check_variable_definitions(props.as_slice(), &def_map))
             .collect()
     }
 }
 
 fn check_variable_definitions<'src>(
     props: &[&'src Property<'src>],
-    def_map: &VariableDefinitionMap<'src>,
+    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
 ) -> Vec<Diagnostic<'src>> {
     let classified: Vec<(&Property, Vec<SyntaxComponentKind>, bool)> = props
         .iter()
@@ -86,8 +83,11 @@ fn check_variable_definitions<'src>(
         .collect()
 }
 
-fn resolve_value<'src>(value: &'src str, def_map: &VariableDefinitionMap<'src>) -> Option<String> {
-    match resolve_vars(value, |name| def_map.lookup(name)) {
+fn resolve_value<'src>(
+    value: &'src str,
+    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
+) -> Option<String> {
+    match resolve_vars(value, |name| lookup_variable(def_map, name)) {
         ResolveResult::Resolved(s) => Some(s),
         ResolveResult::Unresolved => None,
     }

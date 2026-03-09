@@ -2,32 +2,28 @@ use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::conditions::variable_definitions::{VariableDefinitionMap, VariableDefinitions};
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 
 pub struct NoUndefinedVariableUse;
 
 impl Rule for NoUndefinedVariableUse {
-    fn register_conditions<'src>(
-        &self,
-        searcher: SearcherBuilder<'src>,
-    ) -> SearcherBuilder<'src> {
+    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
         searcher
             .add_condition(VariableDefinitions)
             .add_condition(VariableUsages)
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
-        let defs = search_result.get_result_for(VariableDefinitions);
-        let def_map = VariableDefinitionMap::from(&defs);
+        let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let usages = search_result.get_result_for(VariableUsages);
         check_undefined(&def_map, &usages)
     }
 }
 
 fn check_undefined<'src>(
-    definitions: &VariableDefinitionMap<'src>,
+    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
     usages: &[&'src Property<'src>],
 ) -> Vec<Diagnostic<'src>> {
     let mut diagnostics = Vec::new();
@@ -37,7 +33,7 @@ fn check_undefined<'src>(
             continue;
         }
         if let Some(token_list) = &prop.value.token_list {
-            collect_undefined(token_list, definitions, prop, &mut diagnostics);
+            collect_undefined(token_list, def_map, prop, &mut diagnostics);
         }
     }
 
@@ -46,7 +42,7 @@ fn check_undefined<'src>(
 
 fn collect_undefined<'src>(
     token_list: &TokenList<'_>,
-    definitions: &VariableDefinitionMap<'_>,
+    definitions: &PropMapFor<'_, '_, VariableDefinitions>,
     prop: &'src Property<'src>,
     diagnostics: &mut Vec<Diagnostic<'src>>,
 ) {
@@ -54,7 +50,7 @@ fn collect_undefined<'src>(
         match token {
             TokenOrValue::Var(var) => {
                 let name = &*var.name.ident.0;
-                if !definitions.has(name) {
+                if !definitions.contains_key(name) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
@@ -70,7 +66,7 @@ fn collect_undefined<'src>(
             }
             TokenOrValue::DashedIdent(ident) => {
                 let name = &*ident.0;
-                if !definitions.has(name) {
+                if !definitions.contains_key(name) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
@@ -170,5 +166,4 @@ mod tests {
             &["undefined variable `--b`"],
         );
     }
-
 }

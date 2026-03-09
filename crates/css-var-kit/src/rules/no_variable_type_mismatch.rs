@@ -1,10 +1,8 @@
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::conditions::variable_definitions::{
-    VariableDefinitionMap, VariableDefinitions,
-};
+use crate::searcher::conditions::variable_definitions::{VariableDefinitions, lookup_variable};
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckResult, check_property_type};
 
 pub struct NoVariableTypeMismatch;
@@ -17,15 +15,14 @@ impl Rule for NoVariableTypeMismatch {
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
-        let defs = search_result.get_result_for(VariableDefinitions);
-        let def_map = VariableDefinitionMap::from(&defs);
+        let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let usages = search_result.get_result_for(VariableUsages);
         check_type_mismatch(&def_map, &usages)
     }
 }
 
 fn check_type_mismatch<'src>(
-    definitions: &VariableDefinitionMap<'src>,
+    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
     usages: &[&'src Property<'src>],
 ) -> Vec<Diagnostic<'src>> {
     usages
@@ -34,7 +31,7 @@ fn check_type_mismatch<'src>(
         .filter(|prop| !prop.name.raw.starts_with("--"))
         .filter_map(|prop| {
             let result = check_property_type(prop.name.raw, prop.value.raw, |name| {
-                definitions.lookup(name)
+                lookup_variable(def_map, name)
             });
             match result {
                 TypeCheckResult::Mismatch => Some(Diagnostic {
@@ -174,7 +171,9 @@ mod tests {
     fn mismatch_compound_value_in_wrong_property() {
         assert_messages(
             ":root { --my-border: solid 1px black; } .a { color: var(--my-border); }",
-            &["type mismatch: resolved value of `var(--my-border)` is not valid for property `color`"],
+            &[
+                "type mismatch: resolved value of `var(--my-border)` is not valid for property `color`",
+            ],
         );
     }
 
