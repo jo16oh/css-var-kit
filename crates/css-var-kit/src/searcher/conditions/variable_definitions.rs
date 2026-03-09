@@ -1,5 +1,5 @@
 use crate::parser::css::Property;
-use crate::searcher::{PropMapFor, SearchCondition};
+use crate::searcher::SearchCondition;
 
 pub struct VariableDefinitions;
 
@@ -7,15 +7,6 @@ impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &Property) -> bool {
         prop.name.raw.starts_with("--")
     }
-}
-
-pub fn lookup_variable<'src>(
-    map: &PropMapFor<'src, '_, VariableDefinitions>,
-    name: &str,
-) -> Option<&'src str> {
-    map.get(name)
-        .and_then(|props| props.last())
-        .map(|p| p.value.raw)
 }
 
 #[cfg(test)]
@@ -137,17 +128,4 @@ mod tests {
         assert_eq!(props[1].value.raw, "blue");
     }
 
-    #[test]
-    fn lookup_variable_returns_last_value() {
-        let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
-            .build();
-        let search_result = searcher.search();
-        let map = search_result.get_prop_map_for::<VariableDefinitions>();
-
-        assert_eq!(lookup_variable(&map, "--color"), Some("blue"));
-        assert_eq!(lookup_variable(&map, "--missing"), None);
-    }
 }

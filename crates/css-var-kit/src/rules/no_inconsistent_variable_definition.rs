@@ -1,6 +1,6 @@
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::conditions::variable_definitions::{VariableDefinitions, lookup_variable};
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 use crate::type_checker::value_classifier::classify_value;
 use crate::type_checker::variable_resolver::{ResolveResult, resolve_vars};
@@ -87,7 +87,12 @@ fn resolve_value<'src>(
     value: &'src str,
     def_map: &PropMapFor<'src, '_, VariableDefinitions>,
 ) -> Option<String> {
-    match resolve_vars(value, |name| lookup_variable(def_map, name)) {
+    match resolve_vars(value, |name| {
+        def_map
+            .get(name)
+            .and_then(|props| props.last())
+            .map(|p| p.value.raw)
+    }) {
         ResolveResult::Resolved(s) => Some(s),
         ResolveResult::Unresolved => None,
     }

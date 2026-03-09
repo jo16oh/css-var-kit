@@ -1,6 +1,6 @@
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::conditions::variable_definitions::{VariableDefinitions, lookup_variable};
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckResult, check_property_type};
@@ -31,7 +31,10 @@ fn check_type_mismatch<'src>(
         .filter(|prop| !prop.name.raw.starts_with("--"))
         .filter_map(|prop| {
             let result = check_property_type(prop.name.raw, prop.value.raw, |name| {
-                lookup_variable(def_map, name)
+                def_map
+                    .get(name)
+                    .and_then(|props| props.last())
+                    .map(|p| p.value.raw)
             });
             match result {
                 TypeCheckResult::Mismatch => Some(Diagnostic {
