@@ -35,6 +35,10 @@ impl<'src> VariableDefinitionMap<'src> {
         self.map.contains_key(name)
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &[&'src Property<'src>])> {
+        self.map.iter().map(|(k, v)| (*k, v.as_slice()))
+    }
+
     pub fn lookup(&self, name: &str) -> Option<&'src str> {
         self.map
             .get(name)

@@ -1,5 +1,6 @@
 use crate::rules::{
     Rule,
+    no_inconsistent_variable_definition::NoInconsistentVariableDefinition,
     no_undefined_variable_use::NoUndefinedVariableUse,
     no_variable_type_mismatch::NoVariableTypeMismatch,
 };
@@ -12,6 +13,7 @@ pub struct Rules {
     pub enforce_variable_use: Option<EnforceVariableUse>,
     pub no_compound_value_in_definition: bool,
     pub no_variable_type_mismatch: bool,
+    pub no_inconsistent_variable_definition: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +36,7 @@ impl Rules {
             enforce_variable_use,
             no_compound_value_in_definition: raw.no_compound_value_in_definition.is_on(),
             no_variable_type_mismatch: raw.no_variable_type_mismatch.is_on(),
+            no_inconsistent_variable_definition: raw.no_inconsistent_variable_definition.is_on(),
         }
     }
 
@@ -46,6 +49,10 @@ impl Rules {
 
         if self.no_variable_type_mismatch {
             rules.push(Box::new(NoVariableTypeMismatch));
+        }
+
+        if self.no_inconsistent_variable_definition {
+            rules.push(Box::new(NoInconsistentVariableDefinition));
         }
 
         rules

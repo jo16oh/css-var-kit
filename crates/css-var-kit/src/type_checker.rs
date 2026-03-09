@@ -1,4 +1,5 @@
 pub mod property_types;
+pub mod value_classifier;
 pub mod variable_resolver;
 
 use lightningcss::properties::Property as CssProperty;

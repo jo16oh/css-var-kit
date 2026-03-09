@@ -137,6 +137,10 @@ impl RawRules {
                     self.no_variable_type_mismatch =
                         Self::parse_toggle(value).map_err(&err)?;
                 }
+                "no-inconsistent-variable-definition" => {
+                    self.no_inconsistent_variable_definition =
+                        Self::parse_toggle(value).map_err(&err)?;
+                }
                 "enforce-variable-use" => {
                     self.enforce_variable_use = Self::parse_enforce(value).map_err(&err)?;
                 }

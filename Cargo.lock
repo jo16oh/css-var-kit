@@ -199,6 +199,7 @@ version = "0.1.0"
 dependencies = [
  "assert_cmd",
  "clap",
+ "cssparser",
  "globset",
  "json-strip-comments",
  "lightningcss",
