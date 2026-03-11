@@ -4,6 +4,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use super::ConfigError;
+use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,49 +83,6 @@ impl Default for RawRules {
     }
 }
 
-#[derive(Default, Debug, Deserialize)]
-#[serde(untagged)]
-pub(super) enum RawEnforceVariableUse {
-    #[serde(rename = "off")]
-    #[default]
-    Off,
-    Config(RawEnforceVariableUseConfig),
-}
-
-impl RawEnforceVariableUse {
-    pub(super) fn default_on() -> Self {
-        Self::Config(RawEnforceVariableUseConfig::default())
-    }
-
-    pub(super) fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
-        match self {
-            Self::Off => None,
-            Self::Config(config) => Some(config),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RawEnforceVariableUseConfig {
-    #[serde(default)]
-    pub(crate) types: Vec<String>,
-    #[serde(default = "default_allowed_functions")]
-    pub(crate) allowed_functions: Vec<String>,
-    #[serde(default = "default_allowed_values")]
-    pub(crate) allowed_values: Vec<String>,
-}
-
-impl Default for RawEnforceVariableUseConfig {
-    fn default() -> Self {
-        Self {
-            types: Vec::new(),
-            allowed_functions: default_allowed_functions(),
-            allowed_values: default_allowed_values(),
-        }
-    }
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum Toggle {
@@ -148,26 +106,4 @@ fn default_lookup_files() -> Vec<String> {
 
 fn default_on() -> Toggle {
     Toggle::On
-}
-
-fn default_allowed_functions() -> Vec<String> {
-    ["calc", "min", "max", "clamp", "env"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-}
-
-fn default_allowed_values() -> Vec<String> {
-    [
-        "inherit",
-        "initial",
-        "unset",
-        "revert",
-        "revert-layer",
-        "currentColor",
-        "transparent",
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect()
 }

@@ -3,13 +3,15 @@ use std::collections::HashSet;
 use lightningcss::properties::custom::{Token, TokenList, TokenOrValue};
 use lightningcss::values::syntax::SyntaxComponentKind;
 
-use crate::config::rules::EnforceVariableUseConfig;
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::type_checker::value_classifier::classify_value;
+use config::EnforceVariableUseConfig;
+
+pub mod config;
 
 const RULE_NAME: &str = "enforce-variable-use";
 
@@ -257,11 +259,12 @@ fn format_kind(kind: &SyntaxComponentKind) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
+    use super::config::{EnforceVariableUseConfig, RawEnforceVariableUseConfig};
     use super::*;
-    use crate::config::{file::RawEnforceVariableUseConfig, rules::EnforceVariableUseConfig};
     use crate::parser;
     use crate::searcher::SearcherBuilder;
-    use std::path::Path;
 
     fn make_config(types: &[&str]) -> EnforceVariableUseConfig {
         let raw = RawEnforceVariableUseConfig {

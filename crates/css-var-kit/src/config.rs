@@ -8,8 +8,11 @@ use thiserror::Error;
 
 use crate::{
     cli::LintArgs,
-    config::file::{RawEnforceVariableUse, RawRules, Toggle},
-    config::rules::Rules,
+    config::{
+        file::{RawRules, Toggle},
+        rules::Rules,
+    },
+    rules::enforce_variable_use::config::RawEnforceVariableUse,
 };
 
 #[derive(Debug, Error)]

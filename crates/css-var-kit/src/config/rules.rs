@@ -1,18 +1,15 @@
-use std::collections::HashSet;
-
-use lightningcss::values::syntax::SyntaxComponentKind;
-
 use crate::{
     config::ConfigError,
     rules::{
-        Rule, enforce_variable_use::EnforceVariableUse,
+        Rule,
+        enforce_variable_use::{EnforceVariableUse, config::EnforceVariableUseConfig},
         no_inconsistent_variable_definition::NoInconsistentVariableDefinition,
         no_undefined_variable_use::NoUndefinedVariableUse,
         no_variable_type_mismatch::NoVariableTypeMismatch,
     },
 };
 
-use super::file::{RawEnforceVariableUseConfig, RawRules};
+use super::file::RawRules;
 
 #[derive(Debug, Clone)]
 pub struct Rules {
@@ -21,13 +18,6 @@ pub struct Rules {
     pub no_compound_value_in_definition: bool,
     pub no_variable_type_mismatch: bool,
     pub no_inconsistent_variable_definition: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct EnforceVariableUseConfig {
-    pub types: Vec<SyntaxComponentKind>,
-    pub allowed_functions: HashSet<String>,
-    pub allowed_values: HashSet<String>,
 }
 
 impl Rules {
@@ -69,44 +59,4 @@ impl Rules {
 
         rules
     }
-}
-
-impl EnforceVariableUseConfig {
-    pub(crate) fn from_raw(raw: RawEnforceVariableUseConfig) -> Result<Self, ConfigError> {
-        Ok(Self {
-            types: raw
-                .types
-                .iter()
-                .map(|s| parse_type_name(s))
-                .collect::<Result<Vec<SyntaxComponentKind>, ConfigError>>()?,
-            allowed_functions: raw.allowed_functions.iter().cloned().collect(),
-            allowed_values: raw.allowed_values.iter().cloned().collect(),
-        })
-    }
-}
-
-fn parse_type_name(name: &str) -> Result<SyntaxComponentKind, ConfigError> {
-    let r = match name {
-        "color" => SyntaxComponentKind::Color,
-        "length" => SyntaxComponentKind::Length,
-        "number" => SyntaxComponentKind::Number,
-        "percentage" => SyntaxComponentKind::Percentage,
-        "length-percentage" => SyntaxComponentKind::LengthPercentage,
-        "integer" => SyntaxComponentKind::Integer,
-        "angle" => SyntaxComponentKind::Angle,
-        "time" => SyntaxComponentKind::Time,
-        "resolution" => SyntaxComponentKind::Resolution,
-        "image" => SyntaxComponentKind::Image,
-        "url" => SyntaxComponentKind::Url,
-        "transform-function" => SyntaxComponentKind::TransformFunction,
-        "transform-list" => SyntaxComponentKind::TransformList,
-        _ => {
-            return Err(ConfigError::InvalidRuleOption {
-                raw: name.to_string(),
-                reason: format!("unknown type '{name}'"),
-            });
-        }
-    };
-
-    Ok(r)
 }
