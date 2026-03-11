@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::searcher::{SearchResult, SearcherBuilder};
 
+pub mod enforce_variable_use;
 pub mod no_inconsistent_variable_definition;
 pub mod no_undefined_variable_use;
 pub mod no_variable_type_mismatch;

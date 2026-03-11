@@ -1,5 +1,5 @@
-mod file;
-mod rules;
+pub(crate) mod file;
+pub(crate) mod rules;
 
 use std::path::{Path, PathBuf};
 
@@ -9,8 +9,8 @@ use thiserror::Error;
 use crate::{
     cli::LintArgs,
     config::file::{RawEnforceVariableUse, RawRules, Toggle},
+    config::rules::Rules,
 };
-pub use rules::{EnforceVariableUse, Rules};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -104,7 +104,7 @@ impl Config {
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
-        let rules = Rules::from_raw(raw_rules);
+        let rules = Rules::from_raw(raw_rules)?;
 
         Ok(Self {
             root_dir,
@@ -134,8 +134,7 @@ impl RawRules {
                         Self::parse_toggle(value).map_err(&err)?;
                 }
                 "no-variable-type-mismatch" => {
-                    self.no_variable_type_mismatch =
-                        Self::parse_toggle(value).map_err(&err)?;
+                    self.no_variable_type_mismatch = Self::parse_toggle(value).map_err(&err)?;
                 }
                 "no-inconsistent-variable-definition" => {
                     self.no_inconsistent_variable_definition =

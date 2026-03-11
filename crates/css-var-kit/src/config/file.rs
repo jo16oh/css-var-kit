@@ -106,13 +106,13 @@ impl RawEnforceVariableUse {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(in crate::config) struct RawEnforceVariableUseConfig {
+pub(crate) struct RawEnforceVariableUseConfig {
     #[serde(default)]
-    pub(in crate::config) types: Vec<String>,
+    pub(crate) types: Vec<String>,
     #[serde(default = "default_allowed_functions")]
-    pub(in crate::config) allowed_functions: Vec<String>,
+    pub(crate) allowed_functions: Vec<String>,
     #[serde(default = "default_allowed_values")]
-    pub(in crate::config) allowed_values: Vec<String>,
+    pub(crate) allowed_values: Vec<String>,
 }
 
 impl Default for RawEnforceVariableUseConfig {
