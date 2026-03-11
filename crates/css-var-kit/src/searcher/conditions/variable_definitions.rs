@@ -127,5 +127,4 @@ mod tests {
         assert_eq!(props[0].value.raw, "red");
         assert_eq!(props[1].value.raw, "blue");
     }
-
 }

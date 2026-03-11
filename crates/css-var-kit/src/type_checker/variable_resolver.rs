@@ -36,7 +36,10 @@ pub enum ResolveResult {
 /// resolve_vars("var(--missing, blue)", |_| None)
 /// // => Resolved("blue")
 /// ```
-pub fn resolve_vars<'src>(value: &'src str, lookup: impl Fn(&str) -> Option<&'src str>) -> ResolveResult {
+pub fn resolve_vars<'src>(
+    value: &'src str,
+    lookup: impl Fn(&str) -> Option<&'src str>,
+) -> ResolveResult {
     match resolve_inner(value, &lookup) {
         Some(result) => ResolveResult::Resolved(result),
         None => ResolveResult::Unresolved,
@@ -44,7 +47,10 @@ pub fn resolve_vars<'src>(value: &'src str, lookup: impl Fn(&str) -> Option<&'sr
 }
 
 /// Inner recursive resolver. Returns `None` if any var() could not be resolved.
-fn resolve_inner<'src>(value: &'src str, lookup: &impl Fn(&str) -> Option<&'src str>) -> Option<String> {
+fn resolve_inner<'src>(
+    value: &'src str,
+    lookup: &impl Fn(&str) -> Option<&'src str>,
+) -> Option<String> {
     let Some(var_start) = value.find("var(") else {
         return Some(value.to_string());
     };
@@ -256,10 +262,7 @@ mod tests {
 
     #[test]
     fn empty_value() {
-        assert_eq!(
-            resolve_vars("", lookup),
-            ResolveResult::Resolved("".into()),
-        );
+        assert_eq!(resolve_vars("", lookup), ResolveResult::Resolved("".into()),);
     }
 
     #[test]
@@ -269,5 +272,4 @@ mod tests {
             ResolveResult::Resolved("')'".into()),
         );
     }
-
 }

@@ -1,5 +1,7 @@
 use cssparser::ParserInput;
-use lightningcss::values::syntax::{Multiplier, SyntaxComponent, SyntaxComponentKind, SyntaxString};
+use lightningcss::values::syntax::{
+    Multiplier, SyntaxComponent, SyntaxComponentKind, SyntaxString,
+};
 
 /// The kinds to test against. Excludes `CustomIdent` (matches almost anything)
 /// and `String` (only matches quoted strings, tested separately).

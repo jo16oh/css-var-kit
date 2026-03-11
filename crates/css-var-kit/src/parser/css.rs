@@ -225,9 +225,7 @@ impl<'a> Scanner<'a> {
                     // Check if the next non-whitespace looks like a new property
                     let mut skip = 1;
                     // For \r\n, skip both bytes
-                    if self.bytes[self.pos] == b'\r'
-                        && self.peek_at(1) == Some(b'\n')
-                    {
+                    if self.bytes[self.pos] == b'\r' && self.peek_at(1) == Some(b'\n') {
                         skip = 2;
                     }
                     let after_newline = &self.bytes[self.pos + skip..];
@@ -281,9 +279,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
             b'/' if s.peek_at(1) == Some(b'*') => {
                 let comment_start_line = s.line;
                 // Blank line between previous comment and this one breaks the chain
-                if !pending_ignores.is_empty()
-                    && comment_start_line > last_comment_end_line + 1
-                {
+                if !pending_ignores.is_empty() && comment_start_line > last_comment_end_line + 1 {
                     pending_ignores.clear();
                 }
                 let content = s.scan_comment(css);
@@ -314,9 +310,7 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                 let name_col = s.col;
 
                 // Blank line between last comment and property breaks the chain
-                if !pending_ignores.is_empty()
-                    && name_line > last_comment_end_line + 1
-                {
+                if !pending_ignores.is_empty() && name_line > last_comment_end_line + 1 {
                     pending_ignores.clear();
                 }
 
@@ -343,11 +337,9 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                     let value_end = s.scan_value_end();
 
                     let raw_value = css[value_start..value_end].trim();
-                    let token_list = TokenList::parse_string_with_options(
-                        raw_value,
-                        ParserOptions::default(),
-                    )
-                    .ok();
+                    let token_list =
+                        TokenList::parse_string_with_options(raw_value, ParserOptions::default())
+                            .ok();
 
                     let ignore_comments = std::mem::take(&mut pending_ignores);
                     properties.push(Property {
@@ -377,7 +369,10 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
         }
     }
 
-    ParseResult { file_path, properties }
+    ParseResult {
+        file_path,
+        properties,
+    }
 }
 
 fn is_ident_start(b: u8) -> bool {
@@ -833,7 +828,12 @@ mod tests {
     fn unterminated_comment_consumes_all_bytes() {
         let mut s = Scanner::new("/* {");
         s.skip_comment();
-        assert!(s.is_eof(), "skip_comment should consume all bytes of an unterminated comment, but pos={} len={}", s.pos, s.bytes.len());
+        assert!(
+            s.is_eof(),
+            "skip_comment should consume all bytes of an unterminated comment, but pos={} len={}",
+            s.pos,
+            s.bytes.len()
+        );
     }
 
     // cvk-ignore tests
@@ -867,7 +867,8 @@ mod tests {
 
     #[test]
     fn cvk_ignore_persists_through_other_comments() {
-        let css = ".a {\n    /* cvk-ignore */\n    /* stylelint-disable */\n    color: var(--c);\n}";
+        let css =
+            ".a {\n    /* cvk-ignore */\n    /* stylelint-disable */\n    color: var(--c);\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
@@ -875,7 +876,8 @@ mod tests {
 
     #[test]
     fn multiple_cvk_ignore_comments() {
-        let css = ".a {\n    /* cvk-ignore */\n    /* cvk-ignore: rule-a */\n    color: var(--c);\n}";
+        let css =
+            ".a {\n    /* cvk-ignore */\n    /* cvk-ignore: rule-a */\n    color: var(--c);\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(

@@ -8,10 +8,7 @@ pub mod no_undefined_variable_use;
 pub mod no_variable_type_mismatch;
 
 pub trait Rule {
-    fn register_conditions<'src>(
-        &self,
-        searcher: SearcherBuilder<'src>,
-    ) -> SearcherBuilder<'src>;
+    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src>;
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>>;
 }

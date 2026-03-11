@@ -191,25 +191,12 @@ pub fn expected_types(property: &str) -> ExpectedTypes {
         | "vertical-align" => ExpectedTypes::Single(LengthPercentage),
 
         // <number>
-        "opacity"
-        | "flex-grow"
-        | "flex-shrink"
-        | "order"
-        | "font-size-adjust"
-        | "fill-opacity"
-        | "stroke-opacity"
-        | "stop-opacity"
-        | "flood-opacity"
-        | "font-weight"
-        | "line-height-step"
-        | "stroke-miterlimit"
-        | "tab-size" => ExpectedTypes::Single(Number),
+        "opacity" | "flex-grow" | "flex-shrink" | "order" | "font-size-adjust" | "fill-opacity"
+        | "stroke-opacity" | "stop-opacity" | "flood-opacity" | "font-weight"
+        | "line-height-step" | "stroke-miterlimit" | "tab-size" => ExpectedTypes::Single(Number),
 
         // <integer>
-        "z-index"
-        | "orphans"
-        | "widows"
-        | "column-count" => ExpectedTypes::Single(Integer),
+        "z-index" | "orphans" | "widows" | "column-count" => ExpectedTypes::Single(Integer),
 
         // <percentage>
         "font-stretch" => ExpectedTypes::Single(Percentage),
@@ -218,19 +205,17 @@ pub fn expected_types(property: &str) -> ExpectedTypes {
         "rotate" => ExpectedTypes::Single(Angle),
 
         // <time>
-        "transition-duration"
-        | "transition-delay"
-        | "animation-duration"
-        | "animation-delay" => ExpectedTypes::Single(Time),
+        "transition-duration" | "transition-delay" | "animation-duration" | "animation-delay" => {
+            ExpectedTypes::Single(Time)
+        }
 
         // <resolution>
         "image-resolution" => ExpectedTypes::Single(Resolution),
 
         // <image>
-        "background-image"
-        | "border-image-source"
-        | "list-style-image"
-        | "mask-image" => ExpectedTypes::Single(Image),
+        "background-image" | "border-image-source" | "list-style-image" | "mask-image" => {
+            ExpectedTypes::Single(Image)
+        }
 
         // <url>
         "cursor" => ExpectedTypes::Single(Url),
@@ -254,78 +239,78 @@ pub fn expected_types(property: &str) -> ExpectedTypes {
         | "border-inline"
         | "border-inline-start"
         | "border-inline-end" => ExpectedTypes::Shorthand(&[
-            Typed(Length),   // <line-width>
-            Keyword,        // <line-style>
-            Typed(Color),   // <color>
+            Typed(Length), // <line-width>
+            Keyword,       // <line-style>
+            Typed(Color),  // <color>
         ]),
 
         // outline: <outline-width> || <outline-style> || <outline-color>
         "outline" => ExpectedTypes::Shorthand(&[
-            Typed(Length),   // <outline-width>
-            Keyword,        // <outline-style>
-            Typed(Color),   // <outline-color>
+            Typed(Length), // <outline-width>
+            Keyword,       // <outline-style>
+            Typed(Color),  // <outline-color>
         ]),
 
         // column-rule: <column-rule-width> || <column-rule-style> || <column-rule-color>
         "column-rule" => ExpectedTypes::Shorthand(&[
-            Typed(Length),   // <column-rule-width>
-            Keyword,        // <column-rule-style>
-            Typed(Color),   // <column-rule-color>
+            Typed(Length), // <column-rule-width>
+            Keyword,       // <column-rule-style>
+            Typed(Color),  // <column-rule-color>
         ]),
 
         // text-decoration: <line> || <style> || <color> || <thickness>
         "text-decoration" => ExpectedTypes::Shorthand(&[
-            Keyword,                  // <text-decoration-line>
-            Keyword,                  // <text-decoration-style>
-            Typed(Color),             // <text-decoration-color>
-            Typed(LengthPercentage),  // <text-decoration-thickness>
+            Keyword,                 // <text-decoration-line>
+            Keyword,                 // <text-decoration-style>
+            Typed(Color),            // <text-decoration-color>
+            Typed(LengthPercentage), // <text-decoration-thickness>
         ]),
 
         // flex: <flex-grow> <flex-shrink>? <flex-basis>?
         "flex" => ExpectedTypes::Shorthand(&[
-            Typed(Number),            // <flex-grow>
-            Typed(Number),            // <flex-shrink>
-            Typed(LengthPercentage),  // <flex-basis>
+            Typed(Number),           // <flex-grow>
+            Typed(Number),           // <flex-shrink>
+            Typed(LengthPercentage), // <flex-basis>
         ]),
 
         // list-style: <position> || <image> || <type>
         "list-style" => ExpectedTypes::Shorthand(&[
-            Keyword,       // <list-style-position>
-            Typed(Image),  // <list-style-image>
-            Keyword,       // <list-style-type>
+            Keyword,      // <list-style-position>
+            Typed(Image), // <list-style-image>
+            Keyword,      // <list-style-type>
         ]),
 
         // transition: <property> <duration> <timing-function> <delay>
         "transition" => ExpectedTypes::Shorthand(&[
-            Keyword,      // <property>
-            Typed(Time),  // <duration>
-            Keyword,      // <timing-function>
-            Typed(Time),  // <delay>
+            Keyword,     // <property>
+            Typed(Time), // <duration>
+            Keyword,     // <timing-function>
+            Typed(Time), // <delay>
         ]),
 
         // animation: <duration> <timing-function> <delay> <iteration-count>
         //            <direction> <fill-mode> <play-state> <name>
         "animation" => ExpectedTypes::Shorthand(&[
-            Typed(Time),    // <duration>
-            Keyword,        // <timing-function>
-            Typed(Time),    // <delay>
-            Typed(Number),  // <iteration-count>
-            Keyword,        // <direction>
-            Keyword,        // <fill-mode>
-            Keyword,        // <play-state>
-            Keyword,        // <name>
+            Typed(Time),   // <duration>
+            Keyword,       // <timing-function>
+            Typed(Time),   // <delay>
+            Typed(Number), // <iteration-count>
+            Keyword,       // <direction>
+            Keyword,       // <fill-mode>
+            Keyword,       // <play-state>
+            Keyword,       // <name>
         ]),
 
         // background: <color> || <image> || <position> / <size> || <repeat> || <attachment> || <origin> || <clip>
         "background" => ExpectedTypes::Shorthand(&[
-            Typed(Color),             // <background-color>
-            Typed(Image),             // <background-image>
-            Typed(LengthPercentage),  // <background-position>
-            Typed(LengthPercentage),  // <background-size>
-            Keyword,                  // <background-repeat>
-            Keyword,                  // <background-attachment>
-            Keyword,                  // <background-origin>
-            Keyword,                  // <background-clip>
+            Typed(Color),            // <background-color>
+            Typed(Image),            // <background-image>
+            Typed(LengthPercentage), // <background-position>
+            Typed(LengthPercentage), // <background-size>
+            Keyword,                 // <background-repeat>
+            Keyword,                 // <background-attachment>
+            Keyword,                 // <background-origin>
+            Keyword,                 // <background-clip>
         ]),
 
         _ => ExpectedTypes::Unknown,

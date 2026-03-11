@@ -1,3 +1,3 @@
 pub mod lint;
-pub mod prune;
 pub mod lsp;
+pub mod prune;
