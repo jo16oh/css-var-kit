@@ -1,0 +1,4 @@
+[tools]
+rust = "1.94"
+prek = "latest"
+tombi = "latest"
