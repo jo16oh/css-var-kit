@@ -42,7 +42,7 @@ impl RawConfig {
         Ok(Self::default())
     }
 
-    pub(in crate::config) fn load_from(path: &Path) -> Result<Self, ConfigError> {
+    pub(super) fn load_from(path: &Path) -> Result<Self, ConfigError> {
         let raw = fs::read_to_string(path).map_err(|e| ConfigError::ReadFile {
             path: path.to_path_buf(),
             source: e,
@@ -57,17 +57,17 @@ impl RawConfig {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub(in crate::config) struct RawRules {
+pub(super) struct RawRules {
     #[serde(default = "default_on")]
-    pub(in crate::config) no_undefined_variable_use: Toggle,
+    pub(super) no_undefined_variable_use: Toggle,
     #[serde(default = "default_on")]
-    pub(in crate::config) no_compound_value_in_definition: Toggle,
+    pub(super) no_compound_value_in_definition: Toggle,
     #[serde(default = "default_on")]
-    pub(in crate::config) no_variable_type_mismatch: Toggle,
+    pub(super) no_variable_type_mismatch: Toggle,
     #[serde(default = "default_on")]
-    pub(in crate::config) no_inconsistent_variable_definition: Toggle,
+    pub(super) no_inconsistent_variable_definition: Toggle,
     #[serde(default)]
-    pub(in crate::config) enforce_variable_use: RawEnforceVariableUse,
+    pub(super) enforce_variable_use: RawEnforceVariableUse,
 }
 
 impl Default for RawRules {
@@ -84,7 +84,7 @@ impl Default for RawRules {
 
 #[derive(Default, Debug, Deserialize)]
 #[serde(untagged)]
-pub(in crate::config) enum RawEnforceVariableUse {
+pub(super) enum RawEnforceVariableUse {
     #[serde(rename = "off")]
     #[default]
     Off,
@@ -92,11 +92,11 @@ pub(in crate::config) enum RawEnforceVariableUse {
 }
 
 impl RawEnforceVariableUse {
-    pub(in crate::config) fn default_on() -> Self {
+    pub(super) fn default_on() -> Self {
         Self::Config(RawEnforceVariableUseConfig::default())
     }
 
-    pub(in crate::config) fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
+    pub(super) fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
         match self {
             Self::Off => None,
             Self::Config(config) => Some(config),
@@ -127,13 +127,13 @@ impl Default for RawEnforceVariableUseConfig {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(in crate::config) enum Toggle {
+pub(super) enum Toggle {
     On,
     Off,
 }
 
 impl Toggle {
-    pub(in crate::config) fn is_on(&self) -> bool {
+    pub(super) fn is_on(&self) -> bool {
         matches!(self, Toggle::On)
     }
 }
