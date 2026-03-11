@@ -1,0 +1,26 @@
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "cargo-fmt"
+name = "cargo fmt"
+language = "system"
+entry = "cargo fmt --all"
+types = ["rust"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "cargo-clippy"
+name = "cargo clippy"
+language = "system"
+entry = "cargo clippy --all-targets -- -D warnings"
+types = ["rust"]
+pass_filenames = false
+
+[[repos.hooks]]
+id = "tombi"
+name = "tombi format"
+language = "system"
+entry = "tombi format"
+types = ["toml"]
+pass_filenames = true
