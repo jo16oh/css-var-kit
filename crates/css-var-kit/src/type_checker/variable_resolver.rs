@@ -57,7 +57,11 @@ fn resolve_inner<'src>(
 
     let prefix = &value[..var_start];
     let inside = &value[var_start + 4..];
-    let close = find_closing_paren(inside)?;
+
+    let Some(close) = find_closing_paren(inside) else {
+        return Some(value.to_string());
+    };
+
     let (name, fallback) = parse_var_contents(&inside[..close])?;
 
     let resolved_var = lookup(name)
@@ -168,6 +172,14 @@ mod tests {
         assert_eq!(
             resolve_vars("var(--size) var(--color)", lookup),
             ResolveResult::Resolved("16px red".into()),
+        );
+    }
+
+    #[test]
+    fn incomplete_multiple_vars() {
+        assert_eq!(
+            resolve_vars("var(--size) var(--color", lookup),
+            ResolveResult::Resolved("16px var(--color".into()),
         );
     }
 
