@@ -234,7 +234,7 @@ mod tests {
     fn fallback_with_string_containing_paren() {
         assert_eq!(
             resolve_vars("var(--missing, ')')", &lookup).unwrap(),
-            "''".to_string(),
+            "')'".to_string(),
         );
     }
 }
