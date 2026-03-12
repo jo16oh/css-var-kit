@@ -45,12 +45,12 @@ pub struct Searcher<'src> {
 
 impl<'src> Searcher<'src> {
     pub fn search(&self) -> SearchResult<'src> {
-        let mut results = HashMap::<TypeId, ConditionResult<'src>>::new();
+        let mut results = HashMap::<TypeId, SearchConditionResult<'src>>::new();
 
         for type_id in self.conditions.keys() {
             results.insert(
                 *type_id,
-                ConditionResult {
+                SearchConditionResult {
                     props: Vec::new(),
                     prop_map: OnceCell::new(),
                 },
@@ -73,13 +73,13 @@ impl<'src> Searcher<'src> {
 
 type PropMap<'src> = HashMap<&'src str, Vec<&'src Property<'src>>>;
 
-struct ConditionResult<'src> {
+struct SearchConditionResult<'src> {
     props: Vec<&'src Property<'src>>,
     prop_map: OnceCell<PropMap<'src>>,
 }
 
 pub struct SearchResult<'src> {
-    results: HashMap<TypeId, ConditionResult<'src>>,
+    results: HashMap<TypeId, SearchConditionResult<'src>>,
 }
 
 impl<'src> SearchResult<'src> {
