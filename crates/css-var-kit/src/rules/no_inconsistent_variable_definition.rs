@@ -3,7 +3,7 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 use crate::type_checker::value_classifier::classify_value;
-use crate::type_checker::variable_resolver::{ResolveResult, resolve_vars};
+use crate::type_checker::variable_resolver::resolve_vars;
 use lightningcss::values::syntax::SyntaxComponentKind;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";
@@ -87,15 +87,13 @@ fn resolve_value<'src>(
     value: &'src str,
     def_map: &PropMapFor<'src, '_, VariableDefinitions>,
 ) -> Option<String> {
-    match resolve_vars(value, |name| {
+    resolve_vars(value, &|name| {
         def_map
             .get(name)
             .and_then(|props| props.last())
             .map(|p| p.value.raw)
-    }) {
-        ResolveResult::Resolved(s) => Some(s),
-        ResolveResult::Unresolved => None,
-    }
+    })
+    .ok()
 }
 
 fn types_are_inconsistent(a: &[SyntaxComponentKind], b: &[SyntaxComponentKind]) -> bool {

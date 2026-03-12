@@ -5,7 +5,9 @@ use lightningcss::properties::Property as CssProperty;
 use lightningcss::properties::PropertyId;
 use lightningcss::stylesheet::ParserOptions;
 
-use variable_resolver::{ResolveResult, resolve_vars};
+use variable_resolver::resolve_vars;
+
+use crate::type_checker::variable_resolver::ResolveError;
 
 /// The result of type-checking a property value containing `var()` references.
 #[derive(Debug, PartialEq)]
@@ -15,7 +17,7 @@ pub enum TypeCheckResult {
     /// The resolved value does not match the property's expected type.
     Mismatch,
     /// A referenced variable is undefined and has no fallback.
-    Unresolved,
+    Unresolved(ResolveError),
 }
 
 /// Resolves `var()` references in `value` using `lookup`, then validates
@@ -33,8 +35,8 @@ pub fn check_property_type<'src>(
     }
 
     let resolved_value = match resolve_vars(value, &lookup) {
-        ResolveResult::Resolved(s) => s,
-        ResolveResult::Unresolved => return TypeCheckResult::Unresolved,
+        Ok(s) => s,
+        Err(e) => return TypeCheckResult::Unresolved(e),
     };
 
     let property_id = PropertyId::from(property_name);
@@ -95,10 +97,10 @@ mod tests {
 
     #[test]
     fn unresolved_variable() {
-        assert_eq!(
+        assert!(matches!(
             check_property_type("color", "var(--undefined)", lookup),
-            TypeCheckResult::Unresolved,
-        );
+            TypeCheckResult::Unresolved(_),
+        ));
     }
 
     #[test]

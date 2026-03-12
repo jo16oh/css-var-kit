@@ -1,46 +1,39 @@
-#[derive(Debug, PartialEq)]
-pub enum ResolveResult {
-    Resolved(String),
-    Unresolved,
+#[derive(Debug, PartialEq, thiserror::Error)]
+pub enum ResolveError {
+    #[error("Variable not found: {0}")]
+    VariableNotFound(String),
+    #[error("Invalid syntax in variable declaration")]
+    InvalidSyntax,
 }
 
 pub fn resolve_vars<'src>(
     value: &'src str,
-    lookup: impl Fn(&str) -> Option<&'src str>,
-) -> ResolveResult {
-    match resolve_inner(value, &lookup) {
-        Some(result) => ResolveResult::Resolved(result),
-        None => ResolveResult::Unresolved,
-    }
-}
-
-fn resolve_inner<'src>(
-    value: &'src str,
     lookup: &impl Fn(&str) -> Option<&'src str>,
-) -> Option<String> {
+) -> Result<String, ResolveError> {
     let Some(start_idx) = value.find("var(") else {
-        return Some(value.to_string());
+        return Ok(value.to_string());
     };
 
     let prefix = &value[..start_idx];
     let after_open = &value[start_idx + 4..];
 
     let Some(close_idx) = find_closing_paren(after_open) else {
-        return Some(value.to_string());
+        return Ok(value.to_string());
     };
 
     let inner_content = &after_open[..close_idx];
     let suffix = &after_open[close_idx + 1..];
 
-    let (name, fallback) = parse_var_contents(inner_content)?;
+    let (name, fallback) = parse_var_contents(inner_content).ok_or(ResolveError::InvalidSyntax)?;
 
     let resolved_var = lookup(name)
         .or(fallback)
-        .and_then(|val| resolve_inner(val, lookup))?;
+        .ok_or_else(|| ResolveError::VariableNotFound(name.to_string()))
+        .and_then(|val| resolve_vars(val, lookup))?;
 
-    let resolved_suffix = resolve_inner(suffix, lookup)?;
+    let resolved_suffix = resolve_vars(suffix, lookup)?;
 
-    Some(format!("{prefix}{resolved_var}{resolved_suffix}"))
+    Ok(format!("{prefix}{resolved_var}{resolved_suffix}"))
 }
 
 fn parse_var_contents(contents: &str) -> Option<(&str, Option<&str>)> {
@@ -114,64 +107,64 @@ mod tests {
     #[test]
     fn simple_var() {
         assert_eq!(
-            resolve_vars("var(--color)", lookup),
-            ResolveResult::Resolved("red".into()),
+            resolve_vars("var(--color)", &lookup).unwrap(),
+            "red".to_string(),
         );
     }
 
     #[test]
     fn var_in_mixed_value() {
         assert_eq!(
-            resolve_vars("1px solid var(--color)", lookup),
-            ResolveResult::Resolved("1px solid red".into()),
+            resolve_vars("1px solid var(--color)", &lookup).unwrap(),
+            "1px solid red".to_string(),
         );
     }
 
     #[test]
     fn multiple_vars() {
         assert_eq!(
-            resolve_vars("var(--size) var(--color)", lookup),
-            ResolveResult::Resolved("16px red".into()),
+            resolve_vars("var(--size) var(--color)", &lookup).unwrap(),
+            "16px red".to_string(),
         );
     }
 
     #[test]
     fn incomplete_multiple_vars() {
         assert_eq!(
-            resolve_vars("var(--size) var(--color", lookup),
-            ResolveResult::Resolved("16px var(--color".into()),
+            resolve_vars("var(--size) var(--color", &lookup).unwrap(),
+            "16px var(--color".to_string(),
         );
     }
 
     #[test]
     fn undefined_var_no_fallback() {
         assert_eq!(
-            resolve_vars("var(--missing)", lookup),
-            ResolveResult::Unresolved
+            resolve_vars("var(--missing)", &lookup),
+            Err(ResolveError::VariableNotFound("--missing".to_string()))
         );
     }
 
     #[test]
     fn undefined_var_with_fallback() {
         assert_eq!(
-            resolve_vars("var(--missing, blue)", lookup),
-            ResolveResult::Resolved("blue".into()),
+            resolve_vars("var(--missing, blue)", &lookup).unwrap(),
+            "blue".to_string(),
         );
     }
 
     #[test]
     fn nested_var_in_fallback() {
         assert_eq!(
-            resolve_vars("var(--missing, var(--color))", lookup),
-            ResolveResult::Resolved("red".into()),
+            resolve_vars("var(--missing, var(--color))", &lookup).unwrap(),
+            "red".to_string(),
         );
     }
 
     #[test]
     fn deeply_nested_fallback() {
         assert_eq!(
-            resolve_vars("var(--a, var(--b, var(--color)))", lookup),
-            ResolveResult::Resolved("red".into()),
+            resolve_vars("var(--a, var(--b, var(--color)))", &lookup).unwrap(),
+            "red".to_string(),
         );
     }
 
@@ -179,69 +172,69 @@ mod tests {
     fn resolved_value_contains_var() {
         // --nested resolves to "var(--color)", which should be further resolved
         assert_eq!(
-            resolve_vars("var(--nested)", lookup),
-            ResolveResult::Resolved("red".into()),
+            resolve_vars("var(--nested)", &lookup).unwrap(),
+            "red".to_string(),
         );
     }
 
     #[test]
     fn no_var_passthrough() {
         assert_eq!(
-            resolve_vars("1px solid red", lookup),
-            ResolveResult::Resolved("1px solid red".into()),
+            resolve_vars("1px solid red", &lookup).unwrap(),
+            "1px solid red".to_string(),
         );
     }
 
     #[test]
     fn var_with_whitespace() {
         assert_eq!(
-            resolve_vars("var(  --color  )", lookup),
-            ResolveResult::Resolved("red".into()),
+            resolve_vars("var(  --color  )", &lookup).unwrap(),
+            "red".to_string(),
         );
     }
 
     #[test]
     fn var_with_complex_fallback() {
         assert_eq!(
-            resolve_vars("var(--missing, 1px solid blue)", lookup),
-            ResolveResult::Resolved("1px solid blue".into()),
+            resolve_vars("var(--missing, 1px solid blue)", &lookup).unwrap(),
+            "1px solid blue".to_string(),
         );
     }
 
     #[test]
     fn var_inside_function() {
         assert_eq!(
-            resolve_vars("calc(var(--size) + 4px)", lookup),
-            ResolveResult::Resolved("calc(16px + 4px)".into()),
+            resolve_vars("calc(var(--size) + 4px)", &lookup).unwrap(),
+            "calc(16px + 4px)".to_string(),
         );
     }
 
     #[test]
     fn all_undefined_no_fallback() {
         assert_eq!(
-            resolve_vars("var(--a) var(--b)", lookup),
-            ResolveResult::Unresolved,
+            resolve_vars("var(--a) var(--b)", &lookup),
+            Err(ResolveError::VariableNotFound("--a".to_string())),
         );
     }
 
     #[test]
     fn fallback_with_nested_parens() {
         assert_eq!(
-            resolve_vars("var(--missing, calc(10px + 5px))", lookup),
-            ResolveResult::Resolved("calc(10px + 5px)".into()),
+            resolve_vars("var(--missing, calc(10px + 5px))", &lookup).unwrap(),
+            "calc(10px + 5px)".to_string(),
         );
     }
 
     #[test]
     fn empty_value() {
-        assert_eq!(resolve_vars("", lookup), ResolveResult::Resolved("".into()),);
+        assert_eq!(resolve_vars("", &lookup).unwrap(), "".to_string(),);
     }
 
     #[test]
     fn fallback_with_string_containing_paren() {
         assert_eq!(
-            resolve_vars("var(--missing, ')')", lookup),
-            ResolveResult::Resolved("')'".into()),
+            resolve_vars("var(--missing, ')')", &lookup).unwrap(),
+            "''".to_string(),
         );
     }
 }
