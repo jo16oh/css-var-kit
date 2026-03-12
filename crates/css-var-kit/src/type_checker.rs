@@ -4,47 +4,46 @@ pub mod variable_resolver;
 use lightningcss::properties::Property as CssProperty;
 use lightningcss::properties::PropertyId;
 use lightningcss::stylesheet::ParserOptions;
+use thiserror::Error;
 
 use variable_resolver::resolve_vars;
 
 use crate::type_checker::variable_resolver::ResolveError;
 
-/// The result of type-checking a property value containing `var()` references.
-#[derive(Debug, PartialEq)]
-pub enum TypeCheckResult {
-    /// The resolved value is valid for this property.
-    Valid,
-    /// The resolved value does not match the property's expected type.
-    Mismatch,
-    /// A referenced variable is undefined and has no fallback.
-    Unresolved(ResolveError),
+#[derive(Debug, PartialEq, Error)]
+pub enum TypeCheckError {
+    #[error("Type mismatch: resolved value of `{0}` is not valid for property `{1}`")]
+    TypeMismatch(String, String),
+    #[error("Variable not found: {0}")]
+    VariableNotFound(String),
+    #[error("Invalid syntax in variable declaration")]
+    InvalidSyntax,
 }
 
-/// Resolves `var()` references in `value` using `lookup`, then validates
-/// the resolved string against the property using `Property::parse_string`.
-///
-/// Returns `Mismatch` if lightningcss considers the resolved value unparseable
-/// for the given property (i.e. `Property::Unparsed`).
 pub fn check_property_type<'src>(
     property_name: &str,
     value: &'src str,
     lookup: impl Fn(&str) -> Option<&'src str>,
-) -> TypeCheckResult {
+) -> Result<(), TypeCheckError> {
+    // skip type-check in variable definitions
     if property_name.starts_with("--") {
-        return TypeCheckResult::Valid;
+        return Ok(());
     }
 
-    let resolved_value = match resolve_vars(value, &lookup) {
-        Ok(s) => s,
-        Err(e) => return TypeCheckResult::Unresolved(e),
-    };
+    let resolved_value = resolve_vars(value, &lookup).map_err(|e| match e {
+        ResolveError::VariableNotFound(s) => TypeCheckError::VariableNotFound(s),
+        ResolveError::InvalidSyntax => TypeCheckError::InvalidSyntax,
+    })?;
 
     let property_id = PropertyId::from(property_name);
 
     match CssProperty::parse_string(property_id, &resolved_value, ParserOptions::default()) {
-        Ok(CssProperty::Unparsed(_)) => TypeCheckResult::Mismatch,
-        Ok(_) => TypeCheckResult::Valid,
-        Err(_) => TypeCheckResult::Mismatch,
+        Ok(CssProperty::Unparsed(_)) => Err(TypeCheckError::TypeMismatch(
+            value.to_string(),
+            property_name.to_string(),
+        )),
+        Ok(_) => Ok(()),
+        Err(_) => Err(TypeCheckError::InvalidSyntax),
     }
 }
 
@@ -65,81 +64,60 @@ mod tests {
 
     #[test]
     fn valid_color() {
-        assert_eq!(
-            check_property_type("color", "var(--color)", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("color", "var(--color)", lookup).is_ok());
     }
 
     #[test]
     fn valid_length() {
-        assert_eq!(
-            check_property_type("font-size", "var(--size)", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("font-size", "var(--size)", lookup).is_ok());
     }
 
     #[test]
     fn mismatch_length_for_color() {
-        assert_eq!(
+        assert!(matches!(
             check_property_type("color", "var(--size)", lookup),
-            TypeCheckResult::Mismatch,
-        );
+            Err(TypeCheckError::TypeMismatch(_, _))
+        ));
     }
 
     #[test]
     fn mismatch_invalid_keyword() {
-        assert_eq!(
+        assert!(matches!(
             check_property_type("color", "var(--invalid)", lookup),
-            TypeCheckResult::Mismatch,
-        );
+            Err(TypeCheckError::TypeMismatch(_, _))
+        ));
     }
 
     #[test]
     fn unresolved_variable() {
         assert!(matches!(
             check_property_type("color", "var(--undefined)", lookup),
-            TypeCheckResult::Unresolved(_),
+            Err(TypeCheckError::VariableNotFound(_)),
         ));
     }
 
     #[test]
     fn fallback_used_when_undefined() {
-        assert_eq!(
-            check_property_type("color", "var(--undefined, blue)", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("color", "var(--undefined, blue)", lookup).is_ok());
     }
 
     #[test]
     fn custom_property_always_valid() {
-        assert_eq!(
-            check_property_type("--my-var", "anything", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("--my-var", "anything", lookup).is_ok());
     }
 
     #[test]
     fn mixed_value() {
-        assert_eq!(
-            check_property_type("border", "1px solid var(--color)", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("border", "1px solid var(--color)", lookup).is_ok());
     }
 
     #[test]
     fn nested_var() {
-        assert_eq!(
-            check_property_type("color", "var(--nested)", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("color", "var(--nested)", lookup).is_ok());
     }
 
     #[test]
     fn no_var_passthrough() {
-        assert_eq!(
-            check_property_type("color", "red", lookup),
-            TypeCheckResult::Valid,
-        );
+        assert!(check_property_type("color", "red", lookup).is_ok());
     }
 }

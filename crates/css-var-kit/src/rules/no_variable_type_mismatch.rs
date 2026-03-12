@@ -3,7 +3,7 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
-use crate::type_checker::{TypeCheckResult, check_property_type};
+use crate::type_checker::{TypeCheckError, check_property_type};
 
 pub struct NoVariableTypeMismatch;
 
@@ -37,18 +37,17 @@ fn check_type_mismatch<'src>(
                     .map(|p| p.value.raw)
             });
             match result {
-                TypeCheckResult::Mismatch => Some(Diagnostic {
+                Ok(_) => None,
+                // Undefined variables are handled by no-undefined-variable-use, not this rule
+                Err(TypeCheckError::VariableNotFound(_)) => None,
+                Err(e) => Some(Diagnostic {
                     file_path: prop.file_path,
                     source: prop.source,
                     line: prop.value.line,
                     column: prop.value.column,
-                    message: format!(
-                        "type mismatch: resolved value of `{}` is not valid for property `{}`",
-                        prop.value.raw, prop.name.raw,
-                    ),
+                    message: e.to_string(),
                     severity: Severity::Warning,
                 }),
-                _ => None,
             }
         })
         .collect()
@@ -91,7 +90,7 @@ mod tests {
     fn mismatch_length_for_color() {
         assert_messages(
             ":root { --size: 16px; } .a { color: var(--size); }",
-            &["type mismatch: resolved value of `var(--size)` is not valid for property `color`"],
+            &["Type mismatch: resolved value of `var(--size)` is not valid for property `color`"],
         );
     }
 
@@ -99,7 +98,7 @@ mod tests {
     fn mismatch_color_for_width() {
         assert_messages(
             ":root { --color: red; } .a { width: var(--color); }",
-            &["type mismatch: resolved value of `var(--color)` is not valid for property `width`"],
+            &["Type mismatch: resolved value of `var(--color)` is not valid for property `width`"],
         );
     }
 
@@ -119,7 +118,7 @@ mod tests {
         assert_messages(
             ".a { color: var(--undefined, 16px); }",
             &[
-                "type mismatch: resolved value of `var(--undefined, 16px)` is not valid for property `color`",
+                "Type mismatch: resolved value of `var(--undefined, 16px)` is not valid for property `color`",
             ],
         );
     }
@@ -158,7 +157,7 @@ mod tests {
     fn cvk_ignore_other_rule_does_not_suppress() {
         assert_messages(
             ":root { --size: 16px; } .a {\n    /* cvk-ignore: no-undefined-variable-use */\n    color: var(--size);\n}",
-            &["type mismatch: resolved value of `var(--size)` is not valid for property `color`"],
+            &["Type mismatch: resolved value of `var(--size)` is not valid for property `color`"],
         );
     }
 
@@ -175,7 +174,7 @@ mod tests {
         assert_messages(
             ":root { --my-border: solid 1px black; } .a { color: var(--my-border); }",
             &[
-                "type mismatch: resolved value of `var(--my-border)` is not valid for property `color`",
+                "Type mismatch: resolved value of `var(--my-border)` is not valid for property `color`",
             ],
         );
     }
@@ -184,7 +183,7 @@ mod tests {
     fn multiple_usages_mixed() {
         assert_messages(
             ":root { --color: red; --size: 16px; } .a { color: var(--color); width: var(--color); }",
-            &["type mismatch: resolved value of `var(--color)` is not valid for property `width`"],
+            &["Type mismatch: resolved value of `var(--color)` is not valid for property `width`"],
         );
     }
 }
