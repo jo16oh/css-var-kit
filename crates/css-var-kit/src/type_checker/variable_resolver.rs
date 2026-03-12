@@ -1,41 +1,9 @@
-//! Resolves `var()` references in a CSS property value string.
-//!
-//! Given a raw CSS value and a lookup function for variable definitions,
-//! replaces each `var(--name)` or `var(--name, fallback)` with the resolved value.
-//! Handles nested `var()` in fallbacks and mixed values like `1px solid var(--color)`.
-
-/// The result of resolving `var()` references in a value.
 #[derive(Debug, PartialEq)]
 pub enum ResolveResult {
-    /// All `var()` references were resolved. Contains the fully resolved value string.
     Resolved(String),
-    /// At least one `var()` could not be resolved (undefined variable with no fallback).
     Unresolved,
 }
 
-/// Resolves all `var()` references in a CSS value string.
-///
-/// The `lookup` function takes a variable name (e.g., `"--color"`) and returns
-/// `Some(value)` if the variable is defined, or `None` if it is not.
-///
-/// When a variable is undefined, the fallback value is used if present.
-/// If neither the variable nor a fallback is available, returns `ResolveResult::Unresolved`.
-///
-/// # Examples
-///
-/// ```ignore
-/// // Simple resolution
-/// resolve_vars("var(--color)", |name| match name { "--color" => Some("red"), _ => None })
-/// // => Resolved("red")
-///
-/// // Mixed value
-/// resolve_vars("1px solid var(--color)", |name| match name { "--color" => Some("red"), _ => None })
-/// // => Resolved("1px solid red")
-///
-/// // Fallback
-/// resolve_vars("var(--missing, blue)", |_| None)
-/// // => Resolved("blue")
-/// ```
 pub fn resolve_vars<'src>(
     value: &'src str,
     lookup: impl Fn(&str) -> Option<&'src str>,
@@ -46,36 +14,35 @@ pub fn resolve_vars<'src>(
     }
 }
 
-/// Inner recursive resolver. Returns `None` if any var() could not be resolved.
 fn resolve_inner<'src>(
     value: &'src str,
     lookup: &impl Fn(&str) -> Option<&'src str>,
 ) -> Option<String> {
-    let Some(var_start) = value.find("var(") else {
+    let Some(start_idx) = value.find("var(") else {
         return Some(value.to_string());
     };
 
-    let prefix = &value[..var_start];
-    let inside = &value[var_start + 4..];
+    let prefix = &value[..start_idx];
+    let after_open = &value[start_idx + 4..];
 
-    let Some(close) = find_closing_paren(inside) else {
+    let Some(close_idx) = find_closing_paren(after_open) else {
         return Some(value.to_string());
     };
 
-    let (name, fallback) = parse_var_contents(&inside[..close])?;
+    let inner_content = &after_open[..close_idx];
+    let suffix = &after_open[close_idx + 1..];
+
+    let (name, fallback) = parse_var_contents(inner_content)?;
 
     let resolved_var = lookup(name)
         .or(fallback)
         .and_then(|val| resolve_inner(val, lookup))?;
 
-    let rest = resolve_inner(&inside[close + 1..], lookup)?;
+    let resolved_suffix = resolve_inner(suffix, lookup)?;
 
-    Some(format!("{prefix}{resolved_var}{rest}"))
+    Some(format!("{prefix}{resolved_var}{resolved_suffix}"))
 }
 
-/// Parses the contents between `var(` and its matching `)`.
-///
-/// Returns `(name, fallback)` where fallback is the part after the first comma, if any.
 fn parse_var_contents(contents: &str) -> Option<(&str, Option<&str>)> {
     let (name, fallback) = match contents.find(',') {
         Some(comma) => (contents[..comma].trim(), Some(contents[comma + 1..].trim())),
@@ -89,12 +56,6 @@ fn parse_var_contents(contents: &str) -> Option<(&str, Option<&str>)> {
     Some((name, fallback))
 }
 
-/// Finds the closing `)` for an already-opened `(`.
-///
-/// `input` is the content after the opening `(` (e.g., after `var(`).
-/// Tracks nested parentheses and skips quoted strings.
-/// Returns the byte offset of the closing `)` within `input`,
-/// or `None` if no matching `)` is found.
 fn find_closing_paren(input: &str) -> Option<usize> {
     let bytes = input.as_bytes();
     let mut pos = 0;
@@ -121,7 +82,6 @@ fn find_closing_paren(input: &str) -> Option<usize> {
     None
 }
 
-/// Skips over a quoted string (single or double), returning the position after the closing quote.
 fn skip_string(bytes: &[u8], start: usize) -> usize {
     let quote = bytes[start];
     let mut pos = start + 1;
