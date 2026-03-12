@@ -92,8 +92,6 @@ fn multiple_rule_overrides() {
             "--rule",
             "no-undefined-variable-use=off",
             "--rule",
-            "no-compound-value-in-definition=off",
-            "--rule",
             "no-variable-type-mismatch=off",
             "--rule",
             "no-inconsistent-variable-definition=off",

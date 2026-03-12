@@ -62,8 +62,6 @@ pub(super) struct RawRules {
     #[serde(default = "default_on")]
     pub(super) no_undefined_variable_use: Toggle,
     #[serde(default = "default_on")]
-    pub(super) no_compound_value_in_definition: Toggle,
-    #[serde(default = "default_on")]
     pub(super) no_variable_type_mismatch: Toggle,
     #[serde(default = "default_on")]
     pub(super) no_inconsistent_variable_definition: Toggle,
@@ -76,7 +74,6 @@ impl Default for RawRules {
         Self {
             no_undefined_variable_use: Toggle::On,
             enforce_variable_use: RawEnforceVariableUse::Off,
-            no_compound_value_in_definition: Toggle::On,
             no_variable_type_mismatch: Toggle::On,
             no_inconsistent_variable_definition: Toggle::On,
         }

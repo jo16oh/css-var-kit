@@ -1,7 +1,6 @@
 {
   "rules": {
     "no-undefined-variable-use": "off",
-    "no-compound-value-in-definition": "off",
     "no-variable-type-mismatch": "off"
   }
 }

@@ -15,7 +15,6 @@ use super::file::RawRules;
 pub struct Rules {
     pub no_undefined_variable_use: bool,
     pub enforce_variable_use: Option<EnforceVariableUseConfig>,
-    pub no_compound_value_in_definition: bool,
     pub no_variable_type_mismatch: bool,
     pub no_inconsistent_variable_definition: bool,
 }
@@ -32,7 +31,6 @@ impl Rules {
         Ok(Self {
             no_undefined_variable_use: raw.no_undefined_variable_use.is_on(),
             enforce_variable_use,
-            no_compound_value_in_definition: raw.no_compound_value_in_definition.is_on(),
             no_variable_type_mismatch: raw.no_variable_type_mismatch.is_on(),
             no_inconsistent_variable_definition: raw.no_inconsistent_variable_definition.is_on(),
         })

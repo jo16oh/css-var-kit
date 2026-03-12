@@ -1,6 +1,5 @@
 {
   "rules": {
-    "no-undefined-variable-use": "off",
-    "no-compound-value-in-definition": "off"
+    "no-undefined-variable-use": "off"
   }
 }

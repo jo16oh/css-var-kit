@@ -132,10 +132,6 @@ impl RawRules {
                 "no-undefined-variable-use" => {
                     self.no_undefined_variable_use = Self::parse_toggle(value).map_err(&err)?;
                 }
-                "no-compound-value-in-definition" => {
-                    self.no_compound_value_in_definition =
-                        Self::parse_toggle(value).map_err(&err)?;
-                }
                 "no-variable-type-mismatch" => {
                     self.no_variable_type_mismatch = Self::parse_toggle(value).map_err(&err)?;
                 }
