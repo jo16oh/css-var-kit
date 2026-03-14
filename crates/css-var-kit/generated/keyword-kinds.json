@@ -3,7 +3,7 @@
     "calc-keyword"
   ],
   "-n": [
-    "an+b"
+    "an-plus-b"
   ],
   "...": [
     "event-trigger-event"
@@ -40,54 +40,53 @@
     "page-size"
   ],
   "a98-rgb": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "aa": [
     "wcag2"
   ],
   "AccentColor": [
-    "system-color"
+    "color"
   ],
   "AccentColorText": [
-    "system-color"
+    "color"
   ],
   "accumulate": [
-    "single-animation-composition"
+    "animation-composition"
   ],
   "activate": [
     "event-trigger-event"
   ],
   "ActiveBorder": [
-    "deprecated-color"
+    "color"
   ],
   "ActiveCaption": [
-    "deprecated-color"
+    "color"
   ],
   "ActiveText": [
-    "system-color"
+    "color"
   ],
   "add": [
     "compositing-operator",
-    "single-animation-composition"
+    "animation-composition"
   ],
   "after": [
-    "legacy-pseudo-element-selector"
+    "pseudo-element"
   ],
   "alias": [
-    "cursor-predefined"
+    "cursor"
   ],
   "aliceblue": [
-    "named-color"
+    "color"
   ],
   "all": [
-    "single-transition-property"
+    "transition-property"
   ],
   "all-scroll": [
-    "cursor-predefined"
+    "cursor"
   ],
   "allow-discrete": [
-    "transition-behavior-value"
+    "transition-behavior"
   ],
   "alpha": [
     "masking-mode"
@@ -98,47 +97,45 @@
     "text-edge"
   ],
   "alternate": [
-    "single-animation-direction"
+    "animation-direction"
   ],
   "alternate-reverse": [
-    "single-animation-direction"
+    "animation-direction"
   ],
   "angle": [
     "syntax-type-name"
   ],
   "antiquewhite": [
-    "named-color"
+    "color"
   ],
   "any": [
     "calc-size-basis",
-    "position-area-query"
+    "position-area"
   ],
   "AppWorkspace": [
-    "deprecated-color"
+    "color"
   ],
   "aqua": [
-    "named-color"
+    "color"
   ],
   "aquamarine": [
-    "named-color"
+    "color"
   ],
   "at": [
-    "navigation-location-keyword"
+    "navigation-location"
   ],
   "auto": [
-    "cursor-predefined",
+    "cursor",
     "grid-line",
-    "inflexible-breadth",
+    "track-breadth",
     "isolation-mode",
-    "outline-line-style",
+    "line-style",
     "random-cache-key",
-    "single-animation-timeline",
-    "source-size",
-    "source-size-value",
-    "track-breadth"
+    "animation-timeline",
+    "source-size"
   ],
   "azure": [
-    "named-color"
+    "color"
   ],
   "B4": [
     "page-size"
@@ -147,31 +144,31 @@
     "page-size"
   ],
   "back": [
-    "navigation-type-keyword"
+    "navigation-type"
   ],
   "Background": [
-    "deprecated-color"
+    "color"
   ],
   "backwards": [
-    "single-animation-fill-mode"
+    "animation-fill-mode"
   ],
   "base-url": [
     "init-descriptor-name"
   ],
   "beige": [
-    "named-color"
+    "color"
   ],
   "bevel": [
-    "corner-shape-value"
+    "corner-shape"
   ],
   "bisque": [
-    "named-color"
+    "color"
   ],
   "black": [
-    "named-color"
+    "color"
   ],
   "blanchedalmond": [
-    "named-color"
+    "color"
   ],
   "blank": [
     "pseudo-page"
@@ -179,82 +176,74 @@
   "block": [
     "anchor-size",
     "axis",
-    "display-outside",
-    "pointer-axis"
+    "display"
   ],
   "block-end": [
     "position-area",
-    "position-area-query",
-    "position-one",
+    "position",
     "scroll-button-direction"
   ],
   "block-start": [
     "position-area",
-    "position-area-query",
-    "position-one",
-    "position-two",
+    "position",
     "scroll-button-direction"
   ],
   "blue": [
-    "named-color"
+    "color"
   ],
   "blueviolet": [
-    "named-color"
+    "color"
   ],
   "bold": [
-    "font-weight-absolute"
+    "font-weight"
   ],
   "border-area": [
     "bg-clip"
   ],
   "border-box": [
-    "visual-box"
+    "box"
   ],
   "both": [
-    "single-animation-fill-mode"
+    "animation-fill-mode"
   ],
   "bottom": [
     "anchor-side",
     "position-area",
-    "position-area-query",
-    "position-four",
-    "position-one",
-    "position-two",
-    "side-or-corner",
-    "vertical-line-command"
+    "position",
+    "shape-command-position"
   ],
   "brown": [
-    "named-color"
+    "color"
   ],
   "burlywood": [
-    "named-color"
+    "color"
   ],
   "button": [
     "compat-auto"
   ],
   "ButtonBorder": [
-    "system-color"
+    "color"
   ],
   "ButtonFace": [
-    "system-color"
+    "color"
   ],
   "ButtonHighlight": [
-    "deprecated-color"
+    "color"
   ],
   "ButtonShadow": [
-    "deprecated-color"
+    "color"
   ],
   "ButtonText": [
-    "system-color"
+    "color"
   ],
   "cadetblue": [
-    "named-color"
+    "color"
   ],
   "Canvas": [
-    "system-color"
+    "color"
   ],
   "CanvasText": [
-    "system-color"
+    "color"
   ],
   "cap": [
     "text-edge"
@@ -263,31 +252,26 @@
     "system-family-name"
   ],
   "CaptionText": [
-    "deprecated-color"
+    "color"
   ],
   "ccw": [
     "arc-sweep"
   ],
   "cell": [
-    "cursor-predefined"
+    "cursor"
   ],
   "center": [
     "anchor-side",
-    "content-position",
-    "horizontal-line-command",
+    "alignment",
+    "shape-command-position",
     "position-area",
-    "position-area-query",
-    "position-one",
-    "position-three",
-    "position-two",
-    "self-position",
-    "vertical-line-command"
+    "position"
   ],
   "central": [
     "baseline-metric"
   ],
   "chartreuse": [
-    "named-color"
+    "color"
   ],
   "checkbox": [
     "compat-auto"
@@ -296,7 +280,7 @@
     "svg-paint"
   ],
   "chocolate": [
-    "named-color"
+    "color"
   ],
   "circle": [
     "radial-shape"
@@ -314,15 +298,13 @@
     "quote"
   ],
   "closest-corner": [
-    "radial-extent",
-    "ray-size"
+    "radial-extent"
   ],
   "closest-side": [
-    "radial-extent",
-    "ray-size"
+    "radial-extent"
   ],
   "col-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "collection": [
     "font-format"
@@ -353,10 +335,10 @@
     "color-font-tech"
   ],
   "common-ligatures": [
-    "common-lig-values"
+    "ligature-values"
   ],
   "condensed": [
-    "font-width-css3"
+    "font-width"
   ],
   "contain": [
     "bg-size"
@@ -365,46 +347,46 @@
     "content-level"
   ],
   "content-box": [
-    "visual-box"
+    "box"
   ],
   "contents": [
     "animateable-feature",
     "content-list",
-    "display-box"
+    "display"
   ],
   "context-menu": [
-    "cursor-predefined"
+    "cursor"
   ],
   "contextual": [
     "contextual-alt-values"
   ],
   "copy": [
     "composite-mode",
-    "cursor-predefined"
+    "cursor"
   ],
   "coral": [
-    "named-color"
+    "color"
   ],
   "cornflowerblue": [
-    "named-color"
+    "color"
   ],
   "cornsilk": [
-    "named-color"
+    "color"
   ],
   "cover": [
     "bg-size"
   ],
   "crimson": [
-    "named-color"
+    "color"
   ],
   "crosshair": [
-    "cursor-predefined"
+    "cursor"
   ],
   "currentColor": [
     "color"
   ],
   "cursive": [
-    "generic-complete"
+    "generic-family"
   ],
   "custom-ident": [
     "syntax-type-name"
@@ -413,86 +395,85 @@
     "arc-sweep"
   ],
   "cyan": [
-    "named-color"
+    "color"
   ],
   "cyclic": [
     "symbols-type"
   ],
   "darkblue": [
-    "named-color"
+    "color"
   ],
   "darkcyan": [
-    "named-color"
+    "color"
   ],
   "darken": [
     "blend-mode"
   ],
   "darkgoldenrod": [
-    "named-color"
+    "color"
   ],
   "darkgray": [
-    "named-color"
+    "color"
   ],
   "darkgreen": [
-    "named-color"
+    "color"
   ],
   "darkgrey": [
-    "named-color"
+    "color"
   ],
   "darkkhaki": [
-    "named-color"
+    "color"
   ],
   "darkmagenta": [
-    "named-color"
+    "color"
   ],
   "darkolivegreen": [
-    "named-color"
+    "color"
   ],
   "darkorange": [
-    "named-color"
+    "color"
   ],
   "darkorchid": [
-    "named-color"
+    "color"
   ],
   "darkred": [
-    "named-color"
+    "color"
   ],
   "darksalmon": [
-    "named-color"
+    "color"
   ],
   "darkseagreen": [
-    "named-color"
+    "color"
   ],
   "darkslateblue": [
-    "named-color"
+    "color"
   ],
   "darkslategray": [
-    "named-color"
+    "color"
   ],
   "darkslategrey": [
-    "named-color"
+    "color"
   ],
   "darkturquoise": [
-    "named-color"
+    "color"
   ],
   "darkviolet": [
-    "named-color"
+    "color"
   ],
   "dashed": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "dblclick": [
     "event-trigger-event"
   ],
   "deeppink": [
-    "named-color"
+    "color"
   ],
   "deepskyblue": [
-    "named-color"
+    "color"
   ],
   "default": [
-    "cursor-predefined"
+    "cursor"
   ],
   "destination-atop": [
     "composite-mode"
@@ -513,33 +494,29 @@
     "blend-mode"
   ],
   "dimgray": [
-    "named-color"
+    "color"
   ],
   "dimgrey": [
-    "named-color"
+    "color"
   ],
   "discretionary-ligatures": [
-    "discretionary-lig-values"
+    "ligature-values"
   ],
   "display-p3": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "display-p3-linear": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "dodgerblue": [
-    "named-color"
+    "color"
   ],
   "dotted": [
     "leader-type",
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "double": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "down": [
     "rounding-strategy",
@@ -549,19 +526,19 @@
     "calc-keyword"
   ],
   "e-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "ease": [
-    "cubic-bezier-easing-function"
+    "easing-function"
   ],
   "ease-in": [
-    "cubic-bezier-easing-function"
+    "easing-function"
   ],
   "ease-in-out": [
-    "cubic-bezier-easing-function"
+    "easing-function"
   ],
   "ease-out": [
-    "cubic-bezier-easing-function"
+    "easing-function"
   ],
   "element": [
     "content-level"
@@ -577,18 +554,16 @@
   ],
   "end": [
     "anchor-side",
-    "content-position",
+    "alignment",
     "position-area",
-    "position-area-query",
     "relative-control-point",
-    "self-position",
     "step-position"
   ],
   "even": [
-    "an+b"
+    "an-plus-b"
   ],
   "ew-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "exclude": [
     "compositing-operator"
@@ -597,24 +572,22 @@
     "blend-mode"
   ],
   "expanded": [
-    "font-width-css3"
+    "font-width"
   ],
   "extra-condensed": [
-    "font-width-css3"
+    "font-width"
   ],
   "extra-expanded": [
-    "font-width-css3"
+    "font-width"
   ],
   "fantasy": [
-    "generic-complete"
+    "generic-family"
   ],
   "farthest-corner": [
-    "radial-extent",
-    "ray-size"
+    "radial-extent"
   ],
   "farthest-side": [
-    "radial-extent",
-    "ray-size"
+    "radial-extent"
   ],
   "features-aat": [
     "font-features-tech"
@@ -626,42 +599,39 @@
     "font-features-tech"
   ],
   "Field": [
-    "system-color"
+    "color"
   ],
   "FieldText": [
-    "system-color"
+    "color"
   ],
   "fill-box": [
-    "geometry-box",
-    "paint-box"
+    "box"
   ],
   "firebrick": [
-    "named-color"
+    "color"
   ],
   "first": [
-    "baseline-position",
+    "alignment",
     "pseudo-page"
   ],
   "first-letter": [
-    "legacy-pseudo-element-selector"
+    "pseudo-element"
   ],
   "first-line": [
-    "legacy-pseudo-element-selector"
+    "pseudo-element"
   ],
   "fixed": [
     "attachment",
     "symbols-type"
   ],
   "flex": [
-    "display-inside"
+    "display"
   ],
   "flex-end": [
-    "content-position",
-    "self-position"
+    "alignment"
   ],
   "flex-start": [
-    "content-position",
-    "self-position"
+    "alignment"
   ],
   "flip-block": [
     "try-tactic"
@@ -679,78 +649,77 @@
     "try-tactic"
   ],
   "floralwhite": [
-    "named-color"
+    "color"
   ],
   "flow": [
-    "display-inside"
+    "display"
   ],
   "flow-root": [
-    "display-inside"
+    "display"
   ],
   "forestgreen": [
-    "named-color"
+    "color"
   ],
   "forward": [
-    "navigation-type-keyword"
+    "navigation-type"
   ],
   "forwards": [
-    "single-animation-fill-mode"
+    "animation-fill-mode"
   ],
   "from": [
     "keyframe-selector",
-    "navigation-location-keyword"
+    "navigation-location"
   ],
   "fuchsia": [
-    "named-color"
+    "color"
   ],
   "full-width": [
     "east-asian-width-values"
   ],
   "gainsboro": [
-    "named-color"
+    "color"
   ],
   "ghostwhite": [
-    "named-color"
+    "color"
   ],
   "gold": [
-    "named-color"
+    "color"
   ],
   "goldenrod": [
-    "named-color"
+    "color"
   ],
   "grab": [
-    "cursor-predefined"
+    "cursor"
   ],
   "grabbing": [
-    "cursor-predefined"
+    "cursor"
   ],
   "gray": [
-    "named-color"
+    "color"
   ],
   "GrayText": [
-    "system-color"
+    "color"
   ],
   "green": [
-    "named-color"
+    "color"
   ],
   "greenyellow": [
-    "named-color"
+    "color"
   ],
   "grey": [
-    "named-color"
+    "color"
   ],
   "grid": [
-    "display-inside"
+    "display"
   ],
   "groove": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "hairline": [
     "line-width"
   ],
   "half-border-box": [
-    "shape-box"
+    "box"
   ],
   "hanging": [
     "baseline-metric"
@@ -765,37 +734,37 @@
     "anchor-size"
   ],
   "help": [
-    "cursor-predefined"
+    "cursor"
   ],
   "hidden": [
     "line-style"
   ],
   "Highlight": [
-    "system-color"
+    "color"
   ],
   "HighlightText": [
-    "system-color"
+    "color"
   ],
   "historical-ligatures": [
-    "historical-lig-values"
+    "ligature-values"
   ],
   "honeydew": [
-    "named-color"
+    "color"
   ],
   "hostname": [
     "init-descriptor-name"
   ],
   "hotpink": [
-    "named-color"
+    "color"
   ],
   "hsl": [
-    "polar-color-space"
+    "color-space"
   ],
   "hue": [
     "blend-mode"
   ],
   "hwb": [
-    "polar-color-space"
+    "color-space"
   ],
   "i": [
     "attr-modifier"
@@ -820,13 +789,13 @@
     "syntax-type-name"
   ],
   "InactiveBorder": [
-    "deprecated-color"
+    "color"
   ],
   "InactiveCaption": [
-    "deprecated-color"
+    "color"
   ],
   "InactiveCaptionText": [
-    "deprecated-color"
+    "color"
   ],
   "increasing": [
     "hue-interpolation-method"
@@ -835,60 +804,55 @@
     "font-tech"
   ],
   "indianred": [
-    "named-color"
+    "color"
   ],
   "indigo": [
-    "named-color"
+    "color"
   ],
   "infinite": [
-    "single-animation-iteration-count"
+    "animation-iteration-count"
   ],
   "infinity": [
     "calc-keyword"
   ],
   "InfoBackground": [
-    "deprecated-color"
+    "color"
   ],
   "InfoText": [
-    "deprecated-color"
+    "color"
   ],
   "inline": [
     "anchor-size",
     "axis",
-    "display-outside",
-    "pointer-axis"
+    "display"
   ],
   "inline-block": [
-    "display-legacy"
+    "display"
   ],
   "inline-end": [
     "position-area",
-    "position-area-query",
-    "position-one",
-    "position-two",
+    "position",
     "scroll-button-direction"
   ],
   "inline-flex": [
-    "display-legacy"
+    "display"
   ],
   "inline-grid": [
-    "display-legacy"
+    "display"
   ],
   "inline-start": [
     "position-area",
-    "position-area-query",
-    "position-one",
+    "position",
     "scroll-button-direction"
   ],
   "inline-table": [
-    "display-legacy"
+    "display"
   ],
   "insert": [
     "autospace"
   ],
   "inset": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "inside": [
     "anchor-side"
@@ -906,7 +870,7 @@
     "isolation-mode"
   ],
   "ivory": [
-    "named-color"
+    "color"
   ],
   "JIS-B4": [
     "page-size"
@@ -939,10 +903,10 @@
     "step-position"
   ],
   "khaki": [
-    "named-color"
+    "color"
   ],
   "lab": [
-    "rectangular-color-space"
+    "color-space"
   ],
   "large": [
     "absolute-size",
@@ -952,33 +916,31 @@
     "relative-size"
   ],
   "lavender": [
-    "named-color"
+    "color"
   ],
   "lavenderblush": [
-    "named-color"
+    "color"
   ],
   "lawngreen": [
-    "named-color"
+    "color"
   ],
   "lch": [
-    "polar-color-space"
+    "color-space"
   ],
   "ledger": [
     "page-size"
   ],
   "left": [
     "anchor-side",
-    "horizontal-line-command",
-    "position-one",
-    "position-two",
-    "scroll-button-direction",
-    "side-or-corner"
+    "shape-command-position",
+    "position",
+    "scroll-button-direction"
   ],
   "legal": [
     "page-size"
   ],
   "lemonchiffon": [
-    "named-color"
+    "color"
   ],
   "length": [
     "syntax-type-name"
@@ -990,13 +952,13 @@
     "page-size"
   ],
   "lightblue": [
-    "named-color"
+    "color"
   ],
   "lightcoral": [
-    "named-color"
+    "color"
   ],
   "lightcyan": [
-    "named-color"
+    "color"
   ],
   "lighten": [
     "blend-mode"
@@ -1005,61 +967,61 @@
     "composite-mode"
   ],
   "lightgoldenrodyellow": [
-    "named-color"
+    "color"
   ],
   "lightgray": [
-    "named-color"
+    "color"
   ],
   "lightgreen": [
-    "named-color"
+    "color"
   ],
   "lightgrey": [
-    "named-color"
+    "color"
   ],
   "lightpink": [
-    "named-color"
+    "color"
   ],
   "lightsalmon": [
-    "named-color"
+    "color"
   ],
   "lightseagreen": [
-    "named-color"
+    "color"
   ],
   "lightskyblue": [
-    "named-color"
+    "color"
   ],
   "lightslategray": [
-    "named-color"
+    "color"
   ],
   "lightslategrey": [
-    "named-color"
+    "color"
   ],
   "lightsteelblue": [
-    "named-color"
+    "color"
   ],
   "lightyellow": [
-    "named-color"
+    "color"
   ],
   "lime": [
-    "named-color"
+    "color"
   ],
   "limegreen": [
-    "named-color"
+    "color"
   ],
   "line-width": [
     "rounding-strategy"
   ],
   "linear": [
-    "linear-easing-function"
+    "easing-function"
   ],
   "linen": [
-    "named-color"
+    "color"
   ],
   "lining-nums": [
     "numeric-figure-values"
   ],
   "LinkText": [
-    "system-color"
+    "color"
   ],
   "listbox": [
     "compat-auto"
@@ -1080,32 +1042,30 @@
     "blend-mode"
   ],
   "magenta": [
-    "named-color"
+    "color"
   ],
   "margin-box": [
-    "layout-box",
-    "shape-box"
+    "box"
   ],
   "Mark": [
-    "system-color"
+    "color"
   ],
   "MarkText": [
-    "system-color"
+    "color"
   ],
   "maroon": [
-    "named-color"
+    "color"
   ],
   "match-source": [
     "masking-mode"
   ],
   "math": [
-    "generic-complete"
+    "generic-family"
   ],
   "mathematical": [
     "baseline-metric"
   ],
   "max-content": [
-    "inflexible-breadth",
     "track-breadth"
   ],
   "medium": [
@@ -1113,37 +1073,37 @@
     "line-width"
   ],
   "mediumaquamarine": [
-    "named-color"
+    "color"
   ],
   "mediumblue": [
-    "named-color"
+    "color"
   ],
   "mediumorchid": [
-    "named-color"
+    "color"
   ],
   "mediumpurple": [
-    "named-color"
+    "color"
   ],
   "mediumseagreen": [
-    "named-color"
+    "color"
   ],
   "mediumslateblue": [
-    "named-color"
+    "color"
   ],
   "mediumspringgreen": [
-    "named-color"
+    "color"
   ],
   "mediumturquoise": [
-    "named-color"
+    "color"
   ],
   "mediumvioletred": [
-    "named-color"
+    "color"
   ],
   "menu": [
     "system-family-name"
   ],
   "Menu": [
-    "deprecated-color"
+    "color"
   ],
   "menulist": [
     "compat-auto"
@@ -1152,7 +1112,7 @@
     "compat-special"
   ],
   "MenuText": [
-    "deprecated-color"
+    "color"
   ],
   "message-box": [
     "system-family-name"
@@ -1164,23 +1124,22 @@
     "baseline-metric"
   ],
   "midnightblue": [
-    "named-color"
+    "color"
   ],
   "min-content": [
-    "inflexible-breadth",
     "track-breadth"
   ],
   "mintcream": [
-    "named-color"
+    "color"
   ],
   "mistyrose": [
-    "named-color"
+    "color"
   ],
   "moccasin": [
-    "named-color"
+    "color"
   ],
   "monospace": [
-    "generic-complete"
+    "generic-family"
   ],
   "most-block-size": [
     "try-size"
@@ -1195,33 +1154,32 @@
     "try-size"
   ],
   "move": [
-    "cursor-predefined"
+    "cursor"
   ],
   "multiply": [
     "blend-mode"
   ],
   "n-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "NaN": [
     "calc-keyword"
   ],
   "navajowhite": [
-    "named-color"
+    "color"
   ],
   "navy": [
-    "named-color"
+    "color"
   ],
   "ne-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "nearest": [
-    "pointer-source",
-    "rounding-strategy",
-    "scroller"
+    "source",
+    "rounding-strategy"
   ],
   "nesw-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "next": [
     "scroll-button-direction"
@@ -1236,19 +1194,19 @@
     "quote"
   ],
   "no-common-ligatures": [
-    "common-lig-values"
+    "ligature-values"
   ],
   "no-contextual": [
     "contextual-alt-values"
   ],
   "no-discretionary-ligatures": [
-    "discretionary-lig-values"
+    "ligature-values"
   ],
   "no-drop": [
-    "cursor-predefined"
+    "cursor"
   ],
   "no-historical-ligatures": [
-    "historical-lig-values"
+    "ligature-values"
   ],
   "no-open-quote": [
     "quote"
@@ -1257,42 +1215,41 @@
     "referrer-policy-modifier"
   ],
   "no-repeat": [
-    "repetition"
+    "repeat-style"
   ],
   "none": [
     "bg-image",
     "cmyk-component",
-    "cursor-predefined",
-    "display-box",
+    "cursor",
+    "display",
     "line-style",
     "mask-reference",
-    "outline-line-style",
     "paint",
     "single-animation",
-    "single-animation-fill-mode",
-    "single-animation-timeline",
+    "animation-fill-mode",
+    "animation-timeline",
     "single-transition"
   ],
   "normal": [
     "blend-mode",
-    "font-variant-css2",
-    "font-weight-absolute",
-    "font-width-css3",
-    "single-animation-direction",
+    "font-variant",
+    "font-weight",
+    "font-width",
+    "animation-direction",
     "spacing-trim",
-    "transition-behavior-value"
+    "transition-behavior"
   ],
   "not": [
     "media-query"
   ],
   "not-allowed": [
-    "cursor-predefined"
+    "cursor"
   ],
   "notch": [
-    "corner-shape-value"
+    "corner-shape"
   ],
   "ns-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "number": [
     "attr-type",
@@ -1302,31 +1259,31 @@
     "symbols-type"
   ],
   "nw-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "nwse-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "odd": [
-    "an+b"
+    "an-plus-b"
   ],
   "oklab": [
-    "rectangular-color-space"
+    "color-space"
   ],
   "oklch": [
-    "polar-color-space"
+    "color-space"
   ],
   "oldlace": [
-    "named-color"
+    "color"
   ],
   "oldstyle-nums": [
     "numeric-figure-values"
   ],
   "olive": [
-    "named-color"
+    "color"
   ],
   "olivedrab": [
-    "named-color"
+    "color"
   ],
   "on": [
     "feature-tag-value"
@@ -1338,13 +1295,13 @@
     "font-format"
   ],
   "orange": [
-    "named-color"
+    "color"
   ],
   "orangered": [
-    "named-color"
+    "color"
   ],
   "orchid": [
-    "named-color"
+    "color"
   ],
   "origin": [
     "referrer-policy-modifier"
@@ -1353,8 +1310,7 @@
     "referrer-policy-modifier"
   ],
   "outset": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "outside": [
     "anchor-side"
@@ -1363,49 +1319,49 @@
     "blend-mode"
   ],
   "padding-box": [
-    "visual-box"
+    "box"
   ],
   "palegoldenrod": [
-    "named-color"
+    "color"
   ],
   "palegreen": [
-    "named-color"
+    "color"
   ],
   "palettes": [
     "font-tech"
   ],
   "paleturquoise": [
-    "named-color"
+    "color"
   ],
   "palevioletred": [
-    "named-color"
+    "color"
   ],
   "papayawhip": [
-    "named-color"
+    "color"
   ],
   "pathname": [
     "init-descriptor-name"
   ],
   "paused": [
-    "single-animation-play-state"
+    "animation-play-state"
   ],
   "peachpuff": [
-    "named-color"
+    "color"
   ],
   "percentage": [
     "syntax-type-name"
   ],
   "peru": [
-    "named-color"
+    "color"
   ],
   "pi": [
     "calc-keyword"
   ],
   "pink": [
-    "named-color"
+    "color"
   ],
   "plum": [
-    "named-color"
+    "color"
   ],
   "plus-darker": [
     "composite-mode"
@@ -1414,26 +1370,25 @@
     "composite-mode"
   ],
   "pointer": [
-    "cursor-predefined"
+    "cursor"
   ],
   "port": [
     "init-descriptor-name"
   ],
   "powderblue": [
-    "named-color"
+    "color"
   ],
   "prev": [
     "scroll-button-direction"
   ],
   "progress": [
-    "cursor-predefined"
+    "cursor"
   ],
   "progress-bar": [
     "compat-auto"
   ],
   "prophoto-rgb": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "proportional-nums": [
     "numeric-spacing-values"
@@ -1448,7 +1403,7 @@
     "autospace"
   ],
   "purple": [
-    "named-color"
+    "color"
   ],
   "radio": [
     "compat-auto"
@@ -1457,29 +1412,28 @@
     "attr-type"
   ],
   "rebeccapurple": [
-    "named-color"
+    "color"
   ],
   "rec2020": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "rec2100-hlg": [
-    "predefined-rgb"
+    "color-space"
   ],
   "rec2100-linear": [
-    "predefined-rgb"
+    "color-space"
   ],
   "rec2100-pq": [
-    "predefined-rgb"
+    "color-space"
   ],
   "red": [
-    "named-color"
+    "color"
   ],
   "reload": [
-    "navigation-type-keyword"
+    "navigation-type"
   ],
   "repeat": [
-    "repetition"
+    "repeat-style"
   ],
   "repeat-block": [
     "repeat-style"
@@ -1495,100 +1449,94 @@
   ],
   "replace": [
     "autospace",
-    "single-animation-composition"
+    "animation-composition"
   ],
   "resolution": [
     "syntax-type-name"
   ],
   "reverse": [
-    "single-animation-direction"
+    "animation-direction"
   ],
   "ridge": [
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "right": [
     "anchor-side",
-    "horizontal-line-command",
+    "shape-command-position",
     "position-area",
-    "position-area-query",
-    "position-four",
-    "position-one",
-    "position-two",
+    "position",
     "pseudo-page",
-    "scroll-button-direction",
-    "side-or-corner"
+    "scroll-button-direction"
   ],
   "root": [
-    "pointer-source",
-    "scroller"
+    "source"
   ],
   "rosybrown": [
-    "named-color"
+    "color"
   ],
   "round": [
-    "corner-shape-value",
-    "repetition"
+    "corner-shape",
+    "repeat-style"
   ],
   "row-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "royalblue": [
-    "named-color"
+    "color"
   ],
   "rtl": [
     "image-tags"
   ],
   "ruby": [
-    "display-inside"
+    "display"
   ],
   "ruby-base": [
-    "display-internal"
+    "display"
   ],
   "ruby-base-container": [
-    "display-internal"
+    "display"
   ],
   "ruby-text": [
-    "display-internal"
+    "display"
   ],
   "ruby-text-container": [
-    "display-internal"
+    "display"
   ],
   "run-in": [
-    "display-outside"
+    "display"
   ],
   "running": [
-    "single-animation-play-state"
+    "animation-play-state"
   ],
   "s": [
     "attr-modifier"
   ],
   "s-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "saddlebrown": [
-    "named-color"
+    "color"
   ],
   "safe": [
-    "overflow-position"
+    "alignment"
   ],
   "salmon": [
-    "named-color"
+    "color"
   ],
   "same-origin": [
     "referrer-policy-modifier"
   ],
   "sandybrown": [
-    "named-color"
+    "color"
   ],
   "sans-serif": [
-    "generic-complete"
+    "generic-family"
   ],
   "saturation": [
     "blend-mode"
   ],
   "scoop": [
-    "corner-shape-value"
+    "corner-shape"
   ],
   "screen": [
     "blend-mode"
@@ -1600,13 +1548,13 @@
     "animateable-feature"
   ],
   "Scrollbar": [
-    "deprecated-color"
+    "color"
   ],
   "se-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "seagreen": [
-    "named-color"
+    "color"
   ],
   "search": [
     "init-descriptor-name"
@@ -1615,113 +1563,102 @@
     "compat-auto"
   ],
   "seashell": [
-    "named-color"
+    "color"
   ],
   "select": [
     "form-control-identifier"
   ],
   "SelectedItem": [
-    "system-color"
+    "color"
   ],
   "SelectedItemText": [
-    "system-color"
+    "color"
   ],
   "self": [
-    "pointer-source",
-    "scroller"
+    "source"
   ],
   "self-block": [
     "anchor-size"
   ],
   "self-block-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-block-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-end": [
     "anchor-side",
     "position-area",
-    "position-area-query",
-    "self-position"
+    "alignment"
   ],
   "self-inline": [
     "anchor-size"
   ],
   "self-inline-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-inline-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-start": [
     "anchor-side",
     "position-area",
-    "position-area-query",
-    "self-position"
+    "alignment"
   ],
   "self-x-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-x-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-y-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "self-y-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "semi-condensed": [
-    "font-width-css3"
+    "font-width"
   ],
   "semi-expanded": [
-    "font-width-css3"
+    "font-width"
   ],
   "serif": [
-    "generic-complete"
+    "generic-family"
   ],
   "shorter": [
     "hue-interpolation-method"
   ],
   "sides": [
-    "ray-size"
+    "radial-extent"
   ],
   "sienna": [
-    "named-color"
+    "color"
   ],
   "silver": [
-    "named-color"
+    "color"
   ],
   "simplified": [
     "east-asian-variant-values"
   ],
   "skyblue": [
-    "named-color"
+    "color"
   ],
   "slateblue": [
-    "named-color"
+    "color"
   ],
   "slategray": [
-    "named-color"
+    "color"
   ],
   "slategrey": [
-    "named-color"
+    "color"
   ],
   "small": [
     "absolute-size",
     "arc-size"
   ],
   "small-caps": [
-    "font-variant-css2"
+    "font-variant"
   ],
   "small-caption": [
     "system-family-name"
@@ -1730,15 +1667,14 @@
     "relative-size"
   ],
   "snow": [
-    "named-color"
+    "color"
   ],
   "soft-light": [
     "blend-mode"
   ],
   "solid": [
     "leader-type",
-    "line-style",
-    "outline-line-style"
+    "line-style"
   ],
   "source-atop": [
     "composite-mode"
@@ -1754,166 +1690,137 @@
   ],
   "space": [
     "leader-type",
-    "repetition"
+    "repeat-style"
   ],
   "space-all": [
     "spacing-trim"
   ],
   "space-around": [
-    "content-distribution"
+    "alignment"
   ],
   "space-between": [
-    "content-distribution"
+    "alignment"
   ],
   "space-evenly": [
-    "content-distribution"
+    "alignment"
   ],
   "space-first": [
     "spacing-trim"
   ],
   "span-all": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-block-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-block-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-bottom": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-inline-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-inline-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-left": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-right": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-block-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-block-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-inline-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-inline-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-x-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-x-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-y-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-self-y-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-top": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-x-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-x-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-y-end": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "span-y-start": [
-    "position-area",
-    "position-area-query"
+    "position-area"
   ],
   "springgreen": [
-    "named-color"
+    "color"
   ],
   "square": [
-    "corner-shape-value"
+    "corner-shape"
   ],
   "squircle": [
-    "corner-shape-value"
+    "corner-shape"
   ],
   "srgb": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "srgb-linear": [
-    "predefined-rgb",
-    "rectangular-color-space"
+    "color-space"
   ],
   "stacked-fractions": [
     "numeric-fraction-values"
   ],
   "start": [
     "anchor-side",
-    "content-position",
+    "alignment",
     "position-area",
-    "position-area-query",
-    "position-two",
-    "self-position",
+    "position",
     "step-position"
   ],
   "status-bar": [
     "system-family-name"
   ],
   "steelblue": [
-    "named-color"
+    "color"
   ],
   "step-end": [
-    "step-easing-function"
+    "easing-function"
   ],
   "step-start": [
-    "step-easing-function"
+    "easing-function"
   ],
   "stretch": [
-    "content-distribution"
+    "alignment"
   ],
   "strict-origin": [
     "referrer-policy-modifier"
@@ -1925,8 +1832,7 @@
     "syntax-type-name"
   ],
   "stroke-box": [
-    "geometry-box",
-    "paint-box"
+    "box"
   ],
   "subtract": [
     "compositing-operator"
@@ -1935,54 +1841,54 @@
     "font-format"
   ],
   "sw-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "symbolic": [
     "symbols-type"
   ],
   "system-ui": [
-    "generic-complete"
+    "generic-family"
   ],
   "table": [
-    "display-inside"
+    "display"
   ],
   "table-caption": [
-    "display-internal"
+    "display"
   ],
   "table-cell": [
-    "display-internal"
+    "display"
   ],
   "table-column": [
-    "display-internal"
+    "display"
   ],
   "table-column-group": [
-    "display-internal"
+    "display"
   ],
   "table-footer-group": [
-    "display-internal"
+    "display"
   ],
   "table-header-group": [
-    "display-internal"
+    "display"
   ],
   "table-row": [
-    "display-internal"
+    "display"
   ],
   "table-row-group": [
-    "display-internal"
+    "display"
   ],
   "tabular-nums": [
     "numeric-spacing-values"
   ],
   "tan": [
-    "named-color"
+    "color"
   ],
   "teal": [
-    "named-color"
+    "color"
   ],
   "text": [
     "bg-clip",
     "content-level",
-    "cursor-predefined",
+    "cursor",
     "text-edge"
   ],
   "text-bottom": [
@@ -2004,43 +1910,41 @@
     "line-width"
   ],
   "thistle": [
-    "named-color"
+    "color"
   ],
   "ThreeDDarkShadow": [
-    "deprecated-color"
+    "color"
   ],
   "ThreeDFace": [
-    "deprecated-color"
+    "color"
   ],
   "ThreeDHighlight": [
-    "deprecated-color"
+    "color"
   ],
   "ThreeDLightShadow": [
-    "deprecated-color"
+    "color"
   ],
   "ThreeDShadow": [
-    "deprecated-color"
+    "color"
   ],
   "time": [
     "syntax-type-name"
   ],
   "to": [
     "keyframe-selector",
-    "navigation-location-keyword"
+    "navigation-location"
   ],
   "to-zero": [
     "rounding-strategy"
   ],
   "tomato": [
-    "named-color"
+    "color"
   ],
   "top": [
     "anchor-side",
     "position-area",
-    "position-area-query",
-    "position-one",
-    "side-or-corner",
-    "vertical-line-command"
+    "position",
+    "shape-command-position"
   ],
   "touch": [
     "event-trigger-event"
@@ -2052,11 +1956,10 @@
     "syntax-type-name"
   ],
   "transparent": [
-    "color-base",
-    "named-color"
+    "color"
   ],
   "traverse": [
-    "navigation-type-keyword"
+    "navigation-type"
   ],
   "trim-all": [
     "spacing-trim"
@@ -2071,28 +1974,28 @@
     "font-format"
   ],
   "turquoise": [
-    "named-color"
+    "color"
   ],
   "ui-monospace": [
-    "generic-incomplete"
+    "generic-family"
   ],
   "ui-rounded": [
-    "generic-incomplete"
+    "generic-family"
   ],
   "ui-sans-serif": [
-    "generic-incomplete"
+    "generic-family"
   ],
   "ui-serif": [
-    "generic-incomplete"
+    "generic-family"
   ],
   "ultra-condensed": [
-    "font-width-css3"
+    "font-width"
   ],
   "ultra-expanded": [
-    "font-width-css3"
+    "font-width"
   ],
   "unsafe": [
-    "overflow-position"
+    "alignment"
   ],
   "unsafe-url)": [
     "referrer-policy-modifier"
@@ -2111,47 +2014,46 @@
     "font-tech"
   ],
   "vertical-text": [
-    "cursor-predefined"
+    "cursor"
   ],
   "view-box": [
-    "coord-box",
-    "geometry-box"
+    "box"
   ],
   "violet": [
-    "named-color"
+    "color"
   ],
   "VisitedText": [
-    "system-color"
+    "color"
   ],
   "w-resize": [
-    "cursor-predefined"
+    "cursor"
   ],
   "wait": [
-    "cursor-predefined"
+    "cursor"
   ],
   "wcag2": [
     "wcag2"
   ],
   "wheat": [
-    "named-color"
+    "color"
   ],
   "white": [
-    "named-color"
+    "color"
   ],
   "whitesmoke": [
-    "named-color"
+    "color"
   ],
   "width": [
     "anchor-size"
   ],
   "Window": [
-    "deprecated-color"
+    "color"
   ],
   "WindowFrame": [
-    "deprecated-color"
+    "color"
   ],
   "WindowText": [
-    "deprecated-color"
+    "color"
   ],
   "woff": [
     "font-format"
@@ -2160,15 +2062,12 @@
     "font-format"
   ],
   "x": [
-    "axis",
-    "pointer-axis"
+    "axis"
   ],
   "x-end": [
-    "horizontal-line-command",
+    "shape-command-position",
     "position-area",
-    "position-area-query",
-    "position-one",
-    "position-two"
+    "position"
   ],
   "x-large": [
     "absolute-size"
@@ -2177,12 +2076,9 @@
     "absolute-size"
   ],
   "x-start": [
-    "horizontal-line-command",
+    "shape-command-position",
     "position-area",
-    "position-area-query",
-    "position-four",
-    "position-one",
-    "position-two"
+    "position"
   ],
   "xor": [
     "composite-mode"
@@ -2197,43 +2093,37 @@
     "absolute-size"
   ],
   "xyz": [
-    "xyz-space"
+    "color-space"
   ],
   "xyz-d50": [
-    "xyz-space"
+    "color-space"
   ],
   "xyz-d65": [
-    "xyz-space"
+    "color-space"
   ],
   "y": [
-    "axis",
-    "pointer-axis"
+    "axis"
   ],
   "y-end": [
     "position-area",
-    "position-area-query",
-    "position-one",
-    "position-two",
-    "vertical-line-command"
+    "position",
+    "shape-command-position"
   ],
   "y-start": [
     "position-area",
-    "position-area-query",
-    "position-four",
-    "position-one",
-    "position-two",
-    "vertical-line-command"
+    "position",
+    "shape-command-position"
   ],
   "yellow": [
-    "named-color"
+    "color"
   ],
   "yellowgreen": [
-    "named-color"
+    "color"
   ],
   "zoom-in": [
-    "cursor-predefined"
+    "cursor"
   ],
   "zoom-out": [
-    "cursor-predefined"
+    "cursor"
   ]
 }
