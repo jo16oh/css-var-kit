@@ -1,0 +1,2239 @@
+{
+  "-infinity": [
+    "calc-keyword"
+  ],
+  "-n": [
+    "an+b"
+  ],
+  "...": [
+    "event-trigger-event"
+  ],
+  "'": [
+    "attr-matcher",
+    "combinator",
+    "ns-prefix",
+    "syntax-combinator"
+  ],
+  "'^'": [
+    "attr-matcher"
+  ],
+  "'='": [
+    "mf-eq"
+  ],
+  "'>'": [
+    "combinator"
+  ],
+  "'~'": [
+    "attr-matcher",
+    "combinator"
+  ],
+  "'$'": [
+    "attr-matcher"
+  ],
+  "A3": [
+    "page-size"
+  ],
+  "A4": [
+    "page-size"
+  ],
+  "A5": [
+    "page-size"
+  ],
+  "a98-rgb": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "aa": [
+    "wcag2"
+  ],
+  "AccentColor": [
+    "system-color"
+  ],
+  "AccentColorText": [
+    "system-color"
+  ],
+  "accumulate": [
+    "single-animation-composition"
+  ],
+  "activate": [
+    "event-trigger-event"
+  ],
+  "ActiveBorder": [
+    "deprecated-color"
+  ],
+  "ActiveCaption": [
+    "deprecated-color"
+  ],
+  "ActiveText": [
+    "system-color"
+  ],
+  "add": [
+    "compositing-operator",
+    "single-animation-composition"
+  ],
+  "after": [
+    "legacy-pseudo-element-selector"
+  ],
+  "alias": [
+    "cursor-predefined"
+  ],
+  "aliceblue": [
+    "named-color"
+  ],
+  "all": [
+    "single-transition-property"
+  ],
+  "all-scroll": [
+    "cursor-predefined"
+  ],
+  "allow-discrete": [
+    "transition-behavior-value"
+  ],
+  "alpha": [
+    "masking-mode"
+  ],
+  "alphabetic": [
+    "baseline-metric",
+    "symbols-type",
+    "text-edge"
+  ],
+  "alternate": [
+    "single-animation-direction"
+  ],
+  "alternate-reverse": [
+    "single-animation-direction"
+  ],
+  "angle": [
+    "syntax-type-name"
+  ],
+  "antiquewhite": [
+    "named-color"
+  ],
+  "any": [
+    "calc-size-basis",
+    "position-area-query"
+  ],
+  "AppWorkspace": [
+    "deprecated-color"
+  ],
+  "aqua": [
+    "named-color"
+  ],
+  "aquamarine": [
+    "named-color"
+  ],
+  "at": [
+    "navigation-location-keyword"
+  ],
+  "auto": [
+    "cursor-predefined",
+    "grid-line",
+    "inflexible-breadth",
+    "isolation-mode",
+    "outline-line-style",
+    "random-cache-key",
+    "single-animation-timeline",
+    "source-size",
+    "source-size-value",
+    "track-breadth"
+  ],
+  "azure": [
+    "named-color"
+  ],
+  "B4": [
+    "page-size"
+  ],
+  "B5": [
+    "page-size"
+  ],
+  "back": [
+    "navigation-type-keyword"
+  ],
+  "Background": [
+    "deprecated-color"
+  ],
+  "backwards": [
+    "single-animation-fill-mode"
+  ],
+  "base-url": [
+    "init-descriptor-name"
+  ],
+  "beige": [
+    "named-color"
+  ],
+  "bevel": [
+    "corner-shape-value"
+  ],
+  "bisque": [
+    "named-color"
+  ],
+  "black": [
+    "named-color"
+  ],
+  "blanchedalmond": [
+    "named-color"
+  ],
+  "blank": [
+    "pseudo-page"
+  ],
+  "block": [
+    "anchor-size",
+    "axis",
+    "display-outside",
+    "pointer-axis"
+  ],
+  "block-end": [
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "scroll-button-direction"
+  ],
+  "block-start": [
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "position-two",
+    "scroll-button-direction"
+  ],
+  "blue": [
+    "named-color"
+  ],
+  "blueviolet": [
+    "named-color"
+  ],
+  "bold": [
+    "font-weight-absolute"
+  ],
+  "border-area": [
+    "bg-clip"
+  ],
+  "border-box": [
+    "visual-box"
+  ],
+  "both": [
+    "single-animation-fill-mode"
+  ],
+  "bottom": [
+    "anchor-side",
+    "position-area",
+    "position-area-query",
+    "position-four",
+    "position-one",
+    "position-two",
+    "side-or-corner",
+    "vertical-line-command"
+  ],
+  "brown": [
+    "named-color"
+  ],
+  "burlywood": [
+    "named-color"
+  ],
+  "button": [
+    "compat-auto"
+  ],
+  "ButtonBorder": [
+    "system-color"
+  ],
+  "ButtonFace": [
+    "system-color"
+  ],
+  "ButtonHighlight": [
+    "deprecated-color"
+  ],
+  "ButtonShadow": [
+    "deprecated-color"
+  ],
+  "ButtonText": [
+    "system-color"
+  ],
+  "cadetblue": [
+    "named-color"
+  ],
+  "Canvas": [
+    "system-color"
+  ],
+  "CanvasText": [
+    "system-color"
+  ],
+  "cap": [
+    "text-edge"
+  ],
+  "caption": [
+    "system-family-name"
+  ],
+  "CaptionText": [
+    "deprecated-color"
+  ],
+  "ccw": [
+    "arc-sweep"
+  ],
+  "cell": [
+    "cursor-predefined"
+  ],
+  "center": [
+    "anchor-side",
+    "content-position",
+    "horizontal-line-command",
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "position-three",
+    "position-two",
+    "self-position",
+    "vertical-line-command"
+  ],
+  "central": [
+    "baseline-metric"
+  ],
+  "chartreuse": [
+    "named-color"
+  ],
+  "checkbox": [
+    "compat-auto"
+  ],
+  "child": [
+    "svg-paint"
+  ],
+  "chocolate": [
+    "named-color"
+  ],
+  "circle": [
+    "radial-shape"
+  ],
+  "clear": [
+    "composite-mode"
+  ],
+  "click": [
+    "event-trigger-event"
+  ],
+  "close": [
+    "shape-command"
+  ],
+  "close-quote": [
+    "quote"
+  ],
+  "closest-corner": [
+    "radial-extent",
+    "ray-size"
+  ],
+  "closest-side": [
+    "radial-extent",
+    "ray-size"
+  ],
+  "col-resize": [
+    "cursor-predefined"
+  ],
+  "collection": [
+    "font-format"
+  ],
+  "color": [
+    "blend-mode",
+    "syntax-type-name"
+  ],
+  "color-burn": [
+    "blend-mode"
+  ],
+  "color-CBDT": [
+    "color-font-tech"
+  ],
+  "color-COLRv0": [
+    "color-font-tech"
+  ],
+  "color-COLRv1": [
+    "color-font-tech"
+  ],
+  "color-dodge": [
+    "blend-mode"
+  ],
+  "color-sbix": [
+    "color-font-tech"
+  ],
+  "color-SVG": [
+    "color-font-tech"
+  ],
+  "common-ligatures": [
+    "common-lig-values"
+  ],
+  "condensed": [
+    "font-width-css3"
+  ],
+  "contain": [
+    "bg-size"
+  ],
+  "content": [
+    "content-level"
+  ],
+  "content-box": [
+    "visual-box"
+  ],
+  "contents": [
+    "animateable-feature",
+    "content-list",
+    "display-box"
+  ],
+  "context-menu": [
+    "cursor-predefined"
+  ],
+  "contextual": [
+    "contextual-alt-values"
+  ],
+  "copy": [
+    "composite-mode",
+    "cursor-predefined"
+  ],
+  "coral": [
+    "named-color"
+  ],
+  "cornflowerblue": [
+    "named-color"
+  ],
+  "cornsilk": [
+    "named-color"
+  ],
+  "cover": [
+    "bg-size"
+  ],
+  "crimson": [
+    "named-color"
+  ],
+  "crosshair": [
+    "cursor-predefined"
+  ],
+  "currentColor": [
+    "color"
+  ],
+  "cursive": [
+    "generic-complete"
+  ],
+  "custom-ident": [
+    "syntax-type-name"
+  ],
+  "cw": [
+    "arc-sweep"
+  ],
+  "cyan": [
+    "named-color"
+  ],
+  "cyclic": [
+    "symbols-type"
+  ],
+  "darkblue": [
+    "named-color"
+  ],
+  "darkcyan": [
+    "named-color"
+  ],
+  "darken": [
+    "blend-mode"
+  ],
+  "darkgoldenrod": [
+    "named-color"
+  ],
+  "darkgray": [
+    "named-color"
+  ],
+  "darkgreen": [
+    "named-color"
+  ],
+  "darkgrey": [
+    "named-color"
+  ],
+  "darkkhaki": [
+    "named-color"
+  ],
+  "darkmagenta": [
+    "named-color"
+  ],
+  "darkolivegreen": [
+    "named-color"
+  ],
+  "darkorange": [
+    "named-color"
+  ],
+  "darkorchid": [
+    "named-color"
+  ],
+  "darkred": [
+    "named-color"
+  ],
+  "darksalmon": [
+    "named-color"
+  ],
+  "darkseagreen": [
+    "named-color"
+  ],
+  "darkslateblue": [
+    "named-color"
+  ],
+  "darkslategray": [
+    "named-color"
+  ],
+  "darkslategrey": [
+    "named-color"
+  ],
+  "darkturquoise": [
+    "named-color"
+  ],
+  "darkviolet": [
+    "named-color"
+  ],
+  "dashed": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "dblclick": [
+    "event-trigger-event"
+  ],
+  "deeppink": [
+    "named-color"
+  ],
+  "deepskyblue": [
+    "named-color"
+  ],
+  "default": [
+    "cursor-predefined"
+  ],
+  "destination-atop": [
+    "composite-mode"
+  ],
+  "destination-in": [
+    "composite-mode"
+  ],
+  "destination-out": [
+    "composite-mode"
+  ],
+  "destination-over": [
+    "composite-mode"
+  ],
+  "diagonal-fractions": [
+    "numeric-fraction-values"
+  ],
+  "difference": [
+    "blend-mode"
+  ],
+  "dimgray": [
+    "named-color"
+  ],
+  "dimgrey": [
+    "named-color"
+  ],
+  "discretionary-ligatures": [
+    "discretionary-lig-values"
+  ],
+  "display-p3": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "display-p3-linear": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "dodgerblue": [
+    "named-color"
+  ],
+  "dotted": [
+    "leader-type",
+    "line-style",
+    "outline-line-style"
+  ],
+  "double": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "down": [
+    "rounding-strategy",
+    "scroll-button-direction"
+  ],
+  "e": [
+    "calc-keyword"
+  ],
+  "e-resize": [
+    "cursor-predefined"
+  ],
+  "ease": [
+    "cubic-bezier-easing-function"
+  ],
+  "ease-in": [
+    "cubic-bezier-easing-function"
+  ],
+  "ease-in-out": [
+    "cubic-bezier-easing-function"
+  ],
+  "ease-out": [
+    "cubic-bezier-easing-function"
+  ],
+  "element": [
+    "content-level"
+  ],
+  "ellipse": [
+    "radial-shape"
+  ],
+  "else": [
+    "if-condition"
+  ],
+  "embedded-opentype": [
+    "font-format"
+  ],
+  "end": [
+    "anchor-side",
+    "content-position",
+    "position-area",
+    "position-area-query",
+    "relative-control-point",
+    "self-position",
+    "step-position"
+  ],
+  "even": [
+    "an+b"
+  ],
+  "ew-resize": [
+    "cursor-predefined"
+  ],
+  "exclude": [
+    "compositing-operator"
+  ],
+  "exclusion": [
+    "blend-mode"
+  ],
+  "expanded": [
+    "font-width-css3"
+  ],
+  "extra-condensed": [
+    "font-width-css3"
+  ],
+  "extra-expanded": [
+    "font-width-css3"
+  ],
+  "fantasy": [
+    "generic-complete"
+  ],
+  "farthest-corner": [
+    "radial-extent",
+    "ray-size"
+  ],
+  "farthest-side": [
+    "radial-extent",
+    "ray-size"
+  ],
+  "features-aat": [
+    "font-features-tech"
+  ],
+  "features-graphite": [
+    "font-features-tech"
+  ],
+  "features-opentype": [
+    "font-features-tech"
+  ],
+  "Field": [
+    "system-color"
+  ],
+  "FieldText": [
+    "system-color"
+  ],
+  "fill-box": [
+    "geometry-box",
+    "paint-box"
+  ],
+  "firebrick": [
+    "named-color"
+  ],
+  "first": [
+    "baseline-position",
+    "pseudo-page"
+  ],
+  "first-letter": [
+    "legacy-pseudo-element-selector"
+  ],
+  "first-line": [
+    "legacy-pseudo-element-selector"
+  ],
+  "fixed": [
+    "attachment",
+    "symbols-type"
+  ],
+  "flex": [
+    "display-inside"
+  ],
+  "flex-end": [
+    "content-position",
+    "self-position"
+  ],
+  "flex-start": [
+    "content-position",
+    "self-position"
+  ],
+  "flip-block": [
+    "try-tactic"
+  ],
+  "flip-inline": [
+    "try-tactic"
+  ],
+  "flip-start": [
+    "try-tactic"
+  ],
+  "flip-x": [
+    "try-tactic"
+  ],
+  "flip-y": [
+    "try-tactic"
+  ],
+  "floralwhite": [
+    "named-color"
+  ],
+  "flow": [
+    "display-inside"
+  ],
+  "flow-root": [
+    "display-inside"
+  ],
+  "forestgreen": [
+    "named-color"
+  ],
+  "forward": [
+    "navigation-type-keyword"
+  ],
+  "forwards": [
+    "single-animation-fill-mode"
+  ],
+  "from": [
+    "keyframe-selector",
+    "navigation-location-keyword"
+  ],
+  "fuchsia": [
+    "named-color"
+  ],
+  "full-width": [
+    "east-asian-width-values"
+  ],
+  "gainsboro": [
+    "named-color"
+  ],
+  "ghostwhite": [
+    "named-color"
+  ],
+  "gold": [
+    "named-color"
+  ],
+  "goldenrod": [
+    "named-color"
+  ],
+  "grab": [
+    "cursor-predefined"
+  ],
+  "grabbing": [
+    "cursor-predefined"
+  ],
+  "gray": [
+    "named-color"
+  ],
+  "GrayText": [
+    "system-color"
+  ],
+  "green": [
+    "named-color"
+  ],
+  "greenyellow": [
+    "named-color"
+  ],
+  "grey": [
+    "named-color"
+  ],
+  "grid": [
+    "display-inside"
+  ],
+  "groove": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "hairline": [
+    "line-width"
+  ],
+  "half-border-box": [
+    "shape-box"
+  ],
+  "hanging": [
+    "baseline-metric"
+  ],
+  "hard-light": [
+    "blend-mode"
+  ],
+  "hash": [
+    "init-descriptor-name"
+  ],
+  "height": [
+    "anchor-size"
+  ],
+  "help": [
+    "cursor-predefined"
+  ],
+  "hidden": [
+    "line-style"
+  ],
+  "Highlight": [
+    "system-color"
+  ],
+  "HighlightText": [
+    "system-color"
+  ],
+  "historical-ligatures": [
+    "historical-lig-values"
+  ],
+  "honeydew": [
+    "named-color"
+  ],
+  "hostname": [
+    "init-descriptor-name"
+  ],
+  "hotpink": [
+    "named-color"
+  ],
+  "hsl": [
+    "polar-color-space"
+  ],
+  "hue": [
+    "blend-mode"
+  ],
+  "hwb": [
+    "polar-color-space"
+  ],
+  "i": [
+    "attr-modifier"
+  ],
+  "icon": [
+    "system-family-name"
+  ],
+  "ideograph-alpha": [
+    "autospace"
+  ],
+  "ideograph-numeric": [
+    "autospace"
+  ],
+  "ideographic": [
+    "baseline-metric",
+    "text-edge"
+  ],
+  "ideographic-ink": [
+    "text-edge"
+  ],
+  "image": [
+    "syntax-type-name"
+  ],
+  "InactiveBorder": [
+    "deprecated-color"
+  ],
+  "InactiveCaption": [
+    "deprecated-color"
+  ],
+  "InactiveCaptionText": [
+    "deprecated-color"
+  ],
+  "increasing": [
+    "hue-interpolation-method"
+  ],
+  "incremental": [
+    "font-tech"
+  ],
+  "indianred": [
+    "named-color"
+  ],
+  "indigo": [
+    "named-color"
+  ],
+  "infinite": [
+    "single-animation-iteration-count"
+  ],
+  "infinity": [
+    "calc-keyword"
+  ],
+  "InfoBackground": [
+    "deprecated-color"
+  ],
+  "InfoText": [
+    "deprecated-color"
+  ],
+  "inline": [
+    "anchor-size",
+    "axis",
+    "display-outside",
+    "pointer-axis"
+  ],
+  "inline-block": [
+    "display-legacy"
+  ],
+  "inline-end": [
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "position-two",
+    "scroll-button-direction"
+  ],
+  "inline-flex": [
+    "display-legacy"
+  ],
+  "inline-grid": [
+    "display-legacy"
+  ],
+  "inline-start": [
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "scroll-button-direction"
+  ],
+  "inline-table": [
+    "display-legacy"
+  ],
+  "insert": [
+    "autospace"
+  ],
+  "inset": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "inside": [
+    "anchor-side"
+  ],
+  "integer": [
+    "syntax-type-name"
+  ],
+  "interest": [
+    "event-trigger-event"
+  ],
+  "intersect": [
+    "compositing-operator"
+  ],
+  "isolate": [
+    "isolation-mode"
+  ],
+  "ivory": [
+    "named-color"
+  ],
+  "JIS-B4": [
+    "page-size"
+  ],
+  "JIS-B5": [
+    "page-size"
+  ],
+  "jis04": [
+    "east-asian-variant-values"
+  ],
+  "jis78": [
+    "east-asian-variant-values"
+  ],
+  "jis83": [
+    "east-asian-variant-values"
+  ],
+  "jis90": [
+    "east-asian-variant-values"
+  ],
+  "jump-both": [
+    "step-position"
+  ],
+  "jump-end": [
+    "step-position"
+  ],
+  "jump-none": [
+    "step-position"
+  ],
+  "jump-start": [
+    "step-position"
+  ],
+  "khaki": [
+    "named-color"
+  ],
+  "lab": [
+    "rectangular-color-space"
+  ],
+  "large": [
+    "absolute-size",
+    "arc-size"
+  ],
+  "larger": [
+    "relative-size"
+  ],
+  "lavender": [
+    "named-color"
+  ],
+  "lavenderblush": [
+    "named-color"
+  ],
+  "lawngreen": [
+    "named-color"
+  ],
+  "lch": [
+    "polar-color-space"
+  ],
+  "ledger": [
+    "page-size"
+  ],
+  "left": [
+    "anchor-side",
+    "horizontal-line-command",
+    "position-one",
+    "position-two",
+    "scroll-button-direction",
+    "side-or-corner"
+  ],
+  "legal": [
+    "page-size"
+  ],
+  "lemonchiffon": [
+    "named-color"
+  ],
+  "length": [
+    "syntax-type-name"
+  ],
+  "length-percentage": [
+    "syntax-type-name"
+  ],
+  "letter": [
+    "page-size"
+  ],
+  "lightblue": [
+    "named-color"
+  ],
+  "lightcoral": [
+    "named-color"
+  ],
+  "lightcyan": [
+    "named-color"
+  ],
+  "lighten": [
+    "blend-mode"
+  ],
+  "lighter": [
+    "composite-mode"
+  ],
+  "lightgoldenrodyellow": [
+    "named-color"
+  ],
+  "lightgray": [
+    "named-color"
+  ],
+  "lightgreen": [
+    "named-color"
+  ],
+  "lightgrey": [
+    "named-color"
+  ],
+  "lightpink": [
+    "named-color"
+  ],
+  "lightsalmon": [
+    "named-color"
+  ],
+  "lightseagreen": [
+    "named-color"
+  ],
+  "lightskyblue": [
+    "named-color"
+  ],
+  "lightslategray": [
+    "named-color"
+  ],
+  "lightslategrey": [
+    "named-color"
+  ],
+  "lightsteelblue": [
+    "named-color"
+  ],
+  "lightyellow": [
+    "named-color"
+  ],
+  "lime": [
+    "named-color"
+  ],
+  "limegreen": [
+    "named-color"
+  ],
+  "line-width": [
+    "rounding-strategy"
+  ],
+  "linear": [
+    "linear-easing-function"
+  ],
+  "linen": [
+    "named-color"
+  ],
+  "lining-nums": [
+    "numeric-figure-values"
+  ],
+  "LinkText": [
+    "system-color"
+  ],
+  "listbox": [
+    "compat-auto"
+  ],
+  "local": [
+    "attachment"
+  ],
+  "longer": [
+    "hue-interpolation-method"
+  ],
+  "ltr": [
+    "image-tags"
+  ],
+  "luminance": [
+    "masking-mode"
+  ],
+  "luminosity": [
+    "blend-mode"
+  ],
+  "magenta": [
+    "named-color"
+  ],
+  "margin-box": [
+    "layout-box",
+    "shape-box"
+  ],
+  "Mark": [
+    "system-color"
+  ],
+  "MarkText": [
+    "system-color"
+  ],
+  "maroon": [
+    "named-color"
+  ],
+  "match-source": [
+    "masking-mode"
+  ],
+  "math": [
+    "generic-complete"
+  ],
+  "mathematical": [
+    "baseline-metric"
+  ],
+  "max-content": [
+    "inflexible-breadth",
+    "track-breadth"
+  ],
+  "medium": [
+    "absolute-size",
+    "line-width"
+  ],
+  "mediumaquamarine": [
+    "named-color"
+  ],
+  "mediumblue": [
+    "named-color"
+  ],
+  "mediumorchid": [
+    "named-color"
+  ],
+  "mediumpurple": [
+    "named-color"
+  ],
+  "mediumseagreen": [
+    "named-color"
+  ],
+  "mediumslateblue": [
+    "named-color"
+  ],
+  "mediumspringgreen": [
+    "named-color"
+  ],
+  "mediumturquoise": [
+    "named-color"
+  ],
+  "mediumvioletred": [
+    "named-color"
+  ],
+  "menu": [
+    "system-family-name"
+  ],
+  "Menu": [
+    "deprecated-color"
+  ],
+  "menulist": [
+    "compat-auto"
+  ],
+  "menulist-button": [
+    "compat-special"
+  ],
+  "MenuText": [
+    "deprecated-color"
+  ],
+  "message-box": [
+    "system-family-name"
+  ],
+  "meter": [
+    "compat-auto"
+  ],
+  "middle": [
+    "baseline-metric"
+  ],
+  "midnightblue": [
+    "named-color"
+  ],
+  "min-content": [
+    "inflexible-breadth",
+    "track-breadth"
+  ],
+  "mintcream": [
+    "named-color"
+  ],
+  "mistyrose": [
+    "named-color"
+  ],
+  "moccasin": [
+    "named-color"
+  ],
+  "monospace": [
+    "generic-complete"
+  ],
+  "most-block-size": [
+    "try-size"
+  ],
+  "most-height": [
+    "try-size"
+  ],
+  "most-inline-size": [
+    "try-size"
+  ],
+  "most-width": [
+    "try-size"
+  ],
+  "move": [
+    "cursor-predefined"
+  ],
+  "multiply": [
+    "blend-mode"
+  ],
+  "n-resize": [
+    "cursor-predefined"
+  ],
+  "NaN": [
+    "calc-keyword"
+  ],
+  "navajowhite": [
+    "named-color"
+  ],
+  "navy": [
+    "named-color"
+  ],
+  "ne-resize": [
+    "cursor-predefined"
+  ],
+  "nearest": [
+    "pointer-source",
+    "rounding-strategy",
+    "scroller"
+  ],
+  "nesw-resize": [
+    "cursor-predefined"
+  ],
+  "next": [
+    "scroll-button-direction"
+  ],
+  "no-autospace": [
+    "autospace"
+  ],
+  "no-clip": [
+    "mask-layer"
+  ],
+  "no-close-quote": [
+    "quote"
+  ],
+  "no-common-ligatures": [
+    "common-lig-values"
+  ],
+  "no-contextual": [
+    "contextual-alt-values"
+  ],
+  "no-discretionary-ligatures": [
+    "discretionary-lig-values"
+  ],
+  "no-drop": [
+    "cursor-predefined"
+  ],
+  "no-historical-ligatures": [
+    "historical-lig-values"
+  ],
+  "no-open-quote": [
+    "quote"
+  ],
+  "no-referrer-when-downgrade": [
+    "referrer-policy-modifier"
+  ],
+  "no-repeat": [
+    "repetition"
+  ],
+  "none": [
+    "bg-image",
+    "cmyk-component",
+    "cursor-predefined",
+    "display-box",
+    "line-style",
+    "mask-reference",
+    "outline-line-style",
+    "paint",
+    "single-animation",
+    "single-animation-fill-mode",
+    "single-animation-timeline",
+    "single-transition"
+  ],
+  "normal": [
+    "blend-mode",
+    "font-variant-css2",
+    "font-weight-absolute",
+    "font-width-css3",
+    "single-animation-direction",
+    "spacing-trim",
+    "transition-behavior-value"
+  ],
+  "not": [
+    "media-query"
+  ],
+  "not-allowed": [
+    "cursor-predefined"
+  ],
+  "notch": [
+    "corner-shape-value"
+  ],
+  "ns-resize": [
+    "cursor-predefined"
+  ],
+  "number": [
+    "attr-type",
+    "syntax-type-name"
+  ],
+  "numeric": [
+    "symbols-type"
+  ],
+  "nw-resize": [
+    "cursor-predefined"
+  ],
+  "nwse-resize": [
+    "cursor-predefined"
+  ],
+  "odd": [
+    "an+b"
+  ],
+  "oklab": [
+    "rectangular-color-space"
+  ],
+  "oklch": [
+    "polar-color-space"
+  ],
+  "oldlace": [
+    "named-color"
+  ],
+  "oldstyle-nums": [
+    "numeric-figure-values"
+  ],
+  "olive": [
+    "named-color"
+  ],
+  "olivedrab": [
+    "named-color"
+  ],
+  "on": [
+    "feature-tag-value"
+  ],
+  "open-quote": [
+    "quote"
+  ],
+  "opentype": [
+    "font-format"
+  ],
+  "orange": [
+    "named-color"
+  ],
+  "orangered": [
+    "named-color"
+  ],
+  "orchid": [
+    "named-color"
+  ],
+  "origin": [
+    "referrer-policy-modifier"
+  ],
+  "origin-when-cross-origin": [
+    "referrer-policy-modifier"
+  ],
+  "outset": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "outside": [
+    "anchor-side"
+  ],
+  "overlay": [
+    "blend-mode"
+  ],
+  "padding-box": [
+    "visual-box"
+  ],
+  "palegoldenrod": [
+    "named-color"
+  ],
+  "palegreen": [
+    "named-color"
+  ],
+  "palettes": [
+    "font-tech"
+  ],
+  "paleturquoise": [
+    "named-color"
+  ],
+  "palevioletred": [
+    "named-color"
+  ],
+  "papayawhip": [
+    "named-color"
+  ],
+  "pathname": [
+    "init-descriptor-name"
+  ],
+  "paused": [
+    "single-animation-play-state"
+  ],
+  "peachpuff": [
+    "named-color"
+  ],
+  "percentage": [
+    "syntax-type-name"
+  ],
+  "peru": [
+    "named-color"
+  ],
+  "pi": [
+    "calc-keyword"
+  ],
+  "pink": [
+    "named-color"
+  ],
+  "plum": [
+    "named-color"
+  ],
+  "plus-darker": [
+    "composite-mode"
+  ],
+  "plus-lighter": [
+    "composite-mode"
+  ],
+  "pointer": [
+    "cursor-predefined"
+  ],
+  "port": [
+    "init-descriptor-name"
+  ],
+  "powderblue": [
+    "named-color"
+  ],
+  "prev": [
+    "scroll-button-direction"
+  ],
+  "progress": [
+    "cursor-predefined"
+  ],
+  "progress-bar": [
+    "compat-auto"
+  ],
+  "prophoto-rgb": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "proportional-nums": [
+    "numeric-spacing-values"
+  ],
+  "proportional-width": [
+    "east-asian-width-values"
+  ],
+  "protocol": [
+    "init-descriptor-name"
+  ],
+  "punctuation": [
+    "autospace"
+  ],
+  "purple": [
+    "named-color"
+  ],
+  "radio": [
+    "compat-auto"
+  ],
+  "raw-string": [
+    "attr-type"
+  ],
+  "rebeccapurple": [
+    "named-color"
+  ],
+  "rec2020": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "rec2100-hlg": [
+    "predefined-rgb"
+  ],
+  "rec2100-linear": [
+    "predefined-rgb"
+  ],
+  "rec2100-pq": [
+    "predefined-rgb"
+  ],
+  "red": [
+    "named-color"
+  ],
+  "reload": [
+    "navigation-type-keyword"
+  ],
+  "repeat": [
+    "repetition"
+  ],
+  "repeat-block": [
+    "repeat-style"
+  ],
+  "repeat-inline": [
+    "repeat-style"
+  ],
+  "repeat-x": [
+    "repeat-style"
+  ],
+  "repeat-y": [
+    "repeat-style"
+  ],
+  "replace": [
+    "autospace",
+    "single-animation-composition"
+  ],
+  "resolution": [
+    "syntax-type-name"
+  ],
+  "reverse": [
+    "single-animation-direction"
+  ],
+  "ridge": [
+    "line-style",
+    "outline-line-style"
+  ],
+  "right": [
+    "anchor-side",
+    "horizontal-line-command",
+    "position-area",
+    "position-area-query",
+    "position-four",
+    "position-one",
+    "position-two",
+    "pseudo-page",
+    "scroll-button-direction",
+    "side-or-corner"
+  ],
+  "root": [
+    "pointer-source",
+    "scroller"
+  ],
+  "rosybrown": [
+    "named-color"
+  ],
+  "round": [
+    "corner-shape-value",
+    "repetition"
+  ],
+  "row-resize": [
+    "cursor-predefined"
+  ],
+  "royalblue": [
+    "named-color"
+  ],
+  "rtl": [
+    "image-tags"
+  ],
+  "ruby": [
+    "display-inside"
+  ],
+  "ruby-base": [
+    "display-internal"
+  ],
+  "ruby-base-container": [
+    "display-internal"
+  ],
+  "ruby-text": [
+    "display-internal"
+  ],
+  "ruby-text-container": [
+    "display-internal"
+  ],
+  "run-in": [
+    "display-outside"
+  ],
+  "running": [
+    "single-animation-play-state"
+  ],
+  "s": [
+    "attr-modifier"
+  ],
+  "s-resize": [
+    "cursor-predefined"
+  ],
+  "saddlebrown": [
+    "named-color"
+  ],
+  "safe": [
+    "overflow-position"
+  ],
+  "salmon": [
+    "named-color"
+  ],
+  "same-origin": [
+    "referrer-policy-modifier"
+  ],
+  "sandybrown": [
+    "named-color"
+  ],
+  "sans-serif": [
+    "generic-complete"
+  ],
+  "saturation": [
+    "blend-mode"
+  ],
+  "scoop": [
+    "corner-shape-value"
+  ],
+  "screen": [
+    "blend-mode"
+  ],
+  "scroll": [
+    "attachment"
+  ],
+  "scroll-position": [
+    "animateable-feature"
+  ],
+  "Scrollbar": [
+    "deprecated-color"
+  ],
+  "se-resize": [
+    "cursor-predefined"
+  ],
+  "seagreen": [
+    "named-color"
+  ],
+  "search": [
+    "init-descriptor-name"
+  ],
+  "searchfield": [
+    "compat-auto"
+  ],
+  "seashell": [
+    "named-color"
+  ],
+  "select": [
+    "form-control-identifier"
+  ],
+  "SelectedItem": [
+    "system-color"
+  ],
+  "SelectedItemText": [
+    "system-color"
+  ],
+  "self": [
+    "pointer-source",
+    "scroller"
+  ],
+  "self-block": [
+    "anchor-size"
+  ],
+  "self-block-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-block-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-end": [
+    "anchor-side",
+    "position-area",
+    "position-area-query",
+    "self-position"
+  ],
+  "self-inline": [
+    "anchor-size"
+  ],
+  "self-inline-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-inline-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-start": [
+    "anchor-side",
+    "position-area",
+    "position-area-query",
+    "self-position"
+  ],
+  "self-x-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-x-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-y-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "self-y-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "semi-condensed": [
+    "font-width-css3"
+  ],
+  "semi-expanded": [
+    "font-width-css3"
+  ],
+  "serif": [
+    "generic-complete"
+  ],
+  "shorter": [
+    "hue-interpolation-method"
+  ],
+  "sides": [
+    "ray-size"
+  ],
+  "sienna": [
+    "named-color"
+  ],
+  "silver": [
+    "named-color"
+  ],
+  "simplified": [
+    "east-asian-variant-values"
+  ],
+  "skyblue": [
+    "named-color"
+  ],
+  "slateblue": [
+    "named-color"
+  ],
+  "slategray": [
+    "named-color"
+  ],
+  "slategrey": [
+    "named-color"
+  ],
+  "small": [
+    "absolute-size",
+    "arc-size"
+  ],
+  "small-caps": [
+    "font-variant-css2"
+  ],
+  "small-caption": [
+    "system-family-name"
+  ],
+  "smaller": [
+    "relative-size"
+  ],
+  "snow": [
+    "named-color"
+  ],
+  "soft-light": [
+    "blend-mode"
+  ],
+  "solid": [
+    "leader-type",
+    "line-style",
+    "outline-line-style"
+  ],
+  "source-atop": [
+    "composite-mode"
+  ],
+  "source-in": [
+    "composite-mode"
+  ],
+  "source-out": [
+    "composite-mode"
+  ],
+  "source-over": [
+    "composite-mode"
+  ],
+  "space": [
+    "leader-type",
+    "repetition"
+  ],
+  "space-all": [
+    "spacing-trim"
+  ],
+  "space-around": [
+    "content-distribution"
+  ],
+  "space-between": [
+    "content-distribution"
+  ],
+  "space-evenly": [
+    "content-distribution"
+  ],
+  "space-first": [
+    "spacing-trim"
+  ],
+  "span-all": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-block-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-block-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-bottom": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-inline-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-inline-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-left": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-right": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-block-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-block-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-inline-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-inline-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-x-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-x-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-y-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-self-y-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-top": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-x-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-x-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-y-end": [
+    "position-area",
+    "position-area-query"
+  ],
+  "span-y-start": [
+    "position-area",
+    "position-area-query"
+  ],
+  "springgreen": [
+    "named-color"
+  ],
+  "square": [
+    "corner-shape-value"
+  ],
+  "squircle": [
+    "corner-shape-value"
+  ],
+  "srgb": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "srgb-linear": [
+    "predefined-rgb",
+    "rectangular-color-space"
+  ],
+  "stacked-fractions": [
+    "numeric-fraction-values"
+  ],
+  "start": [
+    "anchor-side",
+    "content-position",
+    "position-area",
+    "position-area-query",
+    "position-two",
+    "self-position",
+    "step-position"
+  ],
+  "status-bar": [
+    "system-family-name"
+  ],
+  "steelblue": [
+    "named-color"
+  ],
+  "step-end": [
+    "step-easing-function"
+  ],
+  "step-start": [
+    "step-easing-function"
+  ],
+  "stretch": [
+    "content-distribution"
+  ],
+  "strict-origin": [
+    "referrer-policy-modifier"
+  ],
+  "strict-origin-when-cross-origin": [
+    "referrer-policy-modifier"
+  ],
+  "string": [
+    "syntax-type-name"
+  ],
+  "stroke-box": [
+    "geometry-box",
+    "paint-box"
+  ],
+  "subtract": [
+    "compositing-operator"
+  ],
+  "svg": [
+    "font-format"
+  ],
+  "sw-resize": [
+    "cursor-predefined"
+  ],
+  "symbolic": [
+    "symbols-type"
+  ],
+  "system-ui": [
+    "generic-complete"
+  ],
+  "table": [
+    "display-inside"
+  ],
+  "table-caption": [
+    "display-internal"
+  ],
+  "table-cell": [
+    "display-internal"
+  ],
+  "table-column": [
+    "display-internal"
+  ],
+  "table-column-group": [
+    "display-internal"
+  ],
+  "table-footer-group": [
+    "display-internal"
+  ],
+  "table-header-group": [
+    "display-internal"
+  ],
+  "table-row": [
+    "display-internal"
+  ],
+  "table-row-group": [
+    "display-internal"
+  ],
+  "tabular-nums": [
+    "numeric-spacing-values"
+  ],
+  "tan": [
+    "named-color"
+  ],
+  "teal": [
+    "named-color"
+  ],
+  "text": [
+    "bg-clip",
+    "content-level",
+    "cursor-predefined",
+    "text-edge"
+  ],
+  "text-bottom": [
+    "baseline-metric"
+  ],
+  "text-top": [
+    "baseline-metric"
+  ],
+  "textarea": [
+    "compat-auto"
+  ],
+  "textfield": [
+    "compat-special"
+  ],
+  "thick": [
+    "line-width"
+  ],
+  "thin": [
+    "line-width"
+  ],
+  "thistle": [
+    "named-color"
+  ],
+  "ThreeDDarkShadow": [
+    "deprecated-color"
+  ],
+  "ThreeDFace": [
+    "deprecated-color"
+  ],
+  "ThreeDHighlight": [
+    "deprecated-color"
+  ],
+  "ThreeDLightShadow": [
+    "deprecated-color"
+  ],
+  "ThreeDShadow": [
+    "deprecated-color"
+  ],
+  "time": [
+    "syntax-type-name"
+  ],
+  "to": [
+    "keyframe-selector",
+    "navigation-location-keyword"
+  ],
+  "to-zero": [
+    "rounding-strategy"
+  ],
+  "tomato": [
+    "named-color"
+  ],
+  "top": [
+    "anchor-side",
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "side-or-corner",
+    "vertical-line-command"
+  ],
+  "touch": [
+    "event-trigger-event"
+  ],
+  "traditional": [
+    "east-asian-variant-values"
+  ],
+  "transform-function": [
+    "syntax-type-name"
+  ],
+  "transparent": [
+    "color-base",
+    "named-color"
+  ],
+  "traverse": [
+    "navigation-type-keyword"
+  ],
+  "trim-all": [
+    "spacing-trim"
+  ],
+  "trim-both": [
+    "spacing-trim"
+  ],
+  "trim-start": [
+    "spacing-trim"
+  ],
+  "truetype": [
+    "font-format"
+  ],
+  "turquoise": [
+    "named-color"
+  ],
+  "ui-monospace": [
+    "generic-incomplete"
+  ],
+  "ui-rounded": [
+    "generic-incomplete"
+  ],
+  "ui-sans-serif": [
+    "generic-incomplete"
+  ],
+  "ui-serif": [
+    "generic-incomplete"
+  ],
+  "ultra-condensed": [
+    "font-width-css3"
+  ],
+  "ultra-expanded": [
+    "font-width-css3"
+  ],
+  "unsafe": [
+    "overflow-position"
+  ],
+  "unsafe-url)": [
+    "referrer-policy-modifier"
+  ],
+  "up": [
+    "rounding-strategy",
+    "scroll-button-direction"
+  ],
+  "url": [
+    "syntax-type-name"
+  ],
+  "use-credentials)": [
+    "cross-origin-modifier"
+  ],
+  "variations": [
+    "font-tech"
+  ],
+  "vertical-text": [
+    "cursor-predefined"
+  ],
+  "view-box": [
+    "coord-box",
+    "geometry-box"
+  ],
+  "violet": [
+    "named-color"
+  ],
+  "VisitedText": [
+    "system-color"
+  ],
+  "w-resize": [
+    "cursor-predefined"
+  ],
+  "wait": [
+    "cursor-predefined"
+  ],
+  "wcag2": [
+    "wcag2"
+  ],
+  "wheat": [
+    "named-color"
+  ],
+  "white": [
+    "named-color"
+  ],
+  "whitesmoke": [
+    "named-color"
+  ],
+  "width": [
+    "anchor-size"
+  ],
+  "Window": [
+    "deprecated-color"
+  ],
+  "WindowFrame": [
+    "deprecated-color"
+  ],
+  "WindowText": [
+    "deprecated-color"
+  ],
+  "woff": [
+    "font-format"
+  ],
+  "woff2": [
+    "font-format"
+  ],
+  "x": [
+    "axis",
+    "pointer-axis"
+  ],
+  "x-end": [
+    "horizontal-line-command",
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "position-two"
+  ],
+  "x-large": [
+    "absolute-size"
+  ],
+  "x-small": [
+    "absolute-size"
+  ],
+  "x-start": [
+    "horizontal-line-command",
+    "position-area",
+    "position-area-query",
+    "position-four",
+    "position-one",
+    "position-two"
+  ],
+  "xor": [
+    "composite-mode"
+  ],
+  "xx-large": [
+    "absolute-size"
+  ],
+  "xx-small": [
+    "absolute-size"
+  ],
+  "xxx-large": [
+    "absolute-size"
+  ],
+  "xyz": [
+    "xyz-space"
+  ],
+  "xyz-d50": [
+    "xyz-space"
+  ],
+  "xyz-d65": [
+    "xyz-space"
+  ],
+  "y": [
+    "axis",
+    "pointer-axis"
+  ],
+  "y-end": [
+    "position-area",
+    "position-area-query",
+    "position-one",
+    "position-two",
+    "vertical-line-command"
+  ],
+  "y-start": [
+    "position-area",
+    "position-area-query",
+    "position-four",
+    "position-one",
+    "position-two",
+    "vertical-line-command"
+  ],
+  "yellow": [
+    "named-color"
+  ],
+  "yellowgreen": [
+    "named-color"
+  ],
+  "zoom-in": [
+    "cursor-predefined"
+  ],
+  "zoom-out": [
+    "cursor-predefined"
+  ]
+}

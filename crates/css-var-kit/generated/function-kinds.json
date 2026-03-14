@@ -1,0 +1,464 @@
+{
+  "-webkit-image-set": [
+    "image"
+  ],
+  "abs": [
+    "unresolved-arg-dependent"
+  ],
+  "acos": [
+    "unresolved-arg-dependent"
+  ],
+  "alpha": [
+    "color"
+  ],
+  "anchor": [
+    "length"
+  ],
+  "anchor-size": [
+    "length"
+  ],
+  "asin": [
+    "unresolved-arg-dependent"
+  ],
+  "atan": [
+    "unresolved-arg-dependent"
+  ],
+  "atan2": [
+    "unresolved-arg-dependent"
+  ],
+  "attr": [
+    "unresolved-pass-through"
+  ],
+  "blur": [
+    "filter"
+  ],
+  "brightness": [
+    "filter"
+  ],
+  "calc": [
+    "unresolved-arg-dependent"
+  ],
+  "calc-interpolate": [
+    "unresolved-arg-dependent"
+  ],
+  "calc-mix": [
+    "unresolved-arg-dependent"
+  ],
+  "calc-size": [
+    "unresolved-arg-dependent"
+  ],
+  "circle": [
+    "basic-shape"
+  ],
+  "clamp": [
+    "unresolved-arg-dependent"
+  ],
+  "color": [
+    "color"
+  ],
+  "color-interpolate": [
+    "color"
+  ],
+  "color-layers": [
+    "color"
+  ],
+  "color-mix": [
+    "color"
+  ],
+  "conic-gradient": [
+    "image"
+  ],
+  "content": [
+    "string"
+  ],
+  "contrast": [
+    "filter"
+  ],
+  "contrast-color": [
+    "color"
+  ],
+  "control-value": [
+    "form-control"
+  ],
+  "cos": [
+    "unresolved-arg-dependent"
+  ],
+  "counter": [
+    "string"
+  ],
+  "counters": [
+    "string"
+  ],
+  "cross-fade": [
+    "image"
+  ],
+  "cross-origin": [
+    "request-modifier"
+  ],
+  "cubic-bezier": [
+    "easing-function"
+  ],
+  "device-cmyk": [
+    "color"
+  ],
+  "drop-shadow": [
+    "filter"
+  ],
+  "dynamic-range-limit-mix": [
+    "color"
+  ],
+  "element": [
+    "image"
+  ],
+  "ellipse": [
+    "basic-shape"
+  ],
+  "env": [
+    "unresolved-pass-through"
+  ],
+  "exp": [
+    "unresolved-arg-dependent"
+  ],
+  "fade": [
+    "text-overflow"
+  ],
+  "filter": [
+    "image"
+  ],
+  "first-valid": [
+    "unresolved-pass-through"
+  ],
+  "fit-content": [
+    "length"
+  ],
+  "grayscale": [
+    "filter"
+  ],
+  "hdr-color": [
+    "color"
+  ],
+  "hsl": [
+    "color"
+  ],
+  "hsla": [
+    "color"
+  ],
+  "hue-rotate": [
+    "filter"
+  ],
+  "hwb": [
+    "color"
+  ],
+  "hypot": [
+    "unresolved-arg-dependent"
+  ],
+  "ictcp": [
+    "color"
+  ],
+  "ident": [
+    "custom-ident"
+  ],
+  "if": [
+    "unresolved-pass-through"
+  ],
+  "image": [
+    "image"
+  ],
+  "image-set": [
+    "image"
+  ],
+  "inherit": [
+    "unresolved-pass-through"
+  ],
+  "inset": [
+    "basic-shape"
+  ],
+  "integrity": [
+    "request-modifier"
+  ],
+  "interpolate": [
+    "unresolved-arg-dependent"
+  ],
+  "invert": [
+    "filter"
+  ],
+  "jzazbz": [
+    "color"
+  ],
+  "jzczhz": [
+    "color"
+  ],
+  "lab": [
+    "color"
+  ],
+  "lch": [
+    "color"
+  ],
+  "leader": [
+    "string"
+  ],
+  "light-dark": [
+    "color"
+  ],
+  "linear": [
+    "easing-function"
+  ],
+  "linear-gradient": [
+    "image"
+  ],
+  "log": [
+    "unresolved-arg-dependent"
+  ],
+  "matrix": [
+    "transform-function"
+  ],
+  "matrix3d": [
+    "transform-function"
+  ],
+  "max": [
+    "unresolved-arg-dependent"
+  ],
+  "media": [
+    "unresolved-conditional"
+  ],
+  "min": [
+    "unresolved-arg-dependent"
+  ],
+  "minmax": [
+    "grid-track"
+  ],
+  "mod": [
+    "unresolved-arg-dependent"
+  ],
+  "oklab": [
+    "color"
+  ],
+  "oklch": [
+    "color"
+  ],
+  "opacity": [
+    "filter"
+  ],
+  "paint": [
+    "image"
+  ],
+  "palette-mix": [
+    "color"
+  ],
+  "param": [
+    "unresolved-pass-through"
+  ],
+  "path": [
+    "basic-shape"
+  ],
+  "perspective": [
+    "transform-function"
+  ],
+  "pointer": [
+    "animation-timeline"
+  ],
+  "polygon": [
+    "basic-shape"
+  ],
+  "pow": [
+    "unresolved-arg-dependent"
+  ],
+  "progress": [
+    "number"
+  ],
+  "radial-gradient": [
+    "image"
+  ],
+  "random": [
+    "unresolved-arg-dependent"
+  ],
+  "random-item": [
+    "unresolved-pass-through"
+  ],
+  "ray": [
+    "ray"
+  ],
+  "rect": [
+    "basic-shape"
+  ],
+  "referrer-policy": [
+    "request-modifier"
+  ],
+  "rem": [
+    "unresolved-arg-dependent"
+  ],
+  "repeat": [
+    "grid-track"
+  ],
+  "repeating-conic-gradient": [
+    "image"
+  ],
+  "repeating-linear-gradient": [
+    "image"
+  ],
+  "repeating-radial-gradient": [
+    "image"
+  ],
+  "rgb": [
+    "color"
+  ],
+  "rgba": [
+    "color"
+  ],
+  "rotate": [
+    "transform-function"
+  ],
+  "rotate3d": [
+    "transform-function"
+  ],
+  "rotateX": [
+    "transform-function"
+  ],
+  "rotateY": [
+    "transform-function"
+  ],
+  "rotateZ": [
+    "transform-function"
+  ],
+  "round": [
+    "unresolved-arg-dependent"
+  ],
+  "running": [
+    "custom-ident"
+  ],
+  "saturate": [
+    "filter"
+  ],
+  "scale": [
+    "transform-function"
+  ],
+  "scale3d": [
+    "transform-function"
+  ],
+  "scaleX": [
+    "transform-function"
+  ],
+  "scaleY": [
+    "transform-function"
+  ],
+  "scaleZ": [
+    "transform-function"
+  ],
+  "scroll": [
+    "animation-timeline"
+  ],
+  "sepia": [
+    "filter"
+  ],
+  "shape": [
+    "basic-shape"
+  ],
+  "sibling-count": [
+    "integer"
+  ],
+  "sibling-index": [
+    "integer"
+  ],
+  "sign": [
+    "unresolved-arg-dependent"
+  ],
+  "sin": [
+    "unresolved-arg-dependent"
+  ],
+  "skew": [
+    "transform-function"
+  ],
+  "skewX": [
+    "transform-function"
+  ],
+  "skewY": [
+    "transform-function"
+  ],
+  "snap-block": [
+    "snap"
+  ],
+  "snap-inline": [
+    "snap"
+  ],
+  "sqrt": [
+    "unresolved-arg-dependent"
+  ],
+  "src": [
+    "image"
+  ],
+  "steps": [
+    "easing-function"
+  ],
+  "string": [
+    "string"
+  ],
+  "stripes": [
+    "image"
+  ],
+  "superellipse": [
+    "corner-shape"
+  ],
+  "supports": [
+    "unresolved-conditional"
+  ],
+  "symbols": [
+    "symbols"
+  ],
+  "tan": [
+    "unresolved-arg-dependent"
+  ],
+  "target-counter": [
+    "string"
+  ],
+  "target-counters": [
+    "string"
+  ],
+  "target-text": [
+    "string"
+  ],
+  "toggle": [
+    "unresolved-pass-through"
+  ],
+  "transform-interpolate": [
+    "transform-list"
+  ],
+  "transform-mix": [
+    "transform-list"
+  ],
+  "translate": [
+    "transform-function"
+  ],
+  "translate3d": [
+    "transform-function"
+  ],
+  "translateX": [
+    "transform-function"
+  ],
+  "translateY": [
+    "transform-function"
+  ],
+  "translateZ": [
+    "transform-function"
+  ],
+  "type": [
+    "unresolved-meta"
+  ],
+  "url": [
+    "url"
+  ],
+  "url-pattern": [
+    "url"
+  ],
+  "var": [
+    "unresolved-pass-through"
+  ],
+  "view": [
+    "animation-timeline"
+  ],
+  "wcag2": [
+    "contrast-algorithm"
+  ],
+  "xywh": [
+    "basic-shape"
+  ]
+}

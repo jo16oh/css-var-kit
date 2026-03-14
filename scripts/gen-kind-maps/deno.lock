@@ -1,0 +1,32 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:@webref/css@8.4.1": "8.4.1_css-tree@3.2.1"
+  },
+  "npm": {
+    "@webref/css@8.4.1_css-tree@3.2.1": {
+      "integrity": "sha512-8DTncc0dhWJ4lVbi9rhLVyMNm+YEYrsFLRbdjgMxPupjNHcAdXiT1s4ZWJXzN4ckUvYQKTjLJKtZWc6tsR4FIQ==",
+      "dependencies": [
+        "css-tree"
+      ]
+    },
+    "css-tree@3.2.1": {
+      "integrity": "sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==",
+      "dependencies": [
+        "mdn-data",
+        "source-map-js"
+      ]
+    },
+    "mdn-data@2.27.1": {
+      "integrity": "sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ=="
+    },
+    "source-map-js@1.2.1": {
+      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:@webref/css@8.4.1"
+    ]
+  }
+}
