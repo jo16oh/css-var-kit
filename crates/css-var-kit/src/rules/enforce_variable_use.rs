@@ -7,8 +7,7 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
-use crate::type_checker::kind_set::KindSet;
-use crate::type_checker::kind_set::kind_of;
+use crate::type_checker::kind_set::{KindSet, ValueKind, kind_of};
 use config::EnforceVariableUseConfig;
 
 pub mod config;
@@ -179,7 +178,9 @@ impl EnforceVariableUse {
                 if is_allowed_value(&css_str, &self.allowed_values) {
                     return vec![];
                 }
-                let kinds = kind_of(&css_str);
+                let ValueKind::Single(kinds) = kind_of(&css_str) else {
+                    return vec![];
+                };
                 let matched = kinds & self.types;
                 if matched.is_empty() {
                     return vec![];
@@ -195,7 +196,9 @@ impl EnforceVariableUse {
                 if is_allowed_value(s, &self.allowed_values) {
                     return vec![];
                 }
-                let kinds = kind_of(s);
+                let ValueKind::Single(kinds) = kind_of(s) else {
+                    return vec![];
+                };
                 let matched = kinds & self.types;
                 if matched.is_empty() {
                     return vec![];
@@ -442,11 +445,11 @@ mod tests {
     }
 
     #[test]
-    fn number_zero_detected_as_length() {
+    fn number_zero_detected_as_number() {
         assert_messages(
             ".a { margin: 0; }",
-            &["length"],
-            &["use a CSS variable instead of the literal length `0`"],
+            &["number"],
+            &["use a CSS variable instead of the literal number `0`"],
         );
     }
 

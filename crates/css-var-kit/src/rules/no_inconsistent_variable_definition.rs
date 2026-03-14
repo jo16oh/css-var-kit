@@ -2,8 +2,7 @@ use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
-use crate::type_checker::kind_set::KindSet;
-use crate::type_checker::kind_set::kind_of;
+use crate::type_checker::kind_set::{ValueKind, kind_of};
 use crate::type_checker::variable_resolver::resolve_vars;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";
@@ -29,7 +28,7 @@ fn check_variable_definitions<'src>(
     props: &[&'src Property<'src>],
     def_map: &PropMapFor<'src, '_, VariableDefinitions>,
 ) -> Vec<Diagnostic<'src>> {
-    let classified: Vec<(&Property, KindSet, bool)> = props
+    let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
         .filter_map(|&p| {
             let resolved = resolve_value(p.value.raw, def_map)?;
@@ -43,12 +42,12 @@ fn check_variable_definitions<'src>(
         return vec![];
     }
 
-    let (baseline_idx, baseline_types) = match classified
+    let (baseline_idx, baseline) = match classified
         .iter()
         .enumerate()
         .find(|(_, (_, kinds, _))| !kinds.is_empty())
     {
-        Some((idx, (_, kinds, _))) => (idx, *kinds),
+        Some((idx, (_, kinds, _))) => (idx, kinds),
         None => return vec![],
     };
 
@@ -57,9 +56,9 @@ fn check_variable_definitions<'src>(
         .enumerate()
         .filter(|&(idx, _)| idx != baseline_idx)
         .filter(|(_, (_, _, ignored))| !ignored)
-        .filter(|(_, (_, kinds, _))| types_are_inconsistent(baseline_types, *kinds))
+        .filter(|(_, (_, kinds, _))| !baseline.is_consistent_with(kinds))
         .map(|(_, (prop, _, _))| {
-            let type_desc: String = baseline_types.iter_kind_names().collect::<Vec<_>>().join("|");
+            let type_desc = baseline.type_description();
             Diagnostic {
                 file_path: prop.file_path,
                 source: prop.source,
@@ -86,10 +85,6 @@ fn resolve_value<'src>(
             .map(|p| p.value.raw)
     })
     .ok()
-}
-
-fn types_are_inconsistent(a: KindSet, b: KindSet) -> bool {
-    a.is_empty() || b.is_empty() || !a.intersects(b)
 }
 
 #[cfg(test)]
@@ -223,6 +218,24 @@ mod tests {
         assert_messages(
             ":root { --color: red; --size: 16px; } .dark { --color: blue; --size: 24px; }",
             &[],
+        );
+    }
+
+    #[test]
+    fn consistent_compound_definitions() {
+        assert_messages(
+            ":root { --border: solid 1px red; } .dark { --border: dashed 2px blue; }",
+            &[],
+        );
+    }
+
+    #[test]
+    fn inconsistent_single_vs_compound() {
+        assert_messages(
+            ":root { --x: solid 1px red; } .dark { --x: blue; }",
+            &[
+                "inconsistent variable definition: `--x` has value `blue` which conflicts with expected type <leader-type|line-style, length, color>",
+            ],
         );
     }
 }

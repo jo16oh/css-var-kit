@@ -1,160 +1,286 @@
 include!("../../generated/kind_set.rs");
 
-use cssparser::ParserInput;
-use lightningcss::values::syntax::{
-    Multiplier, SyntaxComponent, SyntaxComponentKind, SyntaxString,
-};
+use lightningcss::properties::custom::{Token, TokenOrValue};
+use lightningcss::values::syntax::{ParsedComponent, SyntaxString};
 
-/// The kinds to test against. Excludes `CustomIdent` (matches almost anything)
-/// and `String` (only matches quoted strings, tested separately).
-const CLASSIFIABLE_KINDS: &[SyntaxComponentKind] = &[
-    SyntaxComponentKind::Length,
-    SyntaxComponentKind::Number,
-    SyntaxComponentKind::Percentage,
-    SyntaxComponentKind::LengthPercentage,
-    SyntaxComponentKind::Color,
-    SyntaxComponentKind::Image,
-    SyntaxComponentKind::Url,
-    SyntaxComponentKind::Integer,
-    SyntaxComponentKind::Angle,
-    SyntaxComponentKind::Time,
-    SyntaxComponentKind::Resolution,
-    SyntaxComponentKind::TransformFunction,
-    SyntaxComponentKind::TransformList,
-];
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ValueKind {
+    Single(KindSet),
+    Compound(Vec<KindSet>),
+    Unknown(String),
+}
 
-/// Attempts to parse `value` as the given `SyntaxComponentKind`.
-/// Returns `true` if parsing succeeds and consumes the entire input.
-fn try_parse_as(value: &str, kind: &SyntaxComponentKind) -> bool {
-    let syntax = SyntaxString::Components(vec![SyntaxComponent {
-        kind: kind.clone(),
-        multiplier: Multiplier::None,
-    }]);
+impl ValueKind {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Single(k) => k.is_empty(),
+            Self::Compound(parts) => parts.iter().all(|k| k.is_empty()),
+            Self::Unknown(_) => true,
+        }
+    }
 
-    let mut input = ParserInput::new(value);
-    let mut parser = cssparser::Parser::new(&mut input);
+    pub fn is_consistent_with(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Unknown(_), _) | (_, Self::Unknown(_)) => true,
+            (Self::Single(a), Self::Single(b)) => a.intersects(*b),
+            (Self::Compound(a), Self::Compound(b)) => {
+                a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a.intersects(*b))
+            }
+            _ => false,
+        }
+    }
 
-    match syntax.parse_value(&mut parser) {
-        Ok(_) => parser.is_exhausted(),
-        Err(_) => false,
+    pub fn type_description(&self) -> String {
+        match self {
+            Self::Single(k) => k.iter_kind_names().collect::<Vec<_>>().join("|"),
+            Self::Compound(parts) => parts
+                .iter()
+                .map(|k| {
+                    let names = k.iter_kind_names().collect::<Vec<_>>().join("|");
+                    if names.is_empty() {
+                        "?".to_owned()
+                    } else {
+                        names
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+            Self::Unknown(raw) => format!("unknown({raw})"),
+        }
+    }
+}
+/// Returns a `ValueKind` representing the type(s) of a CSS value.
+pub fn kind_of(value: &str) -> ValueKind {
+    let parsed = match SyntaxString::Universal.parse_value_from_string(value) {
+        Ok(p) => p,
+        Err(_) => return ValueKind::Unknown(value.to_owned()),
+    };
+
+    match &parsed {
+        ParsedComponent::Literal(ident) => {
+            let kinds = lookup_keyword_kinds(ident).unwrap_or(KindSet::empty());
+            if kinds.is_empty() {
+                ValueKind::Unknown(value.to_owned())
+            } else {
+                ValueKind::Single(kinds)
+            }
+        }
+
+        ParsedComponent::TokenList(token_list) => {
+            let parts: Vec<KindSet> = token_list
+                .0
+                .iter()
+                .map(token_or_value_to_kind_set)
+                .filter(|k| !k.is_empty())
+                .collect();
+
+            match parts.len() {
+                0 => ValueKind::Unknown(value.to_owned()),
+                1 => ValueKind::Single(parts[0]),
+                _ => ValueKind::Compound(parts),
+            }
+        }
+
+        ParsedComponent::Repeated { components, .. } => {
+            let parts: Vec<KindSet> = components
+                .iter()
+                .map(parsed_component_to_kind_set)
+                .collect();
+
+            match parts.len() {
+                0 => ValueKind::Unknown(value.to_owned()),
+                1 => ValueKind::Single(parts[0]),
+                _ => ValueKind::Compound(parts),
+            }
+        }
+
+        other => {
+            let kinds = parsed_component_to_kind_set(other);
+            if kinds.is_empty() {
+                ValueKind::Unknown(value.to_owned())
+            } else {
+                ValueKind::Single(kinds)
+            }
+        }
     }
 }
 
-/// Returns a `KindSet` representing all types the CSS value satisfies.
-///
-/// Returns an empty `KindSet` for compound values (e.g. `solid 1px black`) that
-/// don't match any single type.
-pub fn kind_of(value: &str) -> KindSet {
-    let parsed = CLASSIFIABLE_KINDS
-        .iter()
-        .filter(|kind| try_parse_as(value, kind))
-        .fold(KindSet::empty(), |acc, kind| {
-            acc | from_syntax_component_kind(kind)
-        });
+fn token_or_value_to_kind_set(token: &TokenOrValue) -> KindSet {
+    match token {
+        TokenOrValue::Color(_) => KindSet::COLOR,
+        TokenOrValue::Length(_) => KindSet::LENGTH,
+        TokenOrValue::Angle(_) => KindSet::ANGLE,
+        TokenOrValue::Time(_) => KindSet::TIME,
+        TokenOrValue::Resolution(_) => KindSet::RESOLUTION,
+        TokenOrValue::Url(_) => KindSet::URL,
+        TokenOrValue::Function(func) => {
+            lookup_function_kinds(&func.name).unwrap_or(KindSet::empty())
+        }
+        TokenOrValue::Token(Token::Ident(name)) => {
+            lookup_keyword_kinds(name).unwrap_or(KindSet::empty())
+        }
+        TokenOrValue::Token(Token::Number {
+            int_value: Some(_), ..
+        }) => KindSet::INTEGER | KindSet::NUMBER,
+        TokenOrValue::Token(Token::Number { .. }) => KindSet::NUMBER,
+        TokenOrValue::Token(Token::Percentage { .. }) => KindSet::PERCENTAGE,
+        _ => KindSet::empty(),
+    }
+}
 
-    parsed | lookup_keyword_kinds(value).unwrap_or(KindSet::empty())
+fn parsed_component_to_kind_set(component: &ParsedComponent) -> KindSet {
+    match component {
+        ParsedComponent::Length(_) => KindSet::LENGTH,
+        ParsedComponent::Number(_) => KindSet::NUMBER,
+        ParsedComponent::Percentage(_) => KindSet::PERCENTAGE,
+        ParsedComponent::LengthPercentage(_) => KindSet::LENGTH_PERCENTAGE,
+        ParsedComponent::Color(_) => KindSet::COLOR,
+        ParsedComponent::Image(_) => KindSet::IMAGE,
+        ParsedComponent::Url(_) => KindSet::URL,
+        ParsedComponent::Integer(_) => KindSet::INTEGER,
+        ParsedComponent::Angle(_) => KindSet::ANGLE,
+        ParsedComponent::Time(_) => KindSet::TIME,
+        ParsedComponent::Resolution(_) => KindSet::RESOLUTION,
+        ParsedComponent::TransformFunction(_) => KindSet::TRANSFORM_FUNCTION,
+        ParsedComponent::TransformList(_) => KindSet::TRANSFORM_LIST,
+        ParsedComponent::String(_) => KindSet::STRING,
+        ParsedComponent::CustomIdent(_) => KindSet::CUSTOM_IDENT,
+        _ => KindSet::empty(),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn assert_single(value: &str, expected: KindSet) {
+        assert_eq!(
+            kind_of(value),
+            ValueKind::Single(expected),
+            "kind_of({value:?})"
+        );
+    }
+
     #[test]
     fn color_keyword() {
-        assert_eq!(kind_of("red"), KindSet::COLOR);
+        assert_single("red", KindSet::COLOR);
     }
 
     #[test]
     fn hex_color() {
-        assert_eq!(kind_of("#ff0000"), KindSet::COLOR);
+        assert_single("#ff0000", KindSet::COLOR);
     }
 
     #[test]
     fn rgb_function() {
-        assert_eq!(kind_of("rgb(255, 0, 0)"), KindSet::COLOR);
+        assert_single("rgb(255, 0, 0)", KindSet::COLOR);
     }
 
     #[test]
     fn length_px() {
-        assert_eq!(kind_of("16px"), KindSet::LENGTH_PERCENTAGE);
+        assert_single("16px", KindSet::LENGTH);
     }
 
     #[test]
     fn length_em() {
-        assert_eq!(kind_of("2em"), KindSet::LENGTH_PERCENTAGE);
+        assert_single("2em", KindSet::LENGTH);
     }
 
     #[test]
     fn percentage() {
-        assert_eq!(kind_of("50%"), KindSet::LENGTH_PERCENTAGE);
+        assert_single("50%", KindSet::PERCENTAGE);
     }
 
     #[test]
-    fn zero_is_many_types() {
-        let result = kind_of("0");
-        assert!(result.contains(KindSet::LENGTH));
-        assert!(result.contains(KindSet::NUMBER));
-        assert!(result.contains(KindSet::INTEGER));
+    fn zero_is_number() {
+        assert_single("0", KindSet::INTEGER | KindSet::NUMBER);
     }
 
     #[test]
     fn integer() {
-        assert_eq!(
-            kind_of("42"),
-            KindSet::LENGTH | KindSet::NUMBER | KindSet::PERCENTAGE | KindSet::INTEGER
-        );
+        assert_single("42", KindSet::INTEGER | KindSet::NUMBER);
     }
 
     #[test]
     fn float_number() {
-        assert_eq!(
-            kind_of("3.14"),
-            KindSet::LENGTH | KindSet::NUMBER | KindSet::PERCENTAGE
-        );
+        assert_single("3.14", KindSet::NUMBER);
     }
 
     #[test]
     fn angle_deg() {
-        assert_eq!(kind_of("90deg"), KindSet::ANGLE);
+        assert_single("90deg", KindSet::ANGLE);
     }
 
     #[test]
     fn time_ms() {
-        assert_eq!(kind_of("300ms"), KindSet::TIME);
+        assert_single("300ms", KindSet::TIME);
     }
 
     #[test]
     fn time_s() {
-        assert_eq!(kind_of("1s"), KindSet::TIME);
+        assert_single("1s", KindSet::TIME);
     }
 
     #[test]
     fn resolution() {
-        assert_eq!(kind_of("96dpi"), KindSet::RESOLUTION);
+        assert_single("96dpi", KindSet::RESOLUTION);
     }
 
     #[test]
     fn url_function() {
-        assert_eq!(kind_of("url(image.png)"), KindSet::IMAGE | KindSet::URL);
+        assert_single("url(image.png)", KindSet::URL);
     }
 
     #[test]
-    fn compound_value_empty() {
-        assert_eq!(kind_of("solid 1px black"), KindSet::empty());
-    }
-
-    #[test]
-    fn calc_length() {
-        assert_eq!(kind_of("calc(100% - 20px)"), KindSet::LENGTH_PERCENTAGE);
+    fn calc_is_unknown() {
+        // calc() return type depends on arguments; not statically classifiable
+        assert!(matches!(
+            kind_of("calc(100% - 20px)"),
+            ValueKind::Unknown(_)
+        ));
     }
 
     #[test]
     fn transparent_is_color() {
-        assert_eq!(kind_of("transparent"), KindSet::COLOR);
+        assert_single("transparent", KindSet::COLOR);
     }
 
     #[test]
     fn gradient_is_image() {
-        assert_eq!(kind_of("linear-gradient(red, blue)"), KindSet::IMAGE);
+        assert_single("linear-gradient(red, blue)", KindSet::IMAGE);
+    }
+
+    #[test]
+    fn compound_border_value() {
+        let result = kind_of("solid 1px black");
+        assert!(matches!(result, ValueKind::Compound(_)));
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn compound_values_consistent() {
+        let a = kind_of("solid 1px black");
+        let b = kind_of("dashed 2px red");
+        assert!(a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn single_vs_compound_inconsistent() {
+        let a = kind_of("red");
+        let b = kind_of("solid 1px black");
+        assert!(!a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn unknown_value() {
+        assert!(matches!(kind_of("foobar"), ValueKind::Unknown(_)));
+    }
+
+    #[test]
+    fn unknown_is_consistent_with_anything() {
+        let unknown = kind_of("foobar");
+        let single = kind_of("red");
+        assert!(unknown.is_consistent_with(&single));
+        assert!(single.is_consistent_with(&unknown));
     }
 }
