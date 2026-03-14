@@ -1,3 +1,5 @@
+include!("../../generated/kind_set.rs");
+
 use cssparser::ParserInput;
 use lightningcss::values::syntax::{
     Multiplier, SyntaxComponent, SyntaxComponentKind, SyntaxString,
@@ -38,122 +40,121 @@ fn try_parse_as(value: &str, kind: &SyntaxComponentKind) -> bool {
     }
 }
 
-/// Classifies a CSS value into the set of `SyntaxComponentKind`s it satisfies.
+/// Returns a `KindSet` representing all types the CSS value satisfies.
 ///
-/// Returns an empty `Vec` for compound values (e.g. `solid 1px black`) that
+/// Returns an empty `KindSet` for compound values (e.g. `solid 1px black`) that
 /// don't match any single type.
-pub fn classify_value(value: &str) -> Vec<SyntaxComponentKind> {
-    CLASSIFIABLE_KINDS
+pub fn kind_of(value: &str) -> KindSet {
+    let parsed = CLASSIFIABLE_KINDS
         .iter()
         .filter(|kind| try_parse_as(value, kind))
-        .cloned()
-        .collect()
+        .fold(KindSet::empty(), |acc, kind| {
+            acc | from_syntax_component_kind(kind)
+        });
+
+    parsed | lookup_keyword_kinds(value).unwrap_or(KindSet::empty())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use SyntaxComponentKind::*;
-
-    fn assert_kinds(value: &str, expected: &[SyntaxComponentKind]) {
-        let result = classify_value(value);
-        assert_eq!(
-            result, expected,
-            "classify_value({value:?}) = {result:?}, expected {expected:?}"
-        );
-    }
 
     #[test]
     fn color_keyword() {
-        assert_kinds("red", &[Color]);
+        assert_eq!(kind_of("red"), KindSet::COLOR);
     }
 
     #[test]
     fn hex_color() {
-        assert_kinds("#ff0000", &[Color]);
+        assert_eq!(kind_of("#ff0000"), KindSet::COLOR);
     }
 
     #[test]
     fn rgb_function() {
-        assert_kinds("rgb(255, 0, 0)", &[Color]);
+        assert_eq!(kind_of("rgb(255, 0, 0)"), KindSet::COLOR);
     }
 
     #[test]
     fn length_px() {
-        assert_kinds("16px", &[Length, LengthPercentage]);
+        assert_eq!(kind_of("16px"), KindSet::LENGTH_PERCENTAGE);
     }
 
     #[test]
     fn length_em() {
-        assert_kinds("2em", &[Length, LengthPercentage]);
+        assert_eq!(kind_of("2em"), KindSet::LENGTH_PERCENTAGE);
     }
 
     #[test]
     fn percentage() {
-        assert_kinds("50%", &[Percentage, LengthPercentage]);
+        assert_eq!(kind_of("50%"), KindSet::LENGTH_PERCENTAGE);
     }
 
     #[test]
     fn zero_is_many_types() {
-        let result = classify_value("0");
-        assert!(result.contains(&Length));
-        assert!(result.contains(&Number));
-        assert!(result.contains(&Integer));
-        assert!(result.contains(&LengthPercentage));
+        let result = kind_of("0");
+        assert!(result.contains(KindSet::LENGTH));
+        assert!(result.contains(KindSet::NUMBER));
+        assert!(result.contains(KindSet::INTEGER));
     }
 
     #[test]
     fn integer() {
-        assert_kinds("42", &[Length, Number, LengthPercentage, Integer]);
+        assert_eq!(
+            kind_of("42"),
+            KindSet::LENGTH | KindSet::NUMBER | KindSet::PERCENTAGE | KindSet::INTEGER
+        );
     }
 
     #[test]
     fn float_number() {
-        assert_kinds("3.14", &[Length, Number, LengthPercentage]);
+        assert_eq!(
+            kind_of("3.14"),
+            KindSet::LENGTH | KindSet::NUMBER | KindSet::PERCENTAGE
+        );
     }
 
     #[test]
     fn angle_deg() {
-        assert_kinds("90deg", &[Angle]);
+        assert_eq!(kind_of("90deg"), KindSet::ANGLE);
     }
 
     #[test]
     fn time_ms() {
-        assert_kinds("300ms", &[Time]);
+        assert_eq!(kind_of("300ms"), KindSet::TIME);
     }
 
     #[test]
     fn time_s() {
-        assert_kinds("1s", &[Time]);
+        assert_eq!(kind_of("1s"), KindSet::TIME);
     }
 
     #[test]
     fn resolution() {
-        assert_kinds("96dpi", &[Resolution]);
+        assert_eq!(kind_of("96dpi"), KindSet::RESOLUTION);
     }
 
     #[test]
     fn url_function() {
-        assert_kinds("url(image.png)", &[Image, Url]);
+        assert_eq!(kind_of("url(image.png)"), KindSet::IMAGE | KindSet::URL);
     }
 
     #[test]
     fn compound_value_empty() {
-        assert_kinds("solid 1px black", &[]);
+        assert_eq!(kind_of("solid 1px black"), KindSet::empty());
     }
 
     #[test]
     fn calc_length() {
-        assert_kinds("calc(100% - 20px)", &[LengthPercentage]);
+        assert_eq!(kind_of("calc(100% - 20px)"), KindSet::LENGTH_PERCENTAGE);
     }
 
     #[test]
     fn transparent_is_color() {
-        assert_kinds("transparent", &[Color]);
+        assert_eq!(kind_of("transparent"), KindSet::COLOR);
     }
 
     #[test]
     fn gradient_is_image() {
-        assert_kinds("linear-gradient(red, blue)", &[Image]);
+        assert_eq!(kind_of("linear-gradient(red, blue)"), KindSet::IMAGE);
     }
 }

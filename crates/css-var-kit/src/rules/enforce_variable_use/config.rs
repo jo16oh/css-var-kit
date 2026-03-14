@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use lightningcss::values::syntax::SyntaxComponentKind;
 use serde::Deserialize;
 
 use crate::config::ConfigError;
+use crate::type_checker::kind_set::KindSet;
 
 #[derive(Default, Debug, Deserialize)]
 #[serde(untagged)]
@@ -72,40 +72,44 @@ fn default_allowed_values() -> Vec<String> {
 
 #[derive(Debug, Clone)]
 pub struct EnforceVariableUseConfig {
-    pub types: Vec<SyntaxComponentKind>,
+    pub types: KindSet,
     pub allowed_functions: HashSet<String>,
     pub allowed_values: HashSet<String>,
 }
 
 impl EnforceVariableUseConfig {
     pub(crate) fn from_raw(raw: RawEnforceVariableUseConfig) -> Result<Self, ConfigError> {
+        let types = raw
+            .types
+            .iter()
+            .map(|s| parse_type_name(s))
+            .collect::<Result<Vec<KindSet>, ConfigError>>()?
+            .into_iter()
+            .fold(KindSet::empty(), |acc, k| acc | k);
+
         Ok(Self {
-            types: raw
-                .types
-                .iter()
-                .map(|s| parse_type_name(s))
-                .collect::<Result<Vec<SyntaxComponentKind>, ConfigError>>()?,
+            types,
             allowed_functions: raw.allowed_functions.iter().cloned().collect(),
             allowed_values: raw.allowed_values.iter().cloned().collect(),
         })
     }
 }
 
-fn parse_type_name(name: &str) -> Result<SyntaxComponentKind, ConfigError> {
+fn parse_type_name(name: &str) -> Result<KindSet, ConfigError> {
     let r = match name {
-        "color" => SyntaxComponentKind::Color,
-        "length" => SyntaxComponentKind::Length,
-        "number" => SyntaxComponentKind::Number,
-        "percentage" => SyntaxComponentKind::Percentage,
-        "length-percentage" => SyntaxComponentKind::LengthPercentage,
-        "integer" => SyntaxComponentKind::Integer,
-        "angle" => SyntaxComponentKind::Angle,
-        "time" => SyntaxComponentKind::Time,
-        "resolution" => SyntaxComponentKind::Resolution,
-        "image" => SyntaxComponentKind::Image,
-        "url" => SyntaxComponentKind::Url,
-        "transform-function" => SyntaxComponentKind::TransformFunction,
-        "transform-list" => SyntaxComponentKind::TransformList,
+        "color" => KindSet::COLOR,
+        "length" => KindSet::LENGTH,
+        "number" => KindSet::NUMBER,
+        "percentage" => KindSet::PERCENTAGE,
+        "length-percentage" => KindSet::LENGTH_PERCENTAGE,
+        "integer" => KindSet::INTEGER,
+        "angle" => KindSet::ANGLE,
+        "time" => KindSet::TIME,
+        "resolution" => KindSet::RESOLUTION,
+        "image" => KindSet::IMAGE,
+        "url" => KindSet::URL,
+        "transform-function" => KindSet::TRANSFORM_FUNCTION,
+        "transform-list" => KindSet::TRANSFORM_LIST,
         _ => {
             return Err(ConfigError::InvalidRuleOption {
                 raw: name.to_string(),

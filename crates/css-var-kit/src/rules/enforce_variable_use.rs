@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use lightningcss::properties::custom::{Token, TokenList, TokenOrValue};
-use lightningcss::values::syntax::SyntaxComponentKind;
 
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
-use crate::type_checker::value_classifier::classify_value;
+use crate::type_checker::kind_set::KindSet;
+use crate::type_checker::kind_set::kind_of;
 use config::EnforceVariableUseConfig;
 
 pub mod config;
@@ -16,7 +16,7 @@ pub mod config;
 const RULE_NAME: &str = "enforce-variable-use";
 
 pub struct EnforceVariableUse {
-    types: Vec<SyntaxComponentKind>,
+    types: KindSet,
     allowed_functions: HashSet<String>,
     allowed_values: HashSet<String>,
 }
@@ -24,16 +24,10 @@ pub struct EnforceVariableUse {
 impl EnforceVariableUse {
     pub fn from_config(config: &EnforceVariableUseConfig) -> Self {
         Self {
-            types: config.types.clone(),
+            types: config.types,
             allowed_functions: config.allowed_functions.clone(),
             allowed_values: config.allowed_values.clone(),
         }
-    }
-
-    fn has_type(&self, kind: &SyntaxComponentKind) -> bool {
-        self.types
-            .iter()
-            .any(|k| std::mem::discriminant(k) == std::mem::discriminant(kind))
     }
 }
 
@@ -81,8 +75,8 @@ impl EnforceVariableUse {
                 TokenOrValue::Env(_) => vec![],
 
                 TokenOrValue::Color(_) => {
-                    if self.has_type(&SyntaxComponentKind::Color) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Color)]
+                    if self.types.intersects(KindSet::COLOR) {
+                        vec![make_diagnostic(prop, "color")]
                     } else {
                         vec![]
                     }
@@ -93,47 +87,44 @@ impl EnforceVariableUse {
                 TokenOrValue::UnresolvedColor(_) => vec![],
 
                 TokenOrValue::Length(_) => {
-                    if self.has_type(&SyntaxComponentKind::Length) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Length)]
-                    } else if self.has_type(&SyntaxComponentKind::LengthPercentage) {
-                        vec![make_diagnostic(
-                            prop,
-                            &SyntaxComponentKind::LengthPercentage,
-                        )]
+                    if self.types.intersects(KindSet::LENGTH) {
+                        vec![make_diagnostic(prop, "length")]
+                    } else if self.types.intersects(KindSet::LENGTH_PERCENTAGE) {
+                        vec![make_diagnostic(prop, "length-percentage")]
                     } else {
                         vec![]
                     }
                 }
 
                 TokenOrValue::Angle(_) => {
-                    if self.has_type(&SyntaxComponentKind::Angle) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Angle)]
+                    if self.types.intersects(KindSet::ANGLE) {
+                        vec![make_diagnostic(prop, "angle")]
                     } else {
                         vec![]
                     }
                 }
 
                 TokenOrValue::Time(_) => {
-                    if self.has_type(&SyntaxComponentKind::Time) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Time)]
+                    if self.types.intersects(KindSet::TIME) {
+                        vec![make_diagnostic(prop, "time")]
                     } else {
                         vec![]
                     }
                 }
 
                 TokenOrValue::Resolution(_) => {
-                    if self.has_type(&SyntaxComponentKind::Resolution) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Resolution)]
+                    if self.types.intersects(KindSet::RESOLUTION) {
+                        vec![make_diagnostic(prop, "resolution")]
                     } else {
                         vec![]
                     }
                 }
 
                 TokenOrValue::Url(_) => {
-                    if self.has_type(&SyntaxComponentKind::Url) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Url)]
-                    } else if self.has_type(&SyntaxComponentKind::Image) {
-                        vec![make_diagnostic(prop, &SyntaxComponentKind::Image)]
+                    if self.types.intersects(KindSet::URL) {
+                        vec![make_diagnostic(prop, "url")]
+                    } else if self.types.intersects(KindSet::IMAGE) {
+                        vec![make_diagnostic(prop, "image")]
                     } else {
                         vec![]
                     }
@@ -157,8 +148,9 @@ impl EnforceVariableUse {
                 int_value,
                 ..
             } => {
-                if !self.has_type(&SyntaxComponentKind::Percentage)
-                    && !self.has_type(&SyntaxComponentKind::LengthPercentage)
+                if !self
+                    .types
+                    .intersects(KindSet::PERCENTAGE | KindSet::LENGTH_PERCENTAGE)
                 {
                     return vec![];
                 }
@@ -170,13 +162,10 @@ impl EnforceVariableUse {
                     return vec![];
                 }
 
-                if self.has_type(&SyntaxComponentKind::Percentage) {
-                    vec![make_diagnostic(prop, &SyntaxComponentKind::Percentage)]
+                if self.types.intersects(KindSet::PERCENTAGE) {
+                    vec![make_diagnostic(prop, "percentage")]
                 } else {
-                    vec![make_diagnostic(
-                        prop,
-                        &SyntaxComponentKind::LengthPercentage,
-                    )]
+                    vec![make_diagnostic(prop, "length-percentage")]
                 }
             }
 
@@ -190,12 +179,15 @@ impl EnforceVariableUse {
                 if is_allowed_value(&css_str, &self.allowed_values) {
                     return vec![];
                 }
-                // Bare numbers like `0` are also valid as lengths in CSS
-                let kinds = classify_value(&css_str);
-                kinds
-                    .iter()
-                    .find(|k| self.has_type(k))
-                    .map(|k| vec![make_diagnostic(prop, k)])
+                let kinds = kind_of(&css_str);
+                let matched = kinds & self.types;
+                if matched.is_empty() {
+                    return vec![];
+                }
+                matched
+                    .iter_kind_names()
+                    .next()
+                    .map(|name| vec![make_diagnostic(prop, name)])
                     .unwrap_or_default()
             }
 
@@ -203,11 +195,15 @@ impl EnforceVariableUse {
                 if is_allowed_value(s, &self.allowed_values) {
                     return vec![];
                 }
-                let kinds = classify_value(s);
-                kinds
-                    .iter()
-                    .find(|k| self.has_type(k))
-                    .map(|k| vec![make_diagnostic(prop, k)])
+                let kinds = kind_of(s);
+                let matched = kinds & self.types;
+                if matched.is_empty() {
+                    return vec![];
+                }
+                matched
+                    .iter_kind_names()
+                    .next()
+                    .map(|name| vec![make_diagnostic(prop, name)])
                     .unwrap_or_default()
             }
 
@@ -220,11 +216,7 @@ fn is_allowed_value(value: &str, allowed_values: &HashSet<String>) -> bool {
     allowed_values.contains(value)
 }
 
-fn make_diagnostic<'src>(
-    prop: &'src Property<'src>,
-    kind: &SyntaxComponentKind,
-) -> Diagnostic<'src> {
-    let kind_name = format_kind(kind);
+fn make_diagnostic<'src>(prop: &'src Property<'src>, kind_name: &str) -> Diagnostic<'src> {
     Diagnostic {
         file_path: prop.file_path,
         source: prop.source,
@@ -235,25 +227,6 @@ fn make_diagnostic<'src>(
             prop.value.raw,
         ),
         severity: Severity::Warning,
-    }
-}
-
-fn format_kind(kind: &SyntaxComponentKind) -> &'static str {
-    match kind {
-        SyntaxComponentKind::Length => "length",
-        SyntaxComponentKind::Number => "number",
-        SyntaxComponentKind::Percentage => "percentage",
-        SyntaxComponentKind::LengthPercentage => "length-percentage",
-        SyntaxComponentKind::Color => "color",
-        SyntaxComponentKind::Image => "image",
-        SyntaxComponentKind::Url => "url",
-        SyntaxComponentKind::Integer => "integer",
-        SyntaxComponentKind::Angle => "angle",
-        SyntaxComponentKind::Time => "time",
-        SyntaxComponentKind::Resolution => "resolution",
-        SyntaxComponentKind::TransformFunction => "transform-function",
-        SyntaxComponentKind::TransformList => "transform-list",
-        _ => "value",
     }
 }
 

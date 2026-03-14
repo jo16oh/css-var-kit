@@ -68,6 +68,57 @@ function generateBitflags(allKinds: string[]): string {
   return lines.join("\n");
 }
 
+function generateFromSyntaxComponentKind(): string {
+  const lines: string[] = [];
+  lines.push(
+    "pub fn from_syntax_component_kind(kind: &lightningcss::values::syntax::SyntaxComponentKind) -> KindSet {",
+  );
+  lines.push(
+    "    use lightningcss::values::syntax::SyntaxComponentKind;",
+  );
+  lines.push("    match kind {");
+
+  for (const { variant, kind } of SYNTAX_COMPONENT_KINDS) {
+    if (kind === "custom-ident" || kind === "string") continue;
+    const constName = kindToConstName(kind);
+    lines.push(
+      `        SyntaxComponentKind::${variant} => KindSet::${constName},`,
+    );
+  }
+  lines.push(
+    "        // LengthPercentage maps to the composite LENGTH | PERCENTAGE",
+  );
+  lines.push(
+    "        SyntaxComponentKind::LengthPercentage => KindSet::LENGTH_PERCENTAGE,",
+  );
+
+  lines.push("        _ => KindSet::empty(),");
+  lines.push("    }");
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function generateKindNames(allKinds: string[]): string {
+  const lines: string[] = [];
+  lines.push("const KIND_NAMES: &[(KindSet, &str)] = &[");
+  for (const kind of allKinds) {
+    const constName = kindToConstName(kind);
+    lines.push(`    (KindSet::${constName}, "${kind}"),`);
+  }
+  lines.push("];");
+  lines.push("");
+  lines.push("impl KindSet {");
+  lines.push(
+    "    pub fn iter_kind_names(self) -> impl Iterator<Item = &'static str> {",
+  );
+  lines.push("        KIND_NAMES.iter()");
+  lines.push("            .filter(move |(flag, _)| self.contains(*flag))");
+  lines.push("            .map(|(_, name)| *name)");
+  lines.push("    }");
+  lines.push("}");
+  return lines.join("\n");
+}
+
 function generateLookupFn(
   fnName: string,
   map: Record<string, string[]>,
@@ -114,6 +165,10 @@ async function main() {
     "// Do not edit manually.",
     "",
     generateBitflags(allKinds),
+    "",
+    generateKindNames(allKinds),
+    "",
+    generateFromSyntaxComponentKind(),
     "",
     generateLookupFn("lookup_keyword_kinds", keywordMap),
     "",
