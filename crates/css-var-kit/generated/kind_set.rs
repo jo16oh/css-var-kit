@@ -118,21 +118,15 @@ bitflags::bitflags! {
     }
 }
 
-impl KindSet {
-    pub fn is_compatible(self, other: KindSet) -> bool {
-        self.intersects(other)
-    }
-}
-
 pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
     match name {
         "-infinity" => Some(KindSet::CALC_KEYWORD),
         "-n" => Some(KindSet::AN_PLUS_B),
         "..." => Some(KindSet::EVENT_TRIGGER_EVENT),
-        "'" => Some(KindSet::ATTR_MATCHER.union(KindSet::COMBINATOR)),
+        "'" => Some(KindSet::ATTR_MATCHER | KindSet::COMBINATOR),
         "'^'" => Some(KindSet::ATTR_MATCHER),
         "'>'" => Some(KindSet::COMBINATOR),
-        "'~'" => Some(KindSet::ATTR_MATCHER.union(KindSet::COMBINATOR)),
+        "'~'" => Some(KindSet::ATTR_MATCHER | KindSet::COMBINATOR),
         "'$'" => Some(KindSet::ATTR_MATCHER),
         "A3" => Some(KindSet::PAGE_SIZE),
         "A4" => Some(KindSet::PAGE_SIZE),
@@ -146,16 +140,14 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "ActiveBorder" => Some(KindSet::COLOR),
         "ActiveCaption" => Some(KindSet::COLOR),
         "ActiveText" => Some(KindSet::COLOR),
-        "add" => Some(KindSet::COMPOSITING_OPERATOR.union(KindSet::ANIMATION_COMPOSITION)),
+        "add" => Some(KindSet::COMPOSITING_OPERATOR | KindSet::ANIMATION_COMPOSITION),
         "after" => Some(KindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR),
         "alias" => Some(KindSet::CURSOR_PREDEFINED),
         "aliceblue" => Some(KindSet::COLOR),
         "all-scroll" => Some(KindSet::CURSOR_PREDEFINED),
         "allow-discrete" => Some(KindSet::TRANSITION_BEHAVIOR),
         "alpha" => Some(KindSet::MASKING_MODE),
-        "alphabetic" => {
-            Some(KindSet::BASELINE_METRIC.union(KindSet::SYMBOLS_TYPE.union(KindSet::TEXT_EDGE)))
-        }
+        "alphabetic" => Some(KindSet::BASELINE_METRIC | KindSet::SYMBOLS_TYPE | KindSet::TEXT_EDGE),
         "alternate" => Some(KindSet::ANIMATION_DIRECTION),
         "alternate-reverse" => Some(KindSet::ANIMATION_DIRECTION),
         "angle" => Some(KindSet::SYNTAX_TYPE_NAME),
@@ -166,12 +158,11 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "aquamarine" => Some(KindSet::COLOR),
         "at" => Some(KindSet::NAVIGATION_LOCATION_KEYWORD),
         "auto" => Some(
-            KindSet::CURSOR_PREDEFINED.union(
-                KindSet::TRACK_BREADTH.union(
-                    KindSet::ISOLATION_MODE
-                        .union(KindSet::LINE_STYLE.union(KindSet::ANIMATION_TIMELINE)),
-                ),
-            ),
+            KindSet::CURSOR_PREDEFINED
+                | KindSet::TRACK_BREADTH
+                | KindSet::ISOLATION_MODE
+                | KindSet::LINE_STYLE
+                | KindSet::ANIMATION_TIMELINE,
         ),
         "azure" => Some(KindSet::COLOR),
         "B4" => Some(KindSet::PAGE_SIZE),
@@ -186,22 +177,25 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "black" => Some(KindSet::COLOR),
         "blanchedalmond" => Some(KindSet::COLOR),
         "blank" => Some(KindSet::PSEUDO_PAGE),
-        "block" => Some(KindSet::ANCHOR_SIZE.union(KindSet::AXIS.union(KindSet::DISPLAY))),
-        "block-end" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-        ),
-        "block-start" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-        ),
+        "block" => Some(KindSet::ANCHOR_SIZE | KindSet::AXIS | KindSet::DISPLAY),
+        "block-end" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SCROLL_BUTTON_DIRECTION)
+        }
+        "block-start" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SCROLL_BUTTON_DIRECTION)
+        }
         "blue" => Some(KindSet::COLOR),
         "blueviolet" => Some(KindSet::COLOR),
         "bold" => Some(KindSet::FONT_WEIGHT_ABSOLUTE),
         "border-area" => Some(KindSet::BG_CLIP),
         "border-box" => Some(KindSet::BOX),
         "both" => Some(KindSet::ANIMATION_FILL_MODE),
-        "bottom" => Some(KindSet::ANCHOR_SIDE.union(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SHAPE_COMMAND_POSITION)),
-        )),
+        "bottom" => Some(
+            KindSet::ANCHOR_SIDE
+                | KindSet::POSITION_AREA
+                | KindSet::POSITION
+                | KindSet::SHAPE_COMMAND_POSITION,
+        ),
         "brown" => Some(KindSet::COLOR),
         "burlywood" => Some(KindSet::COLOR),
         "button" => Some(KindSet::COMPAT_AUTO),
@@ -218,9 +212,13 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "CaptionText" => Some(KindSet::COLOR),
         "ccw" => Some(KindSet::ARC_SWEEP),
         "cell" => Some(KindSet::CURSOR_PREDEFINED),
-        "center" => Some(KindSet::ANCHOR_SIDE.union(KindSet::ALIGNMENT.union(
-            KindSet::SHAPE_COMMAND_POSITION.union(KindSet::POSITION_AREA.union(KindSet::POSITION)),
-        ))),
+        "center" => Some(
+            KindSet::ANCHOR_SIDE
+                | KindSet::ALIGNMENT
+                | KindSet::SHAPE_COMMAND_POSITION
+                | KindSet::POSITION_AREA
+                | KindSet::POSITION,
+        ),
         "central" => Some(KindSet::BASELINE_METRIC),
         "chartreuse" => Some(KindSet::COLOR),
         "checkbox" => Some(KindSet::COMPAT_AUTO),
@@ -233,7 +231,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "closest-side" => Some(KindSet::RADIAL_EXTENT),
         "col-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "collection" => Some(KindSet::FONT_FORMAT),
-        "color" => Some(KindSet::BLEND_MODE.union(KindSet::SYNTAX_TYPE_NAME)),
+        "color" => Some(KindSet::BLEND_MODE | KindSet::SYNTAX_TYPE_NAME),
         "color-burn" => Some(KindSet::BLEND_MODE),
         "color-CBDT" => Some(KindSet::COLOR_FONT_TECH),
         "color-COLRv0" => Some(KindSet::COLOR_FONT_TECH),
@@ -246,10 +244,10 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "contain" => Some(KindSet::BG_SIZE),
         "content" => Some(KindSet::CONTENT_LEVEL),
         "content-box" => Some(KindSet::BOX),
-        "contents" => Some(KindSet::ANIMATEABLE_FEATURE.union(KindSet::DISPLAY)),
+        "contents" => Some(KindSet::ANIMATEABLE_FEATURE | KindSet::DISPLAY),
         "context-menu" => Some(KindSet::CURSOR_PREDEFINED),
         "contextual" => Some(KindSet::CONTEXTUAL_ALT_VALUES),
-        "copy" => Some(KindSet::COMPOSITE_MODE.union(KindSet::CURSOR_PREDEFINED)),
+        "copy" => Some(KindSet::COMPOSITE_MODE | KindSet::CURSOR_PREDEFINED),
         "coral" => Some(KindSet::COLOR),
         "cornflowerblue" => Some(KindSet::COLOR),
         "cornsilk" => Some(KindSet::COLOR),
@@ -299,9 +297,9 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "display-p3" => Some(KindSet::COLOR_SPACE),
         "display-p3-linear" => Some(KindSet::COLOR_SPACE),
         "dodgerblue" => Some(KindSet::COLOR),
-        "dotted" => Some(KindSet::LEADER_TYPE.union(KindSet::LINE_STYLE)),
+        "dotted" => Some(KindSet::LEADER_TYPE | KindSet::LINE_STYLE),
         "double" => Some(KindSet::LINE_STYLE),
-        "down" => Some(KindSet::ROUNDING_STRATEGY.union(KindSet::SCROLL_BUTTON_DIRECTION)),
+        "down" => Some(KindSet::ROUNDING_STRATEGY | KindSet::SCROLL_BUTTON_DIRECTION),
         "e" => Some(KindSet::CALC_KEYWORD),
         "e-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "ease" => Some(KindSet::EASING_FUNCTION),
@@ -311,11 +309,12 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "element" => Some(KindSet::CONTENT_LEVEL),
         "ellipse" => Some(KindSet::RADIAL_SHAPE),
         "embedded-opentype" => Some(KindSet::FONT_FORMAT),
-        "end" => {
-            Some(KindSet::ANCHOR_SIDE.union(
-                KindSet::ALIGNMENT.union(KindSet::POSITION_AREA.union(KindSet::STEP_POSITION)),
-            ))
-        }
+        "end" => Some(
+            KindSet::ANCHOR_SIDE
+                | KindSet::ALIGNMENT
+                | KindSet::POSITION_AREA
+                | KindSet::STEP_POSITION,
+        ),
         "even" => Some(KindSet::AN_PLUS_B),
         "ew-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "exclude" => Some(KindSet::COMPOSITING_OPERATOR),
@@ -333,10 +332,10 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "FieldText" => Some(KindSet::COLOR),
         "fill-box" => Some(KindSet::BOX),
         "firebrick" => Some(KindSet::COLOR),
-        "first" => Some(KindSet::ALIGNMENT.union(KindSet::PSEUDO_PAGE)),
+        "first" => Some(KindSet::ALIGNMENT | KindSet::PSEUDO_PAGE),
         "first-letter" => Some(KindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR),
         "first-line" => Some(KindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR),
-        "fixed" => Some(KindSet::ATTACHMENT.union(KindSet::SYMBOLS_TYPE)),
+        "fixed" => Some(KindSet::ATTACHMENT | KindSet::SYMBOLS_TYPE),
         "flex" => Some(KindSet::DISPLAY),
         "flex-end" => Some(KindSet::ALIGNMENT),
         "flex-start" => Some(KindSet::ALIGNMENT),
@@ -351,7 +350,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "forestgreen" => Some(KindSet::COLOR),
         "forward" => Some(KindSet::NAVIGATION_TYPE_KEYWORD),
         "forwards" => Some(KindSet::ANIMATION_FILL_MODE),
-        "from" => Some(KindSet::KEYFRAME_SELECTOR.union(KindSet::NAVIGATION_LOCATION_KEYWORD)),
+        "from" => Some(KindSet::KEYFRAME_SELECTOR | KindSet::NAVIGATION_LOCATION_KEYWORD),
         "fuchsia" => Some(KindSet::COLOR),
         "full-width" => Some(KindSet::EAST_ASIAN_WIDTH_VALUES),
         "gainsboro" => Some(KindSet::COLOR),
@@ -388,7 +387,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "icon" => Some(KindSet::SYSTEM_FAMILY_NAME),
         "ideograph-alpha" => Some(KindSet::AUTOSPACE),
         "ideograph-numeric" => Some(KindSet::AUTOSPACE),
-        "ideographic" => Some(KindSet::BASELINE_METRIC.union(KindSet::TEXT_EDGE)),
+        "ideographic" => Some(KindSet::BASELINE_METRIC | KindSet::TEXT_EDGE),
         "ideographic-ink" => Some(KindSet::TEXT_EDGE),
         "image" => Some(KindSet::SYNTAX_TYPE_NAME),
         "InactiveBorder" => Some(KindSet::COLOR),
@@ -401,16 +400,16 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "infinity" => Some(KindSet::CALC_KEYWORD),
         "InfoBackground" => Some(KindSet::COLOR),
         "InfoText" => Some(KindSet::COLOR),
-        "inline" => Some(KindSet::ANCHOR_SIZE.union(KindSet::AXIS.union(KindSet::DISPLAY))),
+        "inline" => Some(KindSet::ANCHOR_SIZE | KindSet::AXIS | KindSet::DISPLAY),
         "inline-block" => Some(KindSet::DISPLAY),
-        "inline-end" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-        ),
+        "inline-end" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SCROLL_BUTTON_DIRECTION)
+        }
         "inline-flex" => Some(KindSet::DISPLAY),
         "inline-grid" => Some(KindSet::DISPLAY),
-        "inline-start" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-        ),
+        "inline-start" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SCROLL_BUTTON_DIRECTION)
+        }
         "inline-table" => Some(KindSet::DISPLAY),
         "insert" => Some(KindSet::AUTOSPACE),
         "inset" => Some(KindSet::LINE_STYLE),
@@ -432,7 +431,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "jump-start" => Some(KindSet::STEP_POSITION),
         "khaki" => Some(KindSet::COLOR),
         "lab" => Some(KindSet::COLOR_SPACE),
-        "large" => Some(KindSet::ABSOLUTE_SIZE.union(KindSet::ARC_SIZE)),
+        "large" => Some(KindSet::ABSOLUTE_SIZE | KindSet::ARC_SIZE),
         "larger" => Some(KindSet::RELATIVE_SIZE),
         "lavender" => Some(KindSet::COLOR),
         "lavenderblush" => Some(KindSet::COLOR),
@@ -440,10 +439,10 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "lch" => Some(KindSet::COLOR_SPACE),
         "ledger" => Some(KindSet::PAGE_SIZE),
         "left" => Some(
-            KindSet::ANCHOR_SIDE.union(
-                KindSet::SHAPE_COMMAND_POSITION
-                    .union(KindSet::POSITION.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-            ),
+            KindSet::ANCHOR_SIDE
+                | KindSet::SHAPE_COMMAND_POSITION
+                | KindSet::POSITION
+                | KindSet::SCROLL_BUTTON_DIRECTION,
         ),
         "legal" => Some(KindSet::PAGE_SIZE),
         "lemonchiffon" => Some(KindSet::COLOR),
@@ -489,7 +488,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "math" => Some(KindSet::GENERIC_FAMILY),
         "mathematical" => Some(KindSet::BASELINE_METRIC),
         "max-content" => Some(KindSet::TRACK_BREADTH),
-        "medium" => Some(KindSet::ABSOLUTE_SIZE.union(KindSet::LINE_WIDTH)),
+        "medium" => Some(KindSet::ABSOLUTE_SIZE | KindSet::LINE_WIDTH),
         "mediumaquamarine" => Some(KindSet::COLOR),
         "mediumblue" => Some(KindSet::COLOR),
         "mediumorchid" => Some(KindSet::COLOR),
@@ -524,7 +523,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "navajowhite" => Some(KindSet::COLOR),
         "navy" => Some(KindSet::COLOR),
         "ne-resize" => Some(KindSet::CURSOR_PREDEFINED),
-        "nearest" => Some(KindSet::SOURCE.union(KindSet::ROUNDING_STRATEGY)),
+        "nearest" => Some(KindSet::SOURCE | KindSet::ROUNDING_STRATEGY),
         "nesw-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "next" => Some(KindSet::SCROLL_BUTTON_DIRECTION),
         "no-autospace" => Some(KindSet::AUTOSPACE),
@@ -538,29 +537,25 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "no-referrer-when-downgrade" => Some(KindSet::REFERRER_POLICY_MODIFIER),
         "no-repeat" => Some(KindSet::REPEAT_STYLE),
         "none" => Some(
-            KindSet::CURSOR_PREDEFINED.union(
-                KindSet::DISPLAY.union(
-                    KindSet::LINE_STYLE
-                        .union(KindSet::ANIMATION_FILL_MODE.union(KindSet::ANIMATION_TIMELINE)),
-                ),
-            ),
+            KindSet::CURSOR_PREDEFINED
+                | KindSet::DISPLAY
+                | KindSet::LINE_STYLE
+                | KindSet::ANIMATION_FILL_MODE
+                | KindSet::ANIMATION_TIMELINE,
         ),
         "normal" => Some(
-            KindSet::BLEND_MODE.union(
-                KindSet::FONT_VARIANT_CSS2.union(
-                    KindSet::FONT_WEIGHT_ABSOLUTE.union(
-                        KindSet::FONT_WIDTH_CSS3.union(
-                            KindSet::ANIMATION_DIRECTION
-                                .union(KindSet::SPACING_TRIM.union(KindSet::TRANSITION_BEHAVIOR)),
-                        ),
-                    ),
-                ),
-            ),
+            KindSet::BLEND_MODE
+                | KindSet::FONT_VARIANT_CSS2
+                | KindSet::FONT_WEIGHT_ABSOLUTE
+                | KindSet::FONT_WIDTH_CSS3
+                | KindSet::ANIMATION_DIRECTION
+                | KindSet::SPACING_TRIM
+                | KindSet::TRANSITION_BEHAVIOR,
         ),
         "not-allowed" => Some(KindSet::CURSOR_PREDEFINED),
         "notch" => Some(KindSet::CORNER_SHAPE),
         "ns-resize" => Some(KindSet::CURSOR_PREDEFINED),
-        "number" => Some(KindSet::ATTR_TYPE.union(KindSet::SYNTAX_TYPE_NAME)),
+        "number" => Some(KindSet::ATTR_TYPE | KindSet::SYNTAX_TYPE_NAME),
         "numeric" => Some(KindSet::SYMBOLS_TYPE),
         "nw-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "nwse-resize" => Some(KindSet::CURSOR_PREDEFINED),
@@ -624,23 +619,21 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "repeat-inline" => Some(KindSet::REPEAT_STYLE),
         "repeat-x" => Some(KindSet::REPEAT_STYLE),
         "repeat-y" => Some(KindSet::REPEAT_STYLE),
-        "replace" => Some(KindSet::AUTOSPACE.union(KindSet::ANIMATION_COMPOSITION)),
+        "replace" => Some(KindSet::AUTOSPACE | KindSet::ANIMATION_COMPOSITION),
         "resolution" => Some(KindSet::SYNTAX_TYPE_NAME),
         "reverse" => Some(KindSet::ANIMATION_DIRECTION),
         "ridge" => Some(KindSet::LINE_STYLE),
         "right" => Some(
-            KindSet::ANCHOR_SIDE.union(
-                KindSet::SHAPE_COMMAND_POSITION.union(
-                    KindSet::POSITION_AREA.union(
-                        KindSet::POSITION
-                            .union(KindSet::PSEUDO_PAGE.union(KindSet::SCROLL_BUTTON_DIRECTION)),
-                    ),
-                ),
-            ),
+            KindSet::ANCHOR_SIDE
+                | KindSet::SHAPE_COMMAND_POSITION
+                | KindSet::POSITION_AREA
+                | KindSet::POSITION
+                | KindSet::PSEUDO_PAGE
+                | KindSet::SCROLL_BUTTON_DIRECTION,
         ),
         "root" => Some(KindSet::SOURCE),
         "rosybrown" => Some(KindSet::COLOR),
-        "round" => Some(KindSet::CORNER_SHAPE.union(KindSet::REPEAT_STYLE)),
+        "round" => Some(KindSet::CORNER_SHAPE | KindSet::REPEAT_STYLE),
         "row-resize" => Some(KindSet::CURSOR_PREDEFINED),
         "royalblue" => Some(KindSet::COLOR),
         "rtl" => Some(KindSet::IMAGE_TAGS),
@@ -676,15 +669,11 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "self-block" => Some(KindSet::ANCHOR_SIZE),
         "self-block-end" => Some(KindSet::POSITION_AREA),
         "self-block-start" => Some(KindSet::POSITION_AREA),
-        "self-end" => {
-            Some(KindSet::ANCHOR_SIDE.union(KindSet::POSITION_AREA.union(KindSet::ALIGNMENT)))
-        }
+        "self-end" => Some(KindSet::ANCHOR_SIDE | KindSet::POSITION_AREA | KindSet::ALIGNMENT),
         "self-inline" => Some(KindSet::ANCHOR_SIZE),
         "self-inline-end" => Some(KindSet::POSITION_AREA),
         "self-inline-start" => Some(KindSet::POSITION_AREA),
-        "self-start" => {
-            Some(KindSet::ANCHOR_SIDE.union(KindSet::POSITION_AREA.union(KindSet::ALIGNMENT)))
-        }
+        "self-start" => Some(KindSet::ANCHOR_SIDE | KindSet::POSITION_AREA | KindSet::ALIGNMENT),
         "self-x-end" => Some(KindSet::POSITION_AREA),
         "self-x-start" => Some(KindSet::POSITION_AREA),
         "self-y-end" => Some(KindSet::POSITION_AREA),
@@ -701,18 +690,18 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "slateblue" => Some(KindSet::COLOR),
         "slategray" => Some(KindSet::COLOR),
         "slategrey" => Some(KindSet::COLOR),
-        "small" => Some(KindSet::ABSOLUTE_SIZE.union(KindSet::ARC_SIZE)),
+        "small" => Some(KindSet::ABSOLUTE_SIZE | KindSet::ARC_SIZE),
         "small-caps" => Some(KindSet::FONT_VARIANT_CSS2),
         "small-caption" => Some(KindSet::SYSTEM_FAMILY_NAME),
         "smaller" => Some(KindSet::RELATIVE_SIZE),
         "snow" => Some(KindSet::COLOR),
         "soft-light" => Some(KindSet::BLEND_MODE),
-        "solid" => Some(KindSet::LEADER_TYPE.union(KindSet::LINE_STYLE)),
+        "solid" => Some(KindSet::LEADER_TYPE | KindSet::LINE_STYLE),
         "source-atop" => Some(KindSet::COMPOSITE_MODE),
         "source-in" => Some(KindSet::COMPOSITE_MODE),
         "source-out" => Some(KindSet::COMPOSITE_MODE),
         "source-over" => Some(KindSet::COMPOSITE_MODE),
-        "space" => Some(KindSet::LEADER_TYPE.union(KindSet::REPEAT_STYLE)),
+        "space" => Some(KindSet::LEADER_TYPE | KindSet::REPEAT_STYLE),
         "space-all" => Some(KindSet::SPACING_TRIM),
         "space-around" => Some(KindSet::ALIGNMENT),
         "space-between" => Some(KindSet::ALIGNMENT),
@@ -749,11 +738,13 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "srgb" => Some(KindSet::COLOR_SPACE),
         "srgb-linear" => Some(KindSet::COLOR_SPACE),
         "stacked-fractions" => Some(KindSet::NUMERIC_FRACTION_VALUES),
-        "start" => {
-            Some(KindSet::ANCHOR_SIDE.union(KindSet::ALIGNMENT.union(
-                KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::STEP_POSITION)),
-            )))
-        }
+        "start" => Some(
+            KindSet::ANCHOR_SIDE
+                | KindSet::ALIGNMENT
+                | KindSet::POSITION_AREA
+                | KindSet::POSITION
+                | KindSet::STEP_POSITION,
+        ),
         "status-bar" => Some(KindSet::SYSTEM_FAMILY_NAME),
         "steelblue" => Some(KindSet::COLOR),
         "step-end" => Some(KindSet::EASING_FUNCTION),
@@ -780,9 +771,12 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "tabular-nums" => Some(KindSet::NUMERIC_SPACING_VALUES),
         "tan" => Some(KindSet::COLOR),
         "teal" => Some(KindSet::COLOR),
-        "text" => Some(KindSet::BG_CLIP.union(
-            KindSet::CONTENT_LEVEL.union(KindSet::CURSOR_PREDEFINED.union(KindSet::TEXT_EDGE)),
-        )),
+        "text" => Some(
+            KindSet::BG_CLIP
+                | KindSet::CONTENT_LEVEL
+                | KindSet::CURSOR_PREDEFINED
+                | KindSet::TEXT_EDGE,
+        ),
         "text-bottom" => Some(KindSet::BASELINE_METRIC),
         "text-top" => Some(KindSet::BASELINE_METRIC),
         "textarea" => Some(KindSet::COMPAT_AUTO),
@@ -796,12 +790,15 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "ThreeDLightShadow" => Some(KindSet::COLOR),
         "ThreeDShadow" => Some(KindSet::COLOR),
         "time" => Some(KindSet::SYNTAX_TYPE_NAME),
-        "to" => Some(KindSet::KEYFRAME_SELECTOR.union(KindSet::NAVIGATION_LOCATION_KEYWORD)),
+        "to" => Some(KindSet::KEYFRAME_SELECTOR | KindSet::NAVIGATION_LOCATION_KEYWORD),
         "to-zero" => Some(KindSet::ROUNDING_STRATEGY),
         "tomato" => Some(KindSet::COLOR),
-        "top" => Some(KindSet::ANCHOR_SIDE.union(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SHAPE_COMMAND_POSITION)),
-        )),
+        "top" => Some(
+            KindSet::ANCHOR_SIDE
+                | KindSet::POSITION_AREA
+                | KindSet::POSITION
+                | KindSet::SHAPE_COMMAND_POSITION,
+        ),
         "touch" => Some(KindSet::EVENT_TRIGGER_EVENT),
         "traditional" => Some(KindSet::EAST_ASIAN_VARIANT_VALUES),
         "transform-function" => Some(KindSet::SYNTAX_TYPE_NAME),
@@ -820,7 +817,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "ultra-expanded" => Some(KindSet::FONT_WIDTH_CSS3),
         "unsafe" => Some(KindSet::ALIGNMENT),
         "unsafe-url)" => Some(KindSet::REFERRER_POLICY_MODIFIER),
-        "up" => Some(KindSet::ROUNDING_STRATEGY.union(KindSet::SCROLL_BUTTON_DIRECTION)),
+        "up" => Some(KindSet::ROUNDING_STRATEGY | KindSet::SCROLL_BUTTON_DIRECTION),
         "url" => Some(KindSet::SYNTAX_TYPE_NAME),
         "variations" => Some(KindSet::FONT_TECH),
         "vertical-text" => Some(KindSet::CURSOR_PREDEFINED),
@@ -840,14 +837,14 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "woff" => Some(KindSet::FONT_FORMAT),
         "woff2" => Some(KindSet::FONT_FORMAT),
         "x" => Some(KindSet::AXIS),
-        "x-end" => Some(
-            KindSet::SHAPE_COMMAND_POSITION.union(KindSet::POSITION_AREA.union(KindSet::POSITION)),
-        ),
+        "x-end" => {
+            Some(KindSet::SHAPE_COMMAND_POSITION | KindSet::POSITION_AREA | KindSet::POSITION)
+        }
         "x-large" => Some(KindSet::ABSOLUTE_SIZE),
         "x-small" => Some(KindSet::ABSOLUTE_SIZE),
-        "x-start" => Some(
-            KindSet::SHAPE_COMMAND_POSITION.union(KindSet::POSITION_AREA.union(KindSet::POSITION)),
-        ),
+        "x-start" => {
+            Some(KindSet::SHAPE_COMMAND_POSITION | KindSet::POSITION_AREA | KindSet::POSITION)
+        }
         "xor" => Some(KindSet::COMPOSITE_MODE),
         "xx-large" => Some(KindSet::ABSOLUTE_SIZE),
         "xx-small" => Some(KindSet::ABSOLUTE_SIZE),
@@ -856,12 +853,12 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<KindSet> {
         "xyz-d50" => Some(KindSet::COLOR_SPACE),
         "xyz-d65" => Some(KindSet::COLOR_SPACE),
         "y" => Some(KindSet::AXIS),
-        "y-end" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SHAPE_COMMAND_POSITION)),
-        ),
-        "y-start" => Some(
-            KindSet::POSITION_AREA.union(KindSet::POSITION.union(KindSet::SHAPE_COMMAND_POSITION)),
-        ),
+        "y-end" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SHAPE_COMMAND_POSITION)
+        }
+        "y-start" => {
+            Some(KindSet::POSITION_AREA | KindSet::POSITION | KindSet::SHAPE_COMMAND_POSITION)
+        }
         "yellow" => Some(KindSet::COLOR),
         "yellowgreen" => Some(KindSet::COLOR),
         "zoom-in" => Some(KindSet::CURSOR_PREDEFINED),

@@ -66,14 +66,6 @@ function generateBitflags(allKinds: string[]): string {
 
   lines.push("    }");
   lines.push("}");
-  lines.push("");
-  lines.push("impl KindSet {");
-  lines.push(
-    "    pub fn is_compatible(self, other: KindSet) -> bool {",
-  );
-  lines.push("        self.intersects(other)");
-  lines.push("    }");
-  lines.push("}");
   return lines.join("\n");
 }
 
@@ -87,9 +79,7 @@ function generateLookupFn(
 
   for (const [name, kinds] of Object.entries(map)) {
     const consts = kinds.map((k) => `KindSet::${kindToConstName(k)}`);
-    const combined = consts.length === 1
-      ? consts[0]
-      : consts.join(".union(") + ")".repeat(consts.length - 1);
+    const combined = consts.join(" | ");
     const escaped = name.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
     lines.push(`        "${escaped}" => Some(${combined}),`);
   }
