@@ -1,20 +1,17 @@
-import css from "@webref/css";
-
-interface TypeEntry {
+export interface TypeEntry {
   name: string;
   syntax?: string;
   extended: unknown[];
 }
 
 // Aggregation map: terminal type → semantic kind.
-// Only types that merge into a different name are listed here.
+// Only entries that merge multiple terminal types into one kind are listed.
 // Unlisted types pass through with their original name.
 //
 // Aggregation criteria: merge types when a user would naturally consider
 // their keywords to be "the same kind of value" in a CSS variable definition.
 //   - Same semantic category (different ways to define the same thing)
 //   - Same slot in the same property (mutually exclusive alternatives)
-//   - Spec-internal names normalized to user-facing names
 //   - Type hierarchy where child is always valid in parent position
 const AGGREGATION_MAP: Record<string, string> = {
   // All color definition methods resolve to the same <color> type:
@@ -45,11 +42,6 @@ const AGGREGATION_MAP: Record<string, string> = {
   // generic-complete (serif, sans-serif), generic-incomplete (ui-serif, ui-monospace)
   "generic-complete": "generic-family",
   "generic-incomplete": "generic-family",
-
-  // Spec uses "font-weight-absolute" and "font-width-css3" as internal names
-  "font-weight-absolute": "font-weight",
-  "font-width-css3": "font-width",
-  "font-variant-css2": "font-variant",
 
   // All box model types share a hierarchy and their keywords
   // are interchangeable where a parent type is expected:
@@ -89,8 +81,6 @@ const AGGREGATION_MAP: Record<string, string> = {
   "single-animation-composition": "animation-composition",
   "single-animation-timeline": "animation-timeline",
   "single-animation-iteration-count": "animation-iteration-count",
-  "single-animation": "single-animation",
-  "single-transition": "single-transition",
   "single-transition-property": "transition-property",
   "transition-behavior-value": "transition-behavior",
 
@@ -109,9 +99,6 @@ const AGGREGATION_MAP: Record<string, string> = {
   "common-lig-values": "ligature-values",
   "discretionary-lig-values": "ligature-values",
   "historical-lig-values": "ligature-values",
-
-  // Spec uses "cursor-predefined" internally
-  "cursor-predefined": "cursor",
 
   // <ray-size> keywords (closest-side, farthest-corner, etc.) are a subset of <radial-extent>
   "ray-size": "radial-extent",
@@ -134,41 +121,11 @@ const AGGREGATION_MAP: Record<string, string> = {
   "horizontal-line-command": "shape-command-position",
   "vertical-line-command": "shape-command-position",
 
-  // Spec uses "corner-shape-value" internally
+  // corner-shape-value is a child of corner-shape
   "corner-shape-value": "corner-shape",
-
-  // Spec uses "legacy-pseudo-element-selector" internally
-  "legacy-pseudo-element-selector": "pseudo-element",
-
-  // source-size and source-size-value both describe <source-size> for <img srcset>
-  "source-size-value": "source-size",
-
-  // Spec uses "navigation-*-keyword" internally
-  "navigation-location-keyword": "navigation-location",
-  "navigation-type-keyword": "navigation-type",
-
-  // "an+b" contains "+" which is not valid in Rust identifiers
-  "an+b": "an-plus-b",
 };
 
-async function main() {
-  const outPath = Deno.args[0];
-  if (!outPath) {
-    console.error("Usage: deno run gen-keyword-kinds.ts <output-path>");
-    Deno.exit(1);
-  }
-
-  const data = await css.listAll();
-  const terminalTypes = extractTerminalTypes(data.types ?? []);
-  const keywordToTypes = buildKeywordToTypes(terminalTypes);
-
-  await Deno.writeTextFile(outPath, JSON.stringify(keywordToTypes, null, 2));
-  console.log(
-    `Written ${Object.keys(keywordToTypes).length} keywords to ${outPath}`,
-  );
-}
-
-function extractKeywords(syntax: string): string[] {
+export function extractKeywords(syntax: string): string[] {
   return syntax
     .split("|")
     .map((s) => s.trim())
@@ -186,7 +143,7 @@ function extractKeywords(syntax: string): string[] {
     );
 }
 
-function extractTerminalTypes(
+export function extractTerminalTypes(
   types: TypeEntry[],
 ): Map<string, string[]> {
   const result = new Map<string, string[]>();
@@ -209,24 +166,35 @@ function extractTerminalTypes(
   return result;
 }
 
-function aggregateType(terminalType: string): string {
+export function aggregateType(terminalType: string): string {
   return AGGREGATION_MAP[terminalType] ?? terminalType;
 }
 
-function buildKeywordToTypes(
+export function buildKeywordToTypes(
   terminalTypes: Map<string, string[]>,
 ): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
+  const raw: Record<string, string[]> = {};
 
   for (const [typeName, keywords] of terminalTypes) {
     const aggregated = aggregateType(typeName);
     for (const kw of keywords) {
-      if (result[kw]) {
-        if (!result[kw].includes(aggregated)) result[kw].push(aggregated);
+      if (raw[kw]) {
+        if (!raw[kw].includes(aggregated)) raw[kw].push(aggregated);
       } else {
-        result[kw] = [aggregated];
+        raw[kw] = [aggregated];
       }
     }
+  }
+
+  // Remove singleton kinds: kinds that only one keyword maps to.
+  // A singleton kind's bitflag would never be used for compatibility checks
+  // between different keywords — the sole keyword can only ever match itself,
+  // which Unknown(String) comparison handles identically.
+  const singletons = findSingletonKinds(raw);
+  const result: Record<string, string[]> = {};
+  for (const [kw, kinds] of Object.entries(raw)) {
+    const kept = kinds.filter((k) => !singletons.has(k));
+    if (kept.length > 0) result[kw] = kept;
   }
 
   return Object.fromEntries(
@@ -234,4 +202,20 @@ function buildKeywordToTypes(
   );
 }
 
-await main();
+function findSingletonKinds(
+  keywordMap: Record<string, string[]>,
+): Set<string> {
+  const kindToKeywords = new Map<string, string[]>();
+  for (const [kw, kinds] of Object.entries(keywordMap)) {
+    for (const kind of kinds) {
+      if (!kindToKeywords.has(kind)) kindToKeywords.set(kind, []);
+      kindToKeywords.get(kind)!.push(kw);
+    }
+  }
+  return new Set(
+    [...kindToKeywords.entries()]
+      .filter(([_, kws]) => kws.length === 1)
+      .map(([kind]) => kind),
+  );
+}
+

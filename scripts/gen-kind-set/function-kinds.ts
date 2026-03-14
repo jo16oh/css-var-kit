@@ -1,14 +1,12 @@
-import css from "@webref/css";
-
 // Groups auto-classified from the `for` field
-const FOR_FIELD_MAPPING: Record<string, string> = {
+export const FOR_FIELD_MAPPING: Record<string, string> = {
   "transform": "transform-function",
   "filter": "filter",
   "<basic-shape>": "basic-shape",
 };
 
 // Groups that require manual classification
-const MANUAL_GROUPS: Record<string, string[]> = {
+export const MANUAL_GROUPS: Record<string, string[]> = {
   "color": [
     "rgb",
     "rgba",
@@ -94,48 +92,76 @@ const MANUAL_GROUPS: Record<string, string[]> = {
   "custom-ident": ["ident", "running"],
   "corner-shape": ["superellipse"],
   "snap": ["snap-block", "snap-inline"],
-  "symbols": ["symbols"],
-  "ray": ["ray"],
   "grid-track": ["minmax", "repeat"],
   "request-modifier": ["cross-origin", "integrity", "referrer-policy"],
-  "contrast-algorithm": ["wcag2"],
-  "text-overflow": ["fade"],
-  "form-control": ["control-value"],
-  "unresolved-arg-dependent": [
-    "abs", "acos", "asin", "atan", "atan2",
-    "calc", "calc-interpolate", "calc-mix", "calc-size",
-    "clamp", "cos", "exp", "hypot", "log",
-    "max", "min", "mod", "pow", "rem", "round",
-    "sign", "sin", "sqrt", "tan",
+
+  // Too niche or return type not statically determinable
+  "ignored": [
+    "symbols", // @counter-style descriptor
+    "ray", // offset-path ray()
+    "wcag2", // contrast algorithm
+    "fade", // text-overflow
+    "control-value", // form control value
+
+    // Return type depends on arguments (math functions)
+    "abs",
+    "acos",
+    "asin",
+    "atan",
+    "atan2",
+    "calc",
+    "calc-interpolate",
+    "calc-mix",
+    "calc-size",
+    "clamp",
+    "cos",
+    "exp",
+    "hypot",
+    "log",
+    "max",
+    "min",
+    "mod",
+    "pow",
+    "rem",
+    "round",
+    "sign",
+    "sin",
+    "sqrt",
+    "tan",
     "random",
     "interpolate",
+
+    // Pass-through: return type depends on substituted value
+    "var",
+    "env",
+    "attr",
+    "if",
+    "first-valid",
+    "toggle",
+    "inherit",
+    "random-item",
+    "param",
+
+    // Conditional: return type depends on condition
+    "media",
+    "supports",
+
+    // Meta: type() returns a type descriptor, not a value
+    "type",
   ],
-  "unresolved-pass-through": [
-    "var", "env", "attr",
-    "if", "first-valid", "toggle", "inherit",
-    "random-item", "param",
-  ],
-  "unresolved-conditional": ["media", "supports"],
-  "unresolved-meta": ["type"],
 };
 
 function stripParens(name: string): string {
   return name.replace(/\(\)$/, "");
 }
 
-async function main() {
-  const outPath = Deno.args[0];
-  if (!outPath) {
-    console.error("Usage: deno run gen-function-kinds.ts <output-path>");
-    Deno.exit(1);
-  }
-
-  const data = await css.listAll();
-  const functions: { name: string; for?: string[] }[] = data.functions ?? [];
+export function buildFunctionToKinds(
+  specFunctions: { name: string; for?: string[] }[],
+): Record<string, string[]> {
   const result: Record<string, string[]> = {};
 
   // Auto-classify using the `for` field
-  for (const fn of functions) {
+  for (const fn of specFunctions) {
     if (!fn.for) continue;
     for (const forValue of fn.for) {
       const type = FOR_FIELD_MAPPING[forValue];
@@ -154,12 +180,25 @@ async function main() {
     }
   }
 
-  const sorted = Object.fromEntries(
-    Object.entries(result).sort(([a], [b]) => a.localeCompare(b)),
+  // Verify all spec functions are covered
+  const mapped = new Set(Object.keys(result));
+  const unmapped = specFunctions
+    .map((fn) => stripParens(fn.name))
+    .filter((name) => !mapped.has(name));
+  if (unmapped.length > 0) {
+    throw new Error(
+      `${unmapped.length} unmapped functions: ${unmapped.join(", ")}`,
+    );
+  }
+
+  // Filter out entries whose ALL kinds are ignored
+  const filtered: Record<string, string[]> = {};
+  for (const [name, kinds] of Object.entries(result)) {
+    const kept = kinds.filter((k) => k !== "ignored");
+    if (kept.length > 0) filtered[name] = kept;
+  }
+
+  return Object.fromEntries(
+    Object.entries(filtered).sort(([a], [b]) => a.localeCompare(b)),
   );
-
-  await Deno.writeTextFile(outPath, JSON.stringify(sorted, null, 2));
-  console.log(`Written ${Object.keys(sorted).length} functions to ${outPath}`);
 }
-
-await main();

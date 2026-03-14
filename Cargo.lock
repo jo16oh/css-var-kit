@@ -198,6 +198,7 @@ name = "css-var-kit"
 version = "0.1.0"
 dependencies = [
  "assert_cmd",
+ "bitflags",
  "clap",
  "cssparser",
  "globset",

@@ -1,14 +1,5 @@
-[group('codegen')]
-gen-kind-maps: gen-keyword-kinds gen-function-kinds
-
-[group('codegen')]
-gen-keyword-kinds:
+gen-kind-set:
     @deno run --allow-read --allow-write \
-        scripts/gen-kind-maps/gen-keyword-kinds.ts \
-        crates/css-var-kit/generated/keyword-kinds.json
-
-[group('codegen')]
-gen-function-kinds:
-    @deno run --allow-read --allow-write \
-        scripts/gen-kind-maps/gen-function-kinds.ts \
-        crates/css-var-kit/generated/function-kinds.json
+        scripts/gen-kind-set/main.ts \
+        crates/css-var-kit/generated/kind_set.rs
+    @rustfmt crates/css-var-kit/generated/kind_set.rs
