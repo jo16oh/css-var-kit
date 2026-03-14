@@ -1,8 +1,5 @@
 import css from "@webref/css";
-import {
-  extractTerminalTypes,
-  buildKeywordToTypes,
-} from "./keyword-kinds.ts";
+import { buildKeywordToTypes, extractTerminalTypes } from "./keyword-kinds.ts";
 import { buildFunctionToKinds } from "./function-kinds.ts";
 
 // lightningcss SyntaxComponentKind variants that share a bit with keyword kinds.
@@ -59,7 +56,9 @@ function generateBitflags(allKinds: string[]): string {
   }
 
   lines.push("");
-  lines.push("        // Composite alias: LengthPercentage = Length | Percentage");
+  lines.push(
+    "        // Composite alias: LengthPercentage = Length | Percentage",
+  );
   lines.push(
     "        const LENGTH_PERCENTAGE = KindSet::LENGTH.bits() | KindSet::PERCENTAGE.bits();",
   );

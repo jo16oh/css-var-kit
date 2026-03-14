@@ -218,4 +218,3 @@ function findSingletonKinds(
       .map(([kind]) => kind),
   );
 }
-
