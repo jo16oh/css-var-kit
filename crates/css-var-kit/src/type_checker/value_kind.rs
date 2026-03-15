@@ -1,6 +1,6 @@
 include!("../../generated/value_kind_set.rs");
 
-use lightningcss::properties::custom::{Token, TokenOrValue};
+use lightningcss::properties::custom::{Token, TokenList, TokenOrValue};
 use lightningcss::values::syntax::{ParsedComponent, SyntaxString};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,48 +66,69 @@ pub fn kind_of(value: &str) -> ValueKind {
             }
         }
 
-        ParsedComponent::TokenList(token_list) => {
-            let parts: Vec<ValueKindSet> = token_list
-                .0
-                .iter()
-                .map(token_or_value_to_kind_set)
-                .filter(|k| !k.is_empty())
-                .collect();
+        other => parsed_component_to_value_kind(other, value),
+    }
+}
 
-            match parts.len() {
-                0 => ValueKind::Unknown(value.to_owned()),
-                1 => ValueKind::Single(parts[0]),
-                _ => ValueKind::Compound(parts),
-            }
+fn parsed_component_to_value_kind(component: &ParsedComponent, raw: &str) -> ValueKind {
+    match component {
+        ParsedComponent::Length(_) => ValueKind::Single(ValueKindSet::LENGTH),
+        ParsedComponent::Number(_) => ValueKind::Single(ValueKindSet::NUMBER),
+        ParsedComponent::Percentage(_) => ValueKind::Single(ValueKindSet::PERCENTAGE),
+        ParsedComponent::LengthPercentage(_) => ValueKind::Single(ValueKindSet::LENGTH_PERCENTAGE),
+        ParsedComponent::Color(_) => ValueKind::Single(ValueKindSet::COLOR),
+        ParsedComponent::Image(_) => ValueKind::Single(ValueKindSet::IMAGE),
+        ParsedComponent::Url(_) => ValueKind::Single(ValueKindSet::URL),
+        ParsedComponent::Integer(_) => ValueKind::Single(ValueKindSet::INTEGER),
+        ParsedComponent::Angle(_) => ValueKind::Single(ValueKindSet::ANGLE),
+        ParsedComponent::Time(_) => ValueKind::Single(ValueKindSet::TIME),
+        ParsedComponent::Resolution(_) => ValueKind::Single(ValueKindSet::RESOLUTION),
+        ParsedComponent::TransformFunction(_) => {
+            ValueKind::Single(ValueKindSet::TRANSFORM_FUNCTION)
         }
-
+        ParsedComponent::TransformList(_) => ValueKind::Single(ValueKindSet::TRANSFORM_LIST),
+        ParsedComponent::String(_) => ValueKind::Single(ValueKindSet::STRING),
+        ParsedComponent::CustomIdent(_) => ValueKind::Single(ValueKindSet::CUSTOM_IDENT),
+        ParsedComponent::Literal(ident) => lookup_keyword_kinds(ident)
+            .map(ValueKind::Single)
+            .unwrap_or_else(|| ValueKind::Unknown(raw.to_owned())),
+        ParsedComponent::TokenList(token_list) => token_list_to_value_kind(token_list, raw),
         ParsedComponent::Repeated { components, .. } => {
             let parts: Vec<ValueKindSet> = components
                 .iter()
-                .map(parsed_component_to_kind_set)
+                .filter_map(|c| match parsed_component_to_value_kind(c, raw) {
+                    ValueKind::Single(k) => Some(k),
+                    _ => None,
+                })
                 .collect();
 
             match parts.len() {
-                0 => ValueKind::Unknown(value.to_owned()),
+                0 => ValueKind::Unknown(raw.to_owned()),
                 1 => ValueKind::Single(parts[0]),
                 _ => ValueKind::Compound(parts),
-            }
-        }
-
-        other => {
-            let kinds = parsed_component_to_kind_set(other);
-            if kinds.is_empty() {
-                ValueKind::Unknown(value.to_owned())
-            } else {
-                ValueKind::Single(kinds)
             }
         }
     }
 }
 
+fn token_list_to_value_kind(token_list: &TokenList, raw: &str) -> ValueKind {
+    let parts: Vec<ValueKindSet> = token_list
+        .0
+        .iter()
+        .map(token_or_value_to_kind_set)
+        .filter(|k| !k.is_empty())
+        .collect();
+
+    match parts.len() {
+        0 => ValueKind::Unknown(raw.to_owned()),
+        1 => ValueKind::Single(parts[0]),
+        _ => ValueKind::Compound(parts),
+    }
+}
+
 fn token_or_value_to_kind_set(token: &TokenOrValue) -> ValueKindSet {
     match token {
-        TokenOrValue::Color(_) => ValueKindSet::COLOR,
+        TokenOrValue::Color(_) | TokenOrValue::UnresolvedColor(_) => ValueKindSet::COLOR,
         TokenOrValue::Length(_) => ValueKindSet::LENGTH,
         TokenOrValue::Angle(_) => ValueKindSet::ANGLE,
         TokenOrValue::Time(_) => ValueKindSet::TIME,
@@ -116,36 +137,50 @@ fn token_or_value_to_kind_set(token: &TokenOrValue) -> ValueKindSet {
         TokenOrValue::Function(func) => {
             lookup_function_kinds(&func.name).unwrap_or(ValueKindSet::empty())
         }
-        TokenOrValue::Token(Token::Ident(name)) => {
-            lookup_keyword_kinds(name).unwrap_or(ValueKindSet::empty())
-        }
-        TokenOrValue::Token(Token::Number {
-            int_value: Some(_), ..
-        }) => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
-        TokenOrValue::Token(Token::Number { .. }) => ValueKindSet::NUMBER,
-        TokenOrValue::Token(Token::Percentage { .. }) => ValueKindSet::PERCENTAGE,
-        _ => ValueKindSet::empty(),
+        TokenOrValue::Token(tok) => raw_token_to_kind_set(tok),
+        TokenOrValue::Var(_)
+        | TokenOrValue::Env(_)
+        | TokenOrValue::DashedIdent(_)
+        | TokenOrValue::AnimationName(_) => ValueKindSet::empty(),
     }
 }
 
-fn parsed_component_to_kind_set(component: &ParsedComponent) -> ValueKindSet {
-    match component {
-        ParsedComponent::Length(_) => ValueKindSet::LENGTH,
-        ParsedComponent::Number(_) => ValueKindSet::NUMBER,
-        ParsedComponent::Percentage(_) => ValueKindSet::PERCENTAGE,
-        ParsedComponent::LengthPercentage(_) => ValueKindSet::LENGTH_PERCENTAGE,
-        ParsedComponent::Color(_) => ValueKindSet::COLOR,
-        ParsedComponent::Image(_) => ValueKindSet::IMAGE,
-        ParsedComponent::Url(_) => ValueKindSet::URL,
-        ParsedComponent::Integer(_) => ValueKindSet::INTEGER,
-        ParsedComponent::Angle(_) => ValueKindSet::ANGLE,
-        ParsedComponent::Time(_) => ValueKindSet::TIME,
-        ParsedComponent::Resolution(_) => ValueKindSet::RESOLUTION,
-        ParsedComponent::TransformFunction(_) => ValueKindSet::TRANSFORM_FUNCTION,
-        ParsedComponent::TransformList(_) => ValueKindSet::TRANSFORM_LIST,
-        ParsedComponent::String(_) => ValueKindSet::STRING,
-        ParsedComponent::CustomIdent(_) => ValueKindSet::CUSTOM_IDENT,
-        _ => ValueKindSet::empty(),
+fn raw_token_to_kind_set(tok: &Token) -> ValueKindSet {
+    match tok {
+        Token::Ident(name) => lookup_keyword_kinds(name).unwrap_or(ValueKindSet::empty()),
+        Token::Number {
+            int_value: Some(_), ..
+        } => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
+        Token::Number { .. } => ValueKindSet::NUMBER,
+        Token::Percentage { .. } => ValueKindSet::PERCENTAGE,
+        Token::Dimension { .. }
+        | Token::AtKeyword(_)
+        | Token::Hash(_)
+        | Token::IDHash(_)
+        | Token::String(_)
+        | Token::UnquotedUrl(_)
+        | Token::Delim(_)
+        | Token::WhiteSpace(_)
+        | Token::Comment(_)
+        | Token::Colon
+        | Token::Semicolon
+        | Token::Comma
+        | Token::IncludeMatch
+        | Token::DashMatch
+        | Token::PrefixMatch
+        | Token::SuffixMatch
+        | Token::SubstringMatch
+        | Token::CDO
+        | Token::CDC
+        | Token::Function(_)
+        | Token::ParenthesisBlock
+        | Token::SquareBracketBlock
+        | Token::CurlyBracketBlock
+        | Token::BadUrl(_)
+        | Token::BadString(_)
+        | Token::CloseParenthesis
+        | Token::CloseSquareBracket
+        | Token::CloseCurlyBracket => ValueKindSet::empty(),
     }
 }
 
@@ -269,6 +304,56 @@ mod tests {
         let a = kind_of("red");
         let b = kind_of("solid 1px black");
         assert!(!a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn length_rem() {
+        assert_single("1rem", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn length_vw() {
+        assert_single("100vw", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn length_cm() {
+        assert_single("2.5cm", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn length_ch() {
+        assert_single("10ch", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn angle_rad() {
+        assert_single("1.57rad", ValueKindSet::ANGLE);
+    }
+
+    #[test]
+    fn angle_turn() {
+        assert_single("0.5turn", ValueKindSet::ANGLE);
+    }
+
+    #[test]
+    fn angle_grad() {
+        assert_single("100grad", ValueKindSet::ANGLE);
+    }
+
+    #[test]
+    fn resolution_dpcm() {
+        assert_single("300dpcm", ValueKindSet::RESOLUTION);
+    }
+
+    #[test]
+    fn resolution_dppx() {
+        assert_single("2dppx", ValueKindSet::RESOLUTION);
+    }
+
+    #[test]
+    fn unknown_dimension_unit() {
+        assert!(matches!(kind_of("10foo"), ValueKind::Unknown(_)));
     }
 
     #[test]
