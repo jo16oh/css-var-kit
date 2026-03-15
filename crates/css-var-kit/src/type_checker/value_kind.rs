@@ -1,12 +1,14 @@
 include!("../../generated/value_kind_set.rs");
 
 use lightningcss::properties::custom::{Token, TokenList, TokenOrValue};
-use lightningcss::values::syntax::{ParsedComponent, SyntaxString};
+use lightningcss::values::syntax::{
+    Multiplier, ParsedComponent, SyntaxComponent, SyntaxComponentKind, SyntaxString,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueKind {
     Single(ValueKindSet),
-    Compound(Vec<ValueKindSet>),
+    Compound(Vec<ValueKind>),
     Unknown(String),
 }
 
@@ -14,17 +16,18 @@ impl ValueKind {
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Single(k) => k.is_empty(),
-            Self::Compound(parts) => parts.iter().all(|k| k.is_empty()),
+            Self::Compound(parts) => parts.iter().all(|p| p.is_empty()),
             Self::Unknown(_) => true,
         }
     }
 
     pub fn is_consistent_with(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Unknown(_), _) | (_, Self::Unknown(_)) => true,
+            (Self::Unknown(a), Self::Unknown(b)) => a == b,
+            (Self::Unknown(_), _) | (_, Self::Unknown(_)) => false,
             (Self::Single(a), Self::Single(b)) => a.intersects(*b),
             (Self::Compound(a), Self::Compound(b)) => {
-                a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a.intersects(*b))
+                a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a.is_consistent_with(b))
             }
             _ => false,
         }
@@ -35,14 +38,7 @@ impl ValueKind {
             Self::Single(k) => k.iter_kind_names().collect::<Vec<_>>().join("|"),
             Self::Compound(parts) => parts
                 .iter()
-                .map(|k| {
-                    let names = k.iter_kind_names().collect::<Vec<_>>().join("|");
-                    if names.is_empty() {
-                        "?".to_owned()
-                    } else {
-                        names
-                    }
-                })
+                .map(|p| p.type_description())
                 .collect::<Vec<_>>()
                 .join(", "),
             Self::Unknown(raw) => format!("unknown({raw})"),
@@ -71,117 +67,173 @@ pub fn kind_of(value: &str) -> ValueKind {
 }
 
 fn parsed_component_to_value_kind(component: &ParsedComponent, raw: &str) -> ValueKind {
+    use ValueKind::*;
+
     match component {
-        ParsedComponent::Length(_) => ValueKind::Single(ValueKindSet::LENGTH),
-        ParsedComponent::Number(_) => ValueKind::Single(ValueKindSet::NUMBER),
-        ParsedComponent::Percentage(_) => ValueKind::Single(ValueKindSet::PERCENTAGE),
-        ParsedComponent::LengthPercentage(_) => ValueKind::Single(ValueKindSet::LENGTH_PERCENTAGE),
-        ParsedComponent::Color(_) => ValueKind::Single(ValueKindSet::COLOR),
-        ParsedComponent::Image(_) => ValueKind::Single(ValueKindSet::IMAGE),
-        ParsedComponent::Url(_) => ValueKind::Single(ValueKindSet::URL),
-        ParsedComponent::Integer(_) => ValueKind::Single(ValueKindSet::INTEGER),
-        ParsedComponent::Angle(_) => ValueKind::Single(ValueKindSet::ANGLE),
-        ParsedComponent::Time(_) => ValueKind::Single(ValueKindSet::TIME),
-        ParsedComponent::Resolution(_) => ValueKind::Single(ValueKindSet::RESOLUTION),
-        ParsedComponent::TransformFunction(_) => {
-            ValueKind::Single(ValueKindSet::TRANSFORM_FUNCTION)
-        }
-        ParsedComponent::TransformList(_) => ValueKind::Single(ValueKindSet::TRANSFORM_LIST),
-        ParsedComponent::String(_) => ValueKind::Single(ValueKindSet::STRING),
-        ParsedComponent::CustomIdent(_) => ValueKind::Single(ValueKindSet::CUSTOM_IDENT),
+        ParsedComponent::Length(_) => Single(ValueKindSet::LENGTH),
+        ParsedComponent::Number(_) => Single(ValueKindSet::NUMBER),
+        ParsedComponent::Percentage(_) => Single(ValueKindSet::PERCENTAGE),
+        ParsedComponent::LengthPercentage(_) => Single(ValueKindSet::LENGTH_PERCENTAGE),
+        ParsedComponent::Color(_) => Single(ValueKindSet::COLOR),
+        ParsedComponent::Image(_) => Single(ValueKindSet::IMAGE),
+        ParsedComponent::Url(_) => Single(ValueKindSet::URL),
+        ParsedComponent::Integer(_) => Single(ValueKindSet::INTEGER),
+        ParsedComponent::Angle(_) => Single(ValueKindSet::ANGLE),
+        ParsedComponent::Time(_) => Single(ValueKindSet::TIME),
+        ParsedComponent::Resolution(_) => Single(ValueKindSet::RESOLUTION),
+        ParsedComponent::TransformFunction(_) => Single(ValueKindSet::TRANSFORM_FUNCTION),
+        ParsedComponent::TransformList(_) => Single(ValueKindSet::TRANSFORM_LIST),
+        ParsedComponent::String(_) => Single(ValueKindSet::STRING),
+        ParsedComponent::CustomIdent(_) => Single(ValueKindSet::CUSTOM_IDENT),
         ParsedComponent::Literal(ident) => lookup_keyword_kinds(ident)
-            .map(ValueKind::Single)
-            .unwrap_or_else(|| ValueKind::Unknown(raw.to_owned())),
+            .map(Single)
+            .unwrap_or_else(|| Unknown(raw.to_owned())),
         ParsedComponent::TokenList(token_list) => token_list_to_value_kind(token_list, raw),
         ParsedComponent::Repeated { components, .. } => {
-            let parts: Vec<ValueKindSet> = components
+            let parts: Vec<ValueKind> = components
                 .iter()
-                .filter_map(|c| match parsed_component_to_value_kind(c, raw) {
-                    ValueKind::Single(k) => Some(k),
-                    _ => None,
-                })
+                .map(|c| parsed_component_to_value_kind(c, raw))
                 .collect();
 
             match parts.len() {
-                0 => ValueKind::Unknown(raw.to_owned()),
-                1 => ValueKind::Single(parts[0]),
-                _ => ValueKind::Compound(parts),
+                0 => Unknown(raw.to_owned()),
+                1 => parts.into_iter().next().unwrap(),
+                _ => Compound(parts),
             }
         }
     }
 }
 
 fn token_list_to_value_kind(token_list: &TokenList, raw: &str) -> ValueKind {
-    let parts: Vec<ValueKindSet> = token_list
+    let has_function = token_list
         .0
         .iter()
-        .map(token_or_value_to_kind_set)
-        .filter(|k| !k.is_empty())
+        .any(|t| matches!(t, TokenOrValue::Function(_)));
+
+    if has_function {
+        if let Some(kind) = try_typed_parse(raw) {
+            return ValueKind::Single(kind);
+        }
+    }
+
+    let parts: Vec<ValueKind> = token_list
+        .0
+        .iter()
+        .filter_map(|t| token_or_value_to_value_kind(t))
         .collect();
 
     match parts.len() {
         0 => ValueKind::Unknown(raw.to_owned()),
-        1 => ValueKind::Single(parts[0]),
+        1 => parts.into_iter().next().unwrap(),
         _ => ValueKind::Compound(parts),
     }
 }
 
-fn token_or_value_to_kind_set(token: &TokenOrValue) -> ValueKindSet {
-    match token {
-        TokenOrValue::Color(_) | TokenOrValue::UnresolvedColor(_) => ValueKindSet::COLOR,
-        TokenOrValue::Length(_) => ValueKindSet::LENGTH,
-        TokenOrValue::Angle(_) => ValueKindSet::ANGLE,
-        TokenOrValue::Time(_) => ValueKindSet::TIME,
-        TokenOrValue::Resolution(_) => ValueKindSet::RESOLUTION,
-        TokenOrValue::Url(_) => ValueKindSet::URL,
-        TokenOrValue::Function(func) => {
-            lookup_function_kinds(&func.name).unwrap_or(ValueKindSet::empty())
-        }
-        TokenOrValue::Token(tok) => raw_token_to_kind_set(tok),
-        TokenOrValue::Var(_)
-        | TokenOrValue::Env(_)
-        | TokenOrValue::DashedIdent(_)
-        | TokenOrValue::AnimationName(_) => ValueKindSet::empty(),
-    }
+fn try_typed_parse(value: &str) -> Option<ValueKindSet> {
+    TYPED_SYNTAX_KINDS.iter().find_map(|kind| {
+        let syntax = SyntaxString::Components(vec![SyntaxComponent {
+            kind: kind.clone(),
+            multiplier: Multiplier::None,
+        }]);
+        syntax
+            .parse_value_from_string(value)
+            .ok()
+            .map(|_| from_syntax_component_kind(kind))
+    })
 }
 
-fn raw_token_to_kind_set(tok: &Token) -> ValueKindSet {
-    match tok {
-        Token::Ident(name) => lookup_keyword_kinds(name).unwrap_or(ValueKindSet::empty()),
+const TYPED_SYNTAX_KINDS: &[SyntaxComponentKind] = &[
+    SyntaxComponentKind::Length,
+    SyntaxComponentKind::Percentage,
+    SyntaxComponentKind::LengthPercentage,
+    SyntaxComponentKind::Number,
+    SyntaxComponentKind::Integer,
+    SyntaxComponentKind::Angle,
+    SyntaxComponentKind::Time,
+    SyntaxComponentKind::Resolution,
+    SyntaxComponentKind::Color,
+    SyntaxComponentKind::Image,
+];
+
+/// Returns `Some` for value-bearing tokens, `None` for structural tokens (whitespace, comments).
+fn token_or_value_to_value_kind(token: &TokenOrValue) -> Option<ValueKind> {
+    use ValueKind::*;
+
+    let kind = match token {
+        TokenOrValue::Color(_) | TokenOrValue::UnresolvedColor(_) => Single(ValueKindSet::COLOR),
+        TokenOrValue::Length(_) => Single(ValueKindSet::LENGTH),
+        TokenOrValue::Angle(_) => Single(ValueKindSet::ANGLE),
+        TokenOrValue::Time(_) => Single(ValueKindSet::TIME),
+        TokenOrValue::Resolution(_) => Single(ValueKindSet::RESOLUTION),
+        TokenOrValue::Url(_) => Single(ValueKindSet::URL),
+
+        TokenOrValue::Function(func) => lookup_function_kinds(&func.name)
+            .map(Single)
+            .unwrap_or_else(|| Unknown(func.name.to_string())),
+        TokenOrValue::Token(tok) => raw_token_to_value_kind(tok)?,
+
+        // Unclassifialbe values
+        TokenOrValue::Var(v) => Unknown(format!("{v:?}")),
+        TokenOrValue::Env(e) => Unknown(format!("{e:?}")),
+        TokenOrValue::DashedIdent(name) => Unknown(name.0.to_string()),
+        TokenOrValue::AnimationName(name) => Unknown(format!("{name:?}")),
+    };
+
+    Some(kind)
+}
+
+fn raw_token_to_value_kind(tok: &Token) -> Option<ValueKind> {
+    use ValueKind::*;
+
+    let kind = match tok {
         Token::Number {
             int_value: Some(_), ..
-        } => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
-        Token::Number { .. } => ValueKindSet::NUMBER,
-        Token::Percentage { .. } => ValueKindSet::PERCENTAGE,
-        Token::Dimension { .. }
-        | Token::AtKeyword(_)
-        | Token::Hash(_)
-        | Token::IDHash(_)
-        | Token::String(_)
-        | Token::UnquotedUrl(_)
-        | Token::Delim(_)
-        | Token::WhiteSpace(_)
-        | Token::Comment(_)
-        | Token::Colon
-        | Token::Semicolon
-        | Token::Comma
-        | Token::IncludeMatch
-        | Token::DashMatch
-        | Token::PrefixMatch
-        | Token::SuffixMatch
-        | Token::SubstringMatch
-        | Token::CDO
-        | Token::CDC
-        | Token::Function(_)
-        | Token::ParenthesisBlock
-        | Token::SquareBracketBlock
-        | Token::CurlyBracketBlock
-        | Token::BadUrl(_)
-        | Token::BadString(_)
-        | Token::CloseParenthesis
-        | Token::CloseSquareBracket
-        | Token::CloseCurlyBracket => ValueKindSet::empty(),
-    }
+        } => Single(ValueKindSet::INTEGER | ValueKindSet::NUMBER),
+        Token::Number { .. } => Single(ValueKindSet::NUMBER),
+        Token::Percentage { .. } => Single(ValueKindSet::PERCENTAGE),
+        Token::String(_) => Single(ValueKindSet::STRING),
+        Token::UnquotedUrl(_) => Single(ValueKindSet::URL),
+
+        Token::Ident(name) => lookup_keyword_kinds(name)
+            .map(Single)
+            .unwrap_or_else(|| Unknown(name.to_string())),
+        Token::Function(name) => lookup_function_kinds(name)
+            .map(Single)
+            .unwrap_or_else(|| Unknown(name.to_string())),
+
+        // Known dimension units (px, deg, ms, etc.) are already parsed into
+        // TokenOrValue::Length/Angle/Time/Resolution by lightningcss.
+        // A Token::Dimension here means the unit is unrecognized.
+        Token::Dimension { unit, .. } => Unknown(unit.to_string()),
+
+        // Unclassifialbe values
+        Token::AtKeyword(name) => Unknown(format!("@{name}")),
+        Token::Hash(s) | Token::IDHash(s) => Unknown(format!("#{s}")),
+        Token::BadUrl(s) => Unknown(format!("url({s})")),
+        Token::BadString(s) => Unknown(s.to_string()),
+        Token::Delim(c) => Unknown(c.to_string()),
+        Token::Comma => Unknown(",".to_owned()),
+        Token::Colon => Unknown(":".to_owned()),
+        Token::Semicolon => Unknown(";".to_owned()),
+        Token::IncludeMatch => Unknown("~=".to_owned()),
+        Token::DashMatch => Unknown("|=".to_owned()),
+        Token::PrefixMatch => Unknown("^=".to_owned()),
+        Token::SuffixMatch => Unknown("$=".to_owned()),
+        Token::SubstringMatch => Unknown("*=".to_owned()),
+        Token::CDO => Unknown("<!--".to_owned()),
+        Token::CDC => Unknown("-->".to_owned()),
+        Token::ParenthesisBlock => Unknown("(".to_owned()),
+        Token::SquareBracketBlock => Unknown("[".to_owned()),
+        Token::CurlyBracketBlock => Unknown("{".to_owned()),
+        Token::CloseParenthesis => Unknown(")".to_owned()),
+        Token::CloseSquareBracket => Unknown("]".to_owned()),
+        Token::CloseCurlyBracket => Unknown("}".to_owned()),
+
+        // Ignore whitespaces and comments
+        Token::WhiteSpace(_) | Token::Comment(_) => return None,
+    };
+
+    Some(kind)
 }
 
 #[cfg(test)]
@@ -267,12 +319,23 @@ mod tests {
     }
 
     #[test]
-    fn calc_is_unknown() {
-        // calc() return type depends on arguments; not statically classifiable
-        assert!(matches!(
-            kind_of("calc(100% - 20px)"),
-            ValueKind::Unknown(_)
-        ));
+    fn calc_length_percentage() {
+        assert_single("calc(100% - 20px)", ValueKindSet::LENGTH_PERCENTAGE);
+    }
+
+    #[test]
+    fn calc_length() {
+        assert_single("calc(10px + 20px)", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn calc_angle() {
+        assert_single("calc(90deg + 10deg)", ValueKindSet::ANGLE);
+    }
+
+    #[test]
+    fn calc_time() {
+        assert_single("calc(1s + 500ms)", ValueKindSet::TIME);
     }
 
     #[test]
@@ -362,10 +425,81 @@ mod tests {
     }
 
     #[test]
-    fn unknown_is_consistent_with_anything() {
+    fn unknown_inconsistent_with_known() {
         let unknown = kind_of("foobar");
         let single = kind_of("red");
-        assert!(unknown.is_consistent_with(&single));
-        assert!(single.is_consistent_with(&unknown));
+        assert!(!unknown.is_consistent_with(&single));
+        assert!(!single.is_consistent_with(&unknown));
+    }
+
+    #[test]
+    fn same_unknown_is_consistent() {
+        let a = kind_of("foobar");
+        let b = kind_of("foobar");
+        assert!(a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn different_unknown_is_inconsistent() {
+        let a = kind_of("foobar");
+        let b = kind_of("bazqux");
+        assert!(!a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn attr_match_operators_in_value() {
+        // These are attribute selector operators. If they appear in a custom
+        // property value, they should be preserved as Unknown, not silently dropped.
+        for op in ["~=", "|=", "^=", "$=", "*="] {
+            let value = format!("foo {op} bar");
+            let result = kind_of(&value);
+            // If the operator is parsed as a Token::-Match, it should appear
+            // in the compound (not be filtered out).
+            if let ValueKind::Compound(parts) = &result {
+                assert!(
+                    parts.len() >= 3,
+                    "{op}: expected at least 3 parts, got {parts:?}"
+                );
+            } else {
+                panic!("{op}: expected Compound, got {result:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn slash_delimiter_changes_structure() {
+        // font shorthand: 16px/1.5 vs space-separated 16px 1.5
+        let with_slash = kind_of("16px/1.5");
+        let without_slash = kind_of("16px 1.5");
+        assert!(!with_slash.is_consistent_with(&without_slash));
+    }
+
+    #[test]
+    fn var_with_fallback_differs_from_without() {
+        let with_fallback = kind_of("var(--foo, red)");
+        let without_fallback = kind_of("var(--foo)");
+        assert!(!with_fallback.is_consistent_with(&without_fallback));
+    }
+
+    #[test]
+    fn env_different_reference_is_inconsistent() {
+        let a = kind_of("env(safe-area-inset-top)");
+        let b = kind_of("env(safe-area-inset-bottom)");
+        assert!(!a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn empty_string_is_empty() {
+        assert!(kind_of("").is_empty());
+    }
+
+    #[test]
+    fn whitespace_only_is_empty() {
+        assert!(kind_of("   ").is_empty());
+    }
+
+    #[test]
+    fn comment_only_is_empty() {
+        assert!(kind_of("/* hello */").is_empty());
     }
 }
