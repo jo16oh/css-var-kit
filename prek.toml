@@ -29,7 +29,7 @@ pass_filenames = true
 id = "deno-check"
 name = "deno check"
 language = "system"
-entry = "deno check --config scripts/gen-kind-set/deno.json"
+entry = "deno check --config scripts/gen-value-kind-set/deno.json"
 types = ["ts"]
 pass_filenames = true
 

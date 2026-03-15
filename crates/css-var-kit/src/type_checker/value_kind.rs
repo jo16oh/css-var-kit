@@ -1,12 +1,12 @@
-include!("../../generated/kind_set.rs");
+include!("../../generated/value_kind_set.rs");
 
 use lightningcss::properties::custom::{Token, TokenOrValue};
 use lightningcss::values::syntax::{ParsedComponent, SyntaxString};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueKind {
-    Single(KindSet),
-    Compound(Vec<KindSet>),
+    Single(ValueKindSet),
+    Compound(Vec<ValueKindSet>),
     Unknown(String),
 }
 
@@ -58,7 +58,7 @@ pub fn kind_of(value: &str) -> ValueKind {
 
     match &parsed {
         ParsedComponent::Literal(ident) => {
-            let kinds = lookup_keyword_kinds(ident).unwrap_or(KindSet::empty());
+            let kinds = lookup_keyword_kinds(ident).unwrap_or(ValueKindSet::empty());
             if kinds.is_empty() {
                 ValueKind::Unknown(value.to_owned())
             } else {
@@ -67,7 +67,7 @@ pub fn kind_of(value: &str) -> ValueKind {
         }
 
         ParsedComponent::TokenList(token_list) => {
-            let parts: Vec<KindSet> = token_list
+            let parts: Vec<ValueKindSet> = token_list
                 .0
                 .iter()
                 .map(token_or_value_to_kind_set)
@@ -82,7 +82,7 @@ pub fn kind_of(value: &str) -> ValueKind {
         }
 
         ParsedComponent::Repeated { components, .. } => {
-            let parts: Vec<KindSet> = components
+            let parts: Vec<ValueKindSet> = components
                 .iter()
                 .map(parsed_component_to_kind_set)
                 .collect();
@@ -105,47 +105,47 @@ pub fn kind_of(value: &str) -> ValueKind {
     }
 }
 
-fn token_or_value_to_kind_set(token: &TokenOrValue) -> KindSet {
+fn token_or_value_to_kind_set(token: &TokenOrValue) -> ValueKindSet {
     match token {
-        TokenOrValue::Color(_) => KindSet::COLOR,
-        TokenOrValue::Length(_) => KindSet::LENGTH,
-        TokenOrValue::Angle(_) => KindSet::ANGLE,
-        TokenOrValue::Time(_) => KindSet::TIME,
-        TokenOrValue::Resolution(_) => KindSet::RESOLUTION,
-        TokenOrValue::Url(_) => KindSet::URL,
+        TokenOrValue::Color(_) => ValueKindSet::COLOR,
+        TokenOrValue::Length(_) => ValueKindSet::LENGTH,
+        TokenOrValue::Angle(_) => ValueKindSet::ANGLE,
+        TokenOrValue::Time(_) => ValueKindSet::TIME,
+        TokenOrValue::Resolution(_) => ValueKindSet::RESOLUTION,
+        TokenOrValue::Url(_) => ValueKindSet::URL,
         TokenOrValue::Function(func) => {
-            lookup_function_kinds(&func.name).unwrap_or(KindSet::empty())
+            lookup_function_kinds(&func.name).unwrap_or(ValueKindSet::empty())
         }
         TokenOrValue::Token(Token::Ident(name)) => {
-            lookup_keyword_kinds(name).unwrap_or(KindSet::empty())
+            lookup_keyword_kinds(name).unwrap_or(ValueKindSet::empty())
         }
         TokenOrValue::Token(Token::Number {
             int_value: Some(_), ..
-        }) => KindSet::INTEGER | KindSet::NUMBER,
-        TokenOrValue::Token(Token::Number { .. }) => KindSet::NUMBER,
-        TokenOrValue::Token(Token::Percentage { .. }) => KindSet::PERCENTAGE,
-        _ => KindSet::empty(),
+        }) => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
+        TokenOrValue::Token(Token::Number { .. }) => ValueKindSet::NUMBER,
+        TokenOrValue::Token(Token::Percentage { .. }) => ValueKindSet::PERCENTAGE,
+        _ => ValueKindSet::empty(),
     }
 }
 
-fn parsed_component_to_kind_set(component: &ParsedComponent) -> KindSet {
+fn parsed_component_to_kind_set(component: &ParsedComponent) -> ValueKindSet {
     match component {
-        ParsedComponent::Length(_) => KindSet::LENGTH,
-        ParsedComponent::Number(_) => KindSet::NUMBER,
-        ParsedComponent::Percentage(_) => KindSet::PERCENTAGE,
-        ParsedComponent::LengthPercentage(_) => KindSet::LENGTH_PERCENTAGE,
-        ParsedComponent::Color(_) => KindSet::COLOR,
-        ParsedComponent::Image(_) => KindSet::IMAGE,
-        ParsedComponent::Url(_) => KindSet::URL,
-        ParsedComponent::Integer(_) => KindSet::INTEGER,
-        ParsedComponent::Angle(_) => KindSet::ANGLE,
-        ParsedComponent::Time(_) => KindSet::TIME,
-        ParsedComponent::Resolution(_) => KindSet::RESOLUTION,
-        ParsedComponent::TransformFunction(_) => KindSet::TRANSFORM_FUNCTION,
-        ParsedComponent::TransformList(_) => KindSet::TRANSFORM_LIST,
-        ParsedComponent::String(_) => KindSet::STRING,
-        ParsedComponent::CustomIdent(_) => KindSet::CUSTOM_IDENT,
-        _ => KindSet::empty(),
+        ParsedComponent::Length(_) => ValueKindSet::LENGTH,
+        ParsedComponent::Number(_) => ValueKindSet::NUMBER,
+        ParsedComponent::Percentage(_) => ValueKindSet::PERCENTAGE,
+        ParsedComponent::LengthPercentage(_) => ValueKindSet::LENGTH_PERCENTAGE,
+        ParsedComponent::Color(_) => ValueKindSet::COLOR,
+        ParsedComponent::Image(_) => ValueKindSet::IMAGE,
+        ParsedComponent::Url(_) => ValueKindSet::URL,
+        ParsedComponent::Integer(_) => ValueKindSet::INTEGER,
+        ParsedComponent::Angle(_) => ValueKindSet::ANGLE,
+        ParsedComponent::Time(_) => ValueKindSet::TIME,
+        ParsedComponent::Resolution(_) => ValueKindSet::RESOLUTION,
+        ParsedComponent::TransformFunction(_) => ValueKindSet::TRANSFORM_FUNCTION,
+        ParsedComponent::TransformList(_) => ValueKindSet::TRANSFORM_LIST,
+        ParsedComponent::String(_) => ValueKindSet::STRING,
+        ParsedComponent::CustomIdent(_) => ValueKindSet::CUSTOM_IDENT,
+        _ => ValueKindSet::empty(),
     }
 }
 
@@ -153,7 +153,7 @@ fn parsed_component_to_kind_set(component: &ParsedComponent) -> KindSet {
 mod tests {
     use super::*;
 
-    fn assert_single(value: &str, expected: KindSet) {
+    fn assert_single(value: &str, expected: ValueKindSet) {
         assert_eq!(
             kind_of(value),
             ValueKind::Single(expected),
@@ -163,72 +163,72 @@ mod tests {
 
     #[test]
     fn color_keyword() {
-        assert_single("red", KindSet::COLOR);
+        assert_single("red", ValueKindSet::COLOR);
     }
 
     #[test]
     fn hex_color() {
-        assert_single("#ff0000", KindSet::COLOR);
+        assert_single("#ff0000", ValueKindSet::COLOR);
     }
 
     #[test]
     fn rgb_function() {
-        assert_single("rgb(255, 0, 0)", KindSet::COLOR);
+        assert_single("rgb(255, 0, 0)", ValueKindSet::COLOR);
     }
 
     #[test]
     fn length_px() {
-        assert_single("16px", KindSet::LENGTH);
+        assert_single("16px", ValueKindSet::LENGTH);
     }
 
     #[test]
     fn length_em() {
-        assert_single("2em", KindSet::LENGTH);
+        assert_single("2em", ValueKindSet::LENGTH);
     }
 
     #[test]
     fn percentage() {
-        assert_single("50%", KindSet::PERCENTAGE);
+        assert_single("50%", ValueKindSet::PERCENTAGE);
     }
 
     #[test]
     fn zero_is_number() {
-        assert_single("0", KindSet::INTEGER | KindSet::NUMBER);
+        assert_single("0", ValueKindSet::INTEGER | ValueKindSet::NUMBER);
     }
 
     #[test]
     fn integer() {
-        assert_single("42", KindSet::INTEGER | KindSet::NUMBER);
+        assert_single("42", ValueKindSet::INTEGER | ValueKindSet::NUMBER);
     }
 
     #[test]
     fn float_number() {
-        assert_single("3.14", KindSet::NUMBER);
+        assert_single("3.14", ValueKindSet::NUMBER);
     }
 
     #[test]
     fn angle_deg() {
-        assert_single("90deg", KindSet::ANGLE);
+        assert_single("90deg", ValueKindSet::ANGLE);
     }
 
     #[test]
     fn time_ms() {
-        assert_single("300ms", KindSet::TIME);
+        assert_single("300ms", ValueKindSet::TIME);
     }
 
     #[test]
     fn time_s() {
-        assert_single("1s", KindSet::TIME);
+        assert_single("1s", ValueKindSet::TIME);
     }
 
     #[test]
     fn resolution() {
-        assert_single("96dpi", KindSet::RESOLUTION);
+        assert_single("96dpi", ValueKindSet::RESOLUTION);
     }
 
     #[test]
     fn url_function() {
-        assert_single("url(image.png)", KindSet::URL);
+        assert_single("url(image.png)", ValueKindSet::URL);
     }
 
     #[test]
@@ -242,12 +242,12 @@ mod tests {
 
     #[test]
     fn transparent_is_color() {
-        assert_single("transparent", KindSet::COLOR);
+        assert_single("transparent", ValueKindSet::COLOR);
     }
 
     #[test]
     fn gradient_is_image() {
-        assert_single("linear-gradient(red, blue)", KindSet::IMAGE);
+        assert_single("linear-gradient(red, blue)", ValueKindSet::IMAGE);
     }
 
     #[test]

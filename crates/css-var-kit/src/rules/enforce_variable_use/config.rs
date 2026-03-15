@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde::Deserialize;
 
 use crate::config::ConfigError;
-use crate::type_checker::kind_set::KindSet;
+use crate::type_checker::value_kind::ValueKindSet;
 
 #[derive(Default, Debug, Deserialize)]
 #[serde(untagged)]
@@ -72,7 +72,7 @@ fn default_allowed_values() -> Vec<String> {
 
 #[derive(Debug, Clone)]
 pub struct EnforceVariableUseConfig {
-    pub types: KindSet,
+    pub types: ValueKindSet,
     pub allowed_functions: HashSet<String>,
     pub allowed_values: HashSet<String>,
 }
@@ -83,9 +83,9 @@ impl EnforceVariableUseConfig {
             .types
             .iter()
             .map(|s| parse_type_name(s))
-            .collect::<Result<Vec<KindSet>, ConfigError>>()?
+            .collect::<Result<Vec<ValueKindSet>, ConfigError>>()?
             .into_iter()
-            .fold(KindSet::empty(), |acc, k| acc | k);
+            .fold(ValueKindSet::empty(), |acc, k| acc | k);
 
         Ok(Self {
             types,
@@ -95,21 +95,21 @@ impl EnforceVariableUseConfig {
     }
 }
 
-fn parse_type_name(name: &str) -> Result<KindSet, ConfigError> {
+fn parse_type_name(name: &str) -> Result<ValueKindSet, ConfigError> {
     let r = match name {
-        "color" => KindSet::COLOR,
-        "length" => KindSet::LENGTH,
-        "number" => KindSet::NUMBER,
-        "percentage" => KindSet::PERCENTAGE,
-        "length-percentage" => KindSet::LENGTH_PERCENTAGE,
-        "integer" => KindSet::INTEGER,
-        "angle" => KindSet::ANGLE,
-        "time" => KindSet::TIME,
-        "resolution" => KindSet::RESOLUTION,
-        "image" => KindSet::IMAGE,
-        "url" => KindSet::URL,
-        "transform-function" => KindSet::TRANSFORM_FUNCTION,
-        "transform-list" => KindSet::TRANSFORM_LIST,
+        "color" => ValueKindSet::COLOR,
+        "length" => ValueKindSet::LENGTH,
+        "number" => ValueKindSet::NUMBER,
+        "percentage" => ValueKindSet::PERCENTAGE,
+        "length-percentage" => ValueKindSet::LENGTH_PERCENTAGE,
+        "integer" => ValueKindSet::INTEGER,
+        "angle" => ValueKindSet::ANGLE,
+        "time" => ValueKindSet::TIME,
+        "resolution" => ValueKindSet::RESOLUTION,
+        "image" => ValueKindSet::IMAGE,
+        "url" => ValueKindSet::URL,
+        "transform-function" => ValueKindSet::TRANSFORM_FUNCTION,
+        "transform-list" => ValueKindSet::TRANSFORM_LIST,
         _ => {
             return Err(ConfigError::InvalidRuleOption {
                 raw: name.to_string(),

@@ -2,7 +2,7 @@ use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
-use crate::type_checker::kind_set::{ValueKind, kind_of};
+use crate::type_checker::value_kind::{ValueKind, kind_of};
 use crate::type_checker::variable_resolver::resolve_vars;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";

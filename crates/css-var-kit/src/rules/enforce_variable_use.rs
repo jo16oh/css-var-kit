@@ -7,7 +7,7 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
-use crate::type_checker::kind_set::{KindSet, ValueKind, kind_of};
+use crate::type_checker::value_kind::{ValueKind, ValueKindSet, kind_of};
 use config::EnforceVariableUseConfig;
 
 pub mod config;
@@ -15,7 +15,7 @@ pub mod config;
 const RULE_NAME: &str = "enforce-variable-use";
 
 pub struct EnforceVariableUse {
-    types: KindSet,
+    types: ValueKindSet,
     allowed_functions: HashSet<String>,
     allowed_values: HashSet<String>,
 }
@@ -74,7 +74,7 @@ impl EnforceVariableUse {
                 TokenOrValue::Env(_) => vec![],
 
                 TokenOrValue::Color(_) => {
-                    if self.types.intersects(KindSet::COLOR) {
+                    if self.types.intersects(ValueKindSet::COLOR) {
                         vec![make_diagnostic(prop, "color")]
                     } else {
                         vec![]
@@ -86,9 +86,9 @@ impl EnforceVariableUse {
                 TokenOrValue::UnresolvedColor(_) => vec![],
 
                 TokenOrValue::Length(_) => {
-                    if self.types.intersects(KindSet::LENGTH) {
+                    if self.types.intersects(ValueKindSet::LENGTH) {
                         vec![make_diagnostic(prop, "length")]
-                    } else if self.types.intersects(KindSet::LENGTH_PERCENTAGE) {
+                    } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
                         vec![make_diagnostic(prop, "length-percentage")]
                     } else {
                         vec![]
@@ -96,7 +96,7 @@ impl EnforceVariableUse {
                 }
 
                 TokenOrValue::Angle(_) => {
-                    if self.types.intersects(KindSet::ANGLE) {
+                    if self.types.intersects(ValueKindSet::ANGLE) {
                         vec![make_diagnostic(prop, "angle")]
                     } else {
                         vec![]
@@ -104,7 +104,7 @@ impl EnforceVariableUse {
                 }
 
                 TokenOrValue::Time(_) => {
-                    if self.types.intersects(KindSet::TIME) {
+                    if self.types.intersects(ValueKindSet::TIME) {
                         vec![make_diagnostic(prop, "time")]
                     } else {
                         vec![]
@@ -112,7 +112,7 @@ impl EnforceVariableUse {
                 }
 
                 TokenOrValue::Resolution(_) => {
-                    if self.types.intersects(KindSet::RESOLUTION) {
+                    if self.types.intersects(ValueKindSet::RESOLUTION) {
                         vec![make_diagnostic(prop, "resolution")]
                     } else {
                         vec![]
@@ -120,9 +120,9 @@ impl EnforceVariableUse {
                 }
 
                 TokenOrValue::Url(_) => {
-                    if self.types.intersects(KindSet::URL) {
+                    if self.types.intersects(ValueKindSet::URL) {
                         vec![make_diagnostic(prop, "url")]
-                    } else if self.types.intersects(KindSet::IMAGE) {
+                    } else if self.types.intersects(ValueKindSet::IMAGE) {
                         vec![make_diagnostic(prop, "image")]
                     } else {
                         vec![]
@@ -149,7 +149,7 @@ impl EnforceVariableUse {
             } => {
                 if !self
                     .types
-                    .intersects(KindSet::PERCENTAGE | KindSet::LENGTH_PERCENTAGE)
+                    .intersects(ValueKindSet::PERCENTAGE | ValueKindSet::LENGTH_PERCENTAGE)
                 {
                     return vec![];
                 }
@@ -161,7 +161,7 @@ impl EnforceVariableUse {
                     return vec![];
                 }
 
-                if self.types.intersects(KindSet::PERCENTAGE) {
+                if self.types.intersects(ValueKindSet::PERCENTAGE) {
                     vec![make_diagnostic(prop, "percentage")]
                 } else {
                     vec![make_diagnostic(prop, "length-percentage")]
