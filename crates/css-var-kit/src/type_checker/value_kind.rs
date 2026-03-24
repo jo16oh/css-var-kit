@@ -142,12 +142,14 @@ fn try_typed_parse(value: &str) -> Option<ValueKindSet> {
     })
 }
 
+// Order matters: try more specific (unitless) types before broader ones
+// so that e.g. calc(1 + 2) matches Number, not Length.
 const TYPED_SYNTAX_KINDS: &[SyntaxComponentKind] = &[
+    SyntaxComponentKind::Integer,
+    SyntaxComponentKind::Number,
     SyntaxComponentKind::Length,
     SyntaxComponentKind::Percentage,
     SyntaxComponentKind::LengthPercentage,
-    SyntaxComponentKind::Number,
-    SyntaxComponentKind::Integer,
     SyntaxComponentKind::Angle,
     SyntaxComponentKind::Time,
     SyntaxComponentKind::Resolution,
