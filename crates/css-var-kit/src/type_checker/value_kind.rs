@@ -124,7 +124,7 @@ fn token_list_to_value_kind(token_list: &TokenList, raw: &str) -> ValueKind {
 
     match parts.len() {
         0 => ValueKind::Unknown(raw.to_owned()),
-        1 => parts.into_iter().next().unwrap(),
+        1 => parts[0].clone(),
         _ => ValueKind::Compound(parts),
     }
 }
@@ -503,5 +503,253 @@ mod tests {
     #[test]
     fn comment_only_is_empty() {
         assert!(kind_of("/* hello */").is_empty());
+    }
+
+    // --- Case sensitivity ---
+
+    #[test]
+    fn uppercase_color_keyword() {
+        // CSS color keywords are case-insensitive per spec
+        assert_single("RED", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn mixed_case_color_keyword() {
+        assert_single("ReD", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn uppercase_transparent() {
+        assert_single("TRANSPARENT", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn uppercase_hex_color() {
+        assert_single("#FF0000", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn uppercase_unit() {
+        // CSS units are case-insensitive
+        assert_single("16PX", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn uppercase_rgb_function() {
+        assert_single("RGB(255, 0, 0)", ValueKindSet::COLOR);
+    }
+
+    // --- Signed & special numeric values ---
+
+    #[test]
+    fn negative_length() {
+        assert_single("-10px", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn positive_prefix_length() {
+        assert_single("+10px", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn negative_zero_is_integer() {
+        assert_single("-0", ValueKindSet::INTEGER | ValueKindSet::NUMBER);
+    }
+
+    #[test]
+    fn negative_percentage() {
+        assert_single("-50%", ValueKindSet::PERCENTAGE);
+    }
+
+    #[test]
+    fn negative_angle() {
+        assert_single("-90deg", ValueKindSet::ANGLE);
+    }
+
+    // --- Zero with unit vs without ---
+
+    #[test]
+    fn zero_px_is_length_not_number() {
+        // "0px" has an explicit unit → LENGTH, not NUMBER
+        assert_single("0px", ValueKindSet::LENGTH);
+    }
+
+    #[test]
+    fn zero_without_unit_is_number() {
+        // "0" without unit → INTEGER | NUMBER
+        assert_single("0", ValueKindSet::INTEGER | ValueKindSet::NUMBER);
+    }
+
+    // --- CSS-wide keywords ---
+
+    #[test]
+    fn inherit_is_unknown() {
+        // CSS-wide keywords are not in the keyword table; they become Unknown
+        assert!(matches!(kind_of("inherit"), ValueKind::Unknown(_)));
+    }
+
+    #[test]
+    fn initial_is_unknown() {
+        assert!(matches!(kind_of("initial"), ValueKind::Unknown(_)));
+    }
+
+    #[test]
+    fn css_wide_keywords_self_consistent() {
+        // Same CSS-wide keyword should be consistent with itself
+        let a = kind_of("inherit");
+        let b = kind_of("inherit");
+        assert!(a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn different_css_wide_keywords_inconsistent() {
+        let a = kind_of("inherit");
+        let b = kind_of("initial");
+        assert!(!a.is_consistent_with(&b));
+    }
+
+    // --- calc() edge cases ---
+
+    #[test]
+    fn calc_pure_number() {
+        // calc(1 + 2) is a pure numeric expression; should be NUMBER, not LENGTH
+        let result = kind_of("calc(1 + 2)");
+        assert!(
+            matches!(&result, ValueKind::Single(k) if k.intersects(ValueKindSet::NUMBER)),
+            "expected NUMBER-like, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn nested_calc() {
+        assert_single("calc(calc(10px + 5px) + 5px)", ValueKindSet::LENGTH);
+    }
+
+    // --- Multi-context keywords ---
+
+    #[test]
+    fn none_has_multiple_kinds() {
+        // "none" is valid across many CSS properties (display, border-style, etc.)
+        let result = kind_of("none");
+        if let ValueKind::Single(kinds) = &result {
+            assert!(
+                kinds.iter_kind_names().count() > 1,
+                "expected 'none' to map to multiple kinds, got {kinds:?}"
+            );
+        } else {
+            panic!("expected Single, got {result:?}");
+        }
+    }
+
+    #[test]
+    fn auto_has_multiple_kinds() {
+        let result = kind_of("auto");
+        if let ValueKind::Single(kinds) = &result {
+            assert!(
+                kinds.iter_kind_names().count() > 1,
+                "expected 'auto' to map to multiple kinds, got {kinds:?}"
+            );
+        } else {
+            panic!("expected Single, got {result:?}");
+        }
+    }
+
+    #[test]
+    fn none_consistent_with_none() {
+        let a = kind_of("none");
+        let b = kind_of("none");
+        assert!(a.is_consistent_with(&b));
+    }
+
+    // --- Whitespace handling ---
+
+    #[test]
+    fn leading_trailing_whitespace_color() {
+        // Whitespace around a value should not affect classification
+        assert_single("  red  ", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn extra_spaces_in_compound() {
+        // Multiple spaces between tokens should produce the same structure
+        let normal = kind_of("solid 1px black");
+        let spaced = kind_of("solid  1px  black");
+        assert!(normal.is_consistent_with(&spaced));
+    }
+
+    // --- Consistency symmetry ---
+
+    #[test]
+    fn consistency_is_symmetric() {
+        let pairs = [
+            ("red", "blue"),
+            ("16px", "24px"),
+            ("red", "16px"),
+            ("solid 1px black", "red"),
+            ("foobar", "red"),
+        ];
+        for (a, b) in pairs {
+            let ka = kind_of(a);
+            let kb = kind_of(b);
+            assert_eq!(
+                ka.is_consistent_with(&kb),
+                kb.is_consistent_with(&ka),
+                "symmetry violated for ({a:?}, {b:?})"
+            );
+        }
+    }
+
+    // --- Tricky parse inputs ---
+
+    #[test]
+    fn dimension_with_unknown_unit() {
+        // "10foo" — unknown unit should be Unknown, not crash
+        let result = kind_of("10foo");
+        assert!(matches!(result, ValueKind::Unknown(_)));
+    }
+
+    #[test]
+    fn string_value_is_string() {
+        assert_single("\"hello world\"", ValueKindSet::STRING);
+    }
+
+    #[test]
+    fn single_quoted_string() {
+        assert_single("'hello world'", ValueKindSet::STRING);
+    }
+
+    #[test]
+    fn url_with_quotes() {
+        assert_single("url('image.png')", ValueKindSet::URL);
+    }
+
+    #[test]
+    fn currentcolor_is_color() {
+        assert_single("currentColor", ValueKindSet::COLOR);
+    }
+
+    #[test]
+    fn currentcolor_case_insensitive() {
+        // CSS spec: currentcolor is case-insensitive
+        assert_single("currentcolor", ValueKindSet::COLOR);
+        assert_single("CURRENTCOLOR", ValueKindSet::COLOR);
+    }
+
+    // --- Compound consistency edge cases ---
+
+    #[test]
+    fn compound_different_length_inconsistent() {
+        // "1px 2px" (2 parts) vs "1px 2px 3px" (3 parts) should be inconsistent
+        let a = kind_of("1px 2px");
+        let b = kind_of("1px 2px 3px");
+        assert!(!a.is_consistent_with(&b));
+    }
+
+    #[test]
+    fn compound_same_types_different_values_consistent() {
+        // Same structure (length length) should be consistent regardless of values
+        let a = kind_of("1px 2px");
+        let b = kind_of("10em 20rem");
+        assert!(a.is_consistent_with(&b));
     }
 }
