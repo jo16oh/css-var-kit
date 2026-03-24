@@ -123,11 +123,26 @@ function generateLookupFn(
   fnName: string,
   map: Record<string, string[]>,
 ): string {
+  // CSS keywords and function names are ASCII case-insensitive per spec.
+  // Merge entries that collide after lowercasing (e.g. "menu" and "Menu").
+  const merged: Record<string, string[]> = {};
+  for (const [name, kinds] of Object.entries(map)) {
+    const lower = name.toLowerCase();
+    if (merged[lower]) {
+      for (const k of kinds) {
+        if (!merged[lower].includes(k)) merged[lower].push(k);
+      }
+    } else {
+      merged[lower] = [...kinds];
+    }
+  }
+  const entries = Object.entries(merged).sort(([a], [b]) => a.localeCompare(b));
+
   const lines: string[] = [];
   lines.push(`pub fn ${fnName}(name: &str) -> Option<ValueKindSet> {`);
-  lines.push("    match name {");
+  lines.push("    match &*name.to_ascii_lowercase() {");
 
-  for (const [name, kinds] of Object.entries(map)) {
+  for (const [name, kinds] of entries) {
     const consts = kinds.map((k) => `ValueKindSet::${kindToConstName(k)}`);
     const combined = consts.join(" | ");
     const escaped = name.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
