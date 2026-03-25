@@ -1,11 +1,10 @@
-use lightningcss::properties::PropertyId;
-
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
-use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
+use crate::searcher::conditions::variable_definitions::VarsMap;
+use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::type_checker::resolve_value;
 use crate::type_checker::value_kind::{ValueKind, kind_of};
-use crate::type_checker::variable_resolver::resolve_vars;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
@@ -18,22 +17,24 @@ impl Rule for NoInconsistentVariableDefinition {
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
+        let vars = def_map.vars_map();
         def_map
             .iter()
             .filter(|(_, props)| props.len() >= 2)
-            .flat_map(|(_, props)| check_variable_definitions(props.as_slice(), &def_map))
+            .flat_map(|(_, props)| check_variable_definitions(props.as_slice(), &vars))
             .collect()
     }
 }
 
 fn check_variable_definitions<'src>(
     props: &[&'src Property<'src>],
-    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
+    vars: &VarsMap<'src>,
 ) -> Vec<Diagnostic<'src>> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
         .filter_map(|&p| {
-            let resolved = resolve_value(p.value.raw, def_map)?;
+            let token_list = p.value.token_list.as_ref()?;
+            let resolved = resolve_value(token_list, vars).ok()?;
             let kinds = kind_of(&resolved);
             let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
             Some((p, kinds, is_ignored))
@@ -73,19 +74,6 @@ fn check_variable_definitions<'src>(
             }
         })
         .collect()
-}
-
-fn resolve_value<'src>(
-    value: &'src str,
-    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
-) -> Option<String> {
-    resolve_vars(value, &|name| {
-        def_map
-            .get(&PropertyId::from(name))
-            .and_then(|props| props.last())
-            .map(|p| p.value.raw)
-    })
-    .ok()
 }
 
 #[cfg(test)]

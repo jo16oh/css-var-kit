@@ -1,10 +1,9 @@
-use lightningcss::properties::PropertyId;
-
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_definitions::VarsMap;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
 pub struct NoVariableTypeMismatch;
@@ -17,14 +16,16 @@ impl Rule for NoVariableTypeMismatch {
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
-        let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
+        let vars = search_result
+            .get_prop_map_for::<VariableDefinitions>()
+            .vars_map();
         let usages = search_result.get_result_for(VariableUsages);
-        check_type_mismatch(&def_map, &usages)
+        check_type_mismatch(&vars, &usages)
     }
 }
 
 fn check_type_mismatch<'src>(
-    def_map: &PropMapFor<'src, '_, VariableDefinitions>,
+    vars: &VarsMap<'src>,
     usages: &[&'src Property<'src>],
 ) -> Vec<Diagnostic<'src>> {
     usages
@@ -32,12 +33,7 @@ fn check_type_mismatch<'src>(
         .filter(|prop| !is_ignored(&prop.ignore_comments, "no-variable-type-mismatch"))
         .filter(|prop| !prop.name.raw.starts_with("--"))
         .filter_map(|prop| {
-            let result = check_property_type(prop.name.raw, prop.value.raw, |name| {
-                def_map
-                    .get(&PropertyId::from(name))
-                    .and_then(|props| props.last())
-                    .map(|p| p.value.raw)
-            });
+            let result = check_property_type(prop.name.raw, prop.value.raw, vars);
             match result {
                 Ok(_) => None,
                 // Undefined variables are handled by no-undefined-variable-use, not this rule

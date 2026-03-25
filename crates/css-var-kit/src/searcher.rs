@@ -73,7 +73,7 @@ impl<'src> Searcher<'src> {
     }
 }
 
-type PropMap<'src> = HashMap<PropertyId<'src>, Vec<&'src Property<'src>>>;
+pub type PropMap<'src> = HashMap<PropertyId<'src>, Vec<&'src Property<'src>>>;
 
 struct SearchConditionResult<'src> {
     props: Vec<&'src Property<'src>>,
