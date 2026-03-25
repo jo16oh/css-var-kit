@@ -58,7 +58,6 @@ fn check_variable_definitions<'src>(
         .filter(|(_, (_, _, ignored))| !ignored)
         .filter(|(_, (_, kinds, _))| !baseline.is_consistent_with(kinds))
         .map(|(_, (prop, _, _))| {
-            let type_desc = baseline.type_description();
             Diagnostic {
                 file_path: prop.file_path,
                 source: prop.source,
@@ -66,7 +65,7 @@ fn check_variable_definitions<'src>(
                 column: prop.value.column,
                 message: format!(
                     "inconsistent variable definition: `{}` has value `{}` which conflicts with expected type <{}>",
-                    prop.name.raw, prop.value.raw, type_desc,
+                    prop.name.raw, prop.value.raw, baseline,
                 ),
                 severity: Severity::Warning,
             }

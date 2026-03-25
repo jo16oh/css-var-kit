@@ -32,16 +32,34 @@ impl ValueKind {
             _ => false,
         }
     }
+}
 
-    pub fn type_description(&self) -> String {
+impl std::fmt::Display for ValueKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Single(k) => k.iter_kind_names().collect::<Vec<_>>().join("|"),
-            Self::Compound(parts) => parts
-                .iter()
-                .map(|p| p.type_description())
-                .collect::<Vec<_>>()
-                .join(", "),
-            Self::Unknown(raw) => format!("unknown({raw})"),
+            Self::Single(k) => {
+                let mut first = true;
+                for name in k.iter_kind_names() {
+                    if !first {
+                        f.write_str("|")?;
+                    }
+                    f.write_str(name)?;
+                    first = false;
+                }
+                Ok(())
+            }
+            Self::Compound(parts) => {
+                let mut first = true;
+                for part in parts {
+                    if !first {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{part}")?;
+                    first = false;
+                }
+                Ok(())
+            }
+            Self::Unknown(raw) => write!(f, "unknown({raw})"),
         }
     }
 }
