@@ -15,10 +15,10 @@ fn reports_type_mismatch() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "type mismatch: resolved value of `var(--size)` is not valid for property `color`",
+            "Type mismatch: resolved value of `var(--size)` is not valid for property `color`",
         ))
         .stderr(predicates::str::contains(
-            "type mismatch: resolved value of `var(--color)` is not valid for property `width`",
+            "Type mismatch: resolved value of `var(--color)` is not valid for property `width`",
         ));
 }
 
@@ -29,7 +29,7 @@ fn reports_nested_var_mismatch() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "type mismatch: resolved value of `var(--alias-size)` is not valid for property `color`",
+            "Type mismatch: resolved value of `var(--alias-size)` is not valid for property `color`",
         ));
 }
 
