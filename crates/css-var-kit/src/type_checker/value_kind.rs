@@ -583,6 +583,16 @@ mod tests {
         assert_single("  red  ", ValueKindSet::COLOR);
     }
 
+    #[test]
+    fn important_not_included_in_value() {
+        // lightningcss strips !important at declaration level,
+        // so kind_of should never receive it. Verify it doesn't
+        // silently corrupt classification if it does appear.
+        let with = kind_of("red !important");
+        let without = kind_of("red");
+        assert!(!with.is_consistent_with(&without));
+    }
+
     // ── Unknown values ──
 
     #[test]
