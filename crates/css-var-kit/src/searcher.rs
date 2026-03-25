@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
 
+use lightningcss::properties::PropertyId;
+
 use crate::parser::css::{ParseResult, Property};
 
 pub mod conditions;
@@ -71,7 +73,7 @@ impl<'src> Searcher<'src> {
     }
 }
 
-type PropMap<'src> = HashMap<&'src str, Vec<&'src Property<'src>>>;
+type PropMap<'src> = HashMap<PropertyId<'src>, Vec<&'src Property<'src>>>;
 
 struct SearchConditionResult<'src> {
     props: Vec<&'src Property<'src>>,
@@ -99,7 +101,9 @@ impl<'src> SearchResult<'src> {
         let map = entry.prop_map.get_or_init(|| {
             let mut map = PropMap::new();
             for prop in &entry.props {
-                map.entry(prop.name.raw).or_default().push(prop);
+                map.entry(prop.name.property_id.clone())
+                    .or_default()
+                    .push(prop);
             }
             map
         });

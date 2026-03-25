@@ -1,3 +1,5 @@
+use lightningcss::properties::PropertyId;
+
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -32,7 +34,7 @@ fn check_type_mismatch<'src>(
         .filter_map(|prop| {
             let result = check_property_type(prop.name.raw, prop.value.raw, |name| {
                 def_map
-                    .get(name)
+                    .get(&PropertyId::from(name))
                     .and_then(|props| props.last())
                     .map(|p| p.value.raw)
             });

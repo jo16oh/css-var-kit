@@ -15,6 +15,8 @@ mod tests {
     use crate::parser;
     use std::path::Path;
 
+    use lightningcss::properties::PropertyId;
+
     use crate::parser::css::{ParseResult, Property, PropertyIdent, PropertyValue};
     use crate::searcher::SearcherBuilder;
 
@@ -28,6 +30,7 @@ mod tests {
             source: "",
             name: PropertyIdent {
                 raw: name,
+                property_id: PropertyId::from(name),
                 offset: 0,
                 line: 0,
                 column: 0,
@@ -76,11 +79,11 @@ mod tests {
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        let props = map.get("--color").unwrap();
+        let props = map.get(&PropertyId::from("--color")).unwrap();
         assert_eq!(props.len(), 1);
         assert_eq!(props[0].value.raw, "red");
 
-        let props = map.get("--size").unwrap();
+        let props = map.get(&PropertyId::from("--size")).unwrap();
         assert_eq!(props.len(), 1);
         assert_eq!(props[0].value.raw, "16px");
     }
@@ -95,7 +98,7 @@ mod tests {
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        assert!(map.get("--missing").is_none());
+        assert!(map.get(&PropertyId::from("--missing")).is_none());
     }
 
     #[test]
@@ -108,8 +111,8 @@ mod tests {
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        assert!(map.contains_key("--color"));
-        assert!(!map.contains_key("--missing"));
+        assert!(map.contains_key(&PropertyId::from("--color")));
+        assert!(!map.contains_key(&PropertyId::from("--missing")));
     }
 
     #[test]
@@ -122,7 +125,7 @@ mod tests {
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        let props = map.get("--color").unwrap();
+        let props = map.get(&PropertyId::from("--color")).unwrap();
         assert_eq!(props.len(), 2);
         assert_eq!(props[0].value.raw, "red");
         assert_eq!(props[1].value.raw, "blue");

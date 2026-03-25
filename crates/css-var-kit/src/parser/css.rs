@@ -1,12 +1,14 @@
 use std::path::Path;
 
+use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::TokenList;
 use lightningcss::stylesheet::ParserOptions;
 use lightningcss::traits::ParseWithOptions;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PropertyIdent<'a> {
-    pub raw: &'a str,
+pub struct PropertyIdent<'src> {
+    pub raw: &'src str,
+    pub property_id: PropertyId<'src>,
     pub offset: usize,
     pub line: u32,
     pub column: u32,
@@ -342,11 +344,13 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                             .ok();
 
                     let ignore_comments = std::mem::take(&mut pending_ignores);
+                    let raw_name = &css[name_start..name_end];
                     properties.push(Property {
                         file_path,
                         source: css,
                         name: PropertyIdent {
-                            raw: &css[name_start..name_end],
+                            raw: raw_name,
+                            property_id: PropertyId::from(raw_name),
                             offset: name_start,
                             line: name_line,
                             column: name_col,

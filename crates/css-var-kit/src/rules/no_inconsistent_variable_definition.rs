@@ -1,3 +1,5 @@
+use lightningcss::properties::PropertyId;
+
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -79,7 +81,7 @@ fn resolve_value<'src>(
 ) -> Option<String> {
     resolve_vars(value, &|name| {
         def_map
-            .get(name)
+            .get(&PropertyId::from(name))
             .and_then(|props| props.last())
             .map(|p| p.value.raw)
     })

@@ -1,3 +1,4 @@
+use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::parser::css::Property;
@@ -50,7 +51,7 @@ fn collect_undefined<'src>(
         match token {
             TokenOrValue::Var(var) => {
                 let name = &*var.name.ident.0;
-                if !definitions.contains_key(name) {
+                if !definitions.contains_key(&PropertyId::from(name)) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
@@ -66,7 +67,7 @@ fn collect_undefined<'src>(
             }
             TokenOrValue::DashedIdent(ident) => {
                 let name = &*ident.0;
-                if !definitions.contains_key(name) {
+                if !definitions.contains_key(&PropertyId::from(name)) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
