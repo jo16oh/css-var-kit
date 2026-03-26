@@ -161,14 +161,8 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::CUSTOM_IDENT, "custom-ident"),
     (ValueKindSet::DISPLAY, "display"),
     (ValueKindSet::EASING_FUNCTION, "easing-function"),
-    (
-        ValueKindSet::EAST_ASIAN_VARIANT_VALUES,
-        "east-asian-variant-values",
-    ),
-    (
-        ValueKindSet::EAST_ASIAN_WIDTH_VALUES,
-        "east-asian-width-values",
-    ),
+    (ValueKindSet::EAST_ASIAN_VARIANT_VALUES, "east-asian-variant-values"),
+    (ValueKindSet::EAST_ASIAN_WIDTH_VALUES, "east-asian-width-values"),
     (ValueKindSet::EVENT_TRIGGER_EVENT, "event-trigger-event"),
     (ValueKindSet::FILTER, "filter"),
     (ValueKindSet::FONT_FEATURES_TECH, "font-features-tech"),
@@ -179,10 +173,7 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::FONT_WIDTH_CSS3, "font-width-css3"),
     (ValueKindSet::GENERIC_FAMILY, "generic-family"),
     (ValueKindSet::GRID_TRACK, "grid-track"),
-    (
-        ValueKindSet::HUE_INTERPOLATION_METHOD,
-        "hue-interpolation-method",
-    ),
+    (ValueKindSet::HUE_INTERPOLATION_METHOD, "hue-interpolation-method"),
     (ValueKindSet::IMAGE, "image"),
     (ValueKindSet::IMAGE_TAGS, "image-tags"),
     (ValueKindSet::INIT_DESCRIPTOR_NAME, "init-descriptor-name"),
@@ -190,33 +181,18 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::ISOLATION_MODE, "isolation-mode"),
     (ValueKindSet::KEYFRAME_SELECTOR, "keyframe-selector"),
     (ValueKindSet::LEADER_TYPE, "leader-type"),
-    (
-        ValueKindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR,
-        "legacy-pseudo-element-selector",
-    ),
+    (ValueKindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR, "legacy-pseudo-element-selector"),
     (ValueKindSet::LENGTH, "length"),
     (ValueKindSet::LIGATURE_VALUES, "ligature-values"),
     (ValueKindSet::LINE_STYLE, "line-style"),
     (ValueKindSet::LINE_WIDTH, "line-width"),
     (ValueKindSet::MASKING_MODE, "masking-mode"),
-    (
-        ValueKindSet::NAVIGATION_LOCATION_KEYWORD,
-        "navigation-location-keyword",
-    ),
-    (
-        ValueKindSet::NAVIGATION_TYPE_KEYWORD,
-        "navigation-type-keyword",
-    ),
+    (ValueKindSet::NAVIGATION_LOCATION_KEYWORD, "navigation-location-keyword"),
+    (ValueKindSet::NAVIGATION_TYPE_KEYWORD, "navigation-type-keyword"),
     (ValueKindSet::NUMBER, "number"),
     (ValueKindSet::NUMERIC_FIGURE_VALUES, "numeric-figure-values"),
-    (
-        ValueKindSet::NUMERIC_FRACTION_VALUES,
-        "numeric-fraction-values",
-    ),
-    (
-        ValueKindSet::NUMERIC_SPACING_VALUES,
-        "numeric-spacing-values",
-    ),
+    (ValueKindSet::NUMERIC_FRACTION_VALUES, "numeric-fraction-values"),
+    (ValueKindSet::NUMERIC_SPACING_VALUES, "numeric-spacing-values"),
     (ValueKindSet::PAGE_SIZE, "page-size"),
     (ValueKindSet::PERCENTAGE, "percentage"),
     (ValueKindSet::POSITION, "position"),
@@ -225,23 +201,14 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::QUOTE, "quote"),
     (ValueKindSet::RADIAL_EXTENT, "radial-extent"),
     (ValueKindSet::RADIAL_SHAPE, "radial-shape"),
-    (
-        ValueKindSet::REFERRER_POLICY_MODIFIER,
-        "referrer-policy-modifier",
-    ),
+    (ValueKindSet::REFERRER_POLICY_MODIFIER, "referrer-policy-modifier"),
     (ValueKindSet::RELATIVE_SIZE, "relative-size"),
     (ValueKindSet::REPEAT_STYLE, "repeat-style"),
     (ValueKindSet::REQUEST_MODIFIER, "request-modifier"),
     (ValueKindSet::RESOLUTION, "resolution"),
     (ValueKindSet::ROUNDING_STRATEGY, "rounding-strategy"),
-    (
-        ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        "scroll-button-direction",
-    ),
-    (
-        ValueKindSet::SHAPE_COMMAND_POSITION,
-        "shape-command-position",
-    ),
+    (ValueKindSet::SCROLL_BUTTON_DIRECTION, "scroll-button-direction"),
+    (ValueKindSet::SHAPE_COMMAND_POSITION, "shape-command-position"),
     (ValueKindSet::SNAP, "snap"),
     (ValueKindSet::SOURCE, "source"),
     (ValueKindSet::SPACING_TRIM, "spacing-trim"),
@@ -264,16 +231,13 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
 
 impl ValueKindSet {
     pub fn iter_kind_names(self) -> impl Iterator<Item = &'static str> {
-        KIND_NAMES
-            .iter()
+        KIND_NAMES.iter()
             .filter(move |(flag, _)| self.contains(*flag))
             .map(|(_, name)| *name)
     }
 }
 
-pub fn from_syntax_component_kind(
-    kind: &lightningcss::values::syntax::SyntaxComponentKind,
-) -> ValueKindSet {
+pub fn from_syntax_component_kind(kind: &lightningcss::values::syntax::SyntaxComponentKind) -> ValueKindSet {
     use lightningcss::values::syntax::SyntaxComponentKind;
     match kind {
         SyntaxComponentKind::Length => ValueKindSet::LENGTH,
@@ -291,6 +255,121 @@ pub fn from_syntax_component_kind(
         // LengthPercentage maps to the composite LENGTH | PERCENTAGE
         SyntaxComponentKind::LengthPercentage => ValueKindSet::LENGTH_PERCENTAGE,
         _ => ValueKindSet::empty(),
+    }
+}
+
+pub fn lookup_kind_by_name(name: &str) -> Option<ValueKindSet> {
+    match &*name.to_ascii_lowercase() {
+        "absolute-size" => Some(ValueKindSet::ABSOLUTE_SIZE),
+        "alignment" => Some(ValueKindSet::ALIGNMENT),
+        "an+b" => Some(ValueKindSet::AN_PLUS_B),
+        "anchor-side" => Some(ValueKindSet::ANCHOR_SIDE),
+        "anchor-size" => Some(ValueKindSet::ANCHOR_SIZE),
+        "angle" => Some(ValueKindSet::ANGLE),
+        "animateable-feature" => Some(ValueKindSet::ANIMATEABLE_FEATURE),
+        "animation-composition" => Some(ValueKindSet::ANIMATION_COMPOSITION),
+        "animation-direction" => Some(ValueKindSet::ANIMATION_DIRECTION),
+        "animation-fill-mode" => Some(ValueKindSet::ANIMATION_FILL_MODE),
+        "animation-play-state" => Some(ValueKindSet::ANIMATION_PLAY_STATE),
+        "animation-timeline" => Some(ValueKindSet::ANIMATION_TIMELINE),
+        "arc-size" => Some(ValueKindSet::ARC_SIZE),
+        "arc-sweep" => Some(ValueKindSet::ARC_SWEEP),
+        "attachment" => Some(ValueKindSet::ATTACHMENT),
+        "attr-matcher" => Some(ValueKindSet::ATTR_MATCHER),
+        "attr-modifier" => Some(ValueKindSet::ATTR_MODIFIER),
+        "attr-type" => Some(ValueKindSet::ATTR_TYPE),
+        "autospace" => Some(ValueKindSet::AUTOSPACE),
+        "axis" => Some(ValueKindSet::AXIS),
+        "baseline-metric" => Some(ValueKindSet::BASELINE_METRIC),
+        "basic-shape" => Some(ValueKindSet::BASIC_SHAPE),
+        "bg-clip" => Some(ValueKindSet::BG_CLIP),
+        "bg-size" => Some(ValueKindSet::BG_SIZE),
+        "blend-mode" => Some(ValueKindSet::BLEND_MODE),
+        "box" => Some(ValueKindSet::BOX),
+        "calc-keyword" => Some(ValueKindSet::CALC_KEYWORD),
+        "color" => Some(ValueKindSet::COLOR),
+        "color-font-tech" => Some(ValueKindSet::COLOR_FONT_TECH),
+        "color-space" => Some(ValueKindSet::COLOR_SPACE),
+        "combinator" => Some(ValueKindSet::COMBINATOR),
+        "compat-auto" => Some(ValueKindSet::COMPAT_AUTO),
+        "compat-special" => Some(ValueKindSet::COMPAT_SPECIAL),
+        "composite-mode" => Some(ValueKindSet::COMPOSITE_MODE),
+        "compositing-operator" => Some(ValueKindSet::COMPOSITING_OPERATOR),
+        "content-level" => Some(ValueKindSet::CONTENT_LEVEL),
+        "contextual-alt-values" => Some(ValueKindSet::CONTEXTUAL_ALT_VALUES),
+        "corner-shape" => Some(ValueKindSet::CORNER_SHAPE),
+        "cursor-predefined" => Some(ValueKindSet::CURSOR_PREDEFINED),
+        "custom-ident" => Some(ValueKindSet::CUSTOM_IDENT),
+        "display" => Some(ValueKindSet::DISPLAY),
+        "easing-function" => Some(ValueKindSet::EASING_FUNCTION),
+        "east-asian-variant-values" => Some(ValueKindSet::EAST_ASIAN_VARIANT_VALUES),
+        "east-asian-width-values" => Some(ValueKindSet::EAST_ASIAN_WIDTH_VALUES),
+        "event-trigger-event" => Some(ValueKindSet::EVENT_TRIGGER_EVENT),
+        "filter" => Some(ValueKindSet::FILTER),
+        "font-features-tech" => Some(ValueKindSet::FONT_FEATURES_TECH),
+        "font-format" => Some(ValueKindSet::FONT_FORMAT),
+        "font-tech" => Some(ValueKindSet::FONT_TECH),
+        "font-variant-css2" => Some(ValueKindSet::FONT_VARIANT_CSS2),
+        "font-weight-absolute" => Some(ValueKindSet::FONT_WEIGHT_ABSOLUTE),
+        "font-width-css3" => Some(ValueKindSet::FONT_WIDTH_CSS3),
+        "generic-family" => Some(ValueKindSet::GENERIC_FAMILY),
+        "grid-track" => Some(ValueKindSet::GRID_TRACK),
+        "hue-interpolation-method" => Some(ValueKindSet::HUE_INTERPOLATION_METHOD),
+        "image" => Some(ValueKindSet::IMAGE),
+        "image-tags" => Some(ValueKindSet::IMAGE_TAGS),
+        "init-descriptor-name" => Some(ValueKindSet::INIT_DESCRIPTOR_NAME),
+        "integer" => Some(ValueKindSet::INTEGER),
+        "isolation-mode" => Some(ValueKindSet::ISOLATION_MODE),
+        "keyframe-selector" => Some(ValueKindSet::KEYFRAME_SELECTOR),
+        "leader-type" => Some(ValueKindSet::LEADER_TYPE),
+        "legacy-pseudo-element-selector" => Some(ValueKindSet::LEGACY_PSEUDO_ELEMENT_SELECTOR),
+        "length" => Some(ValueKindSet::LENGTH),
+        "ligature-values" => Some(ValueKindSet::LIGATURE_VALUES),
+        "line-style" => Some(ValueKindSet::LINE_STYLE),
+        "line-width" => Some(ValueKindSet::LINE_WIDTH),
+        "masking-mode" => Some(ValueKindSet::MASKING_MODE),
+        "navigation-location-keyword" => Some(ValueKindSet::NAVIGATION_LOCATION_KEYWORD),
+        "navigation-type-keyword" => Some(ValueKindSet::NAVIGATION_TYPE_KEYWORD),
+        "number" => Some(ValueKindSet::NUMBER),
+        "numeric-figure-values" => Some(ValueKindSet::NUMERIC_FIGURE_VALUES),
+        "numeric-fraction-values" => Some(ValueKindSet::NUMERIC_FRACTION_VALUES),
+        "numeric-spacing-values" => Some(ValueKindSet::NUMERIC_SPACING_VALUES),
+        "page-size" => Some(ValueKindSet::PAGE_SIZE),
+        "percentage" => Some(ValueKindSet::PERCENTAGE),
+        "position" => Some(ValueKindSet::POSITION),
+        "position-area" => Some(ValueKindSet::POSITION_AREA),
+        "pseudo-page" => Some(ValueKindSet::PSEUDO_PAGE),
+        "quote" => Some(ValueKindSet::QUOTE),
+        "radial-extent" => Some(ValueKindSet::RADIAL_EXTENT),
+        "radial-shape" => Some(ValueKindSet::RADIAL_SHAPE),
+        "referrer-policy-modifier" => Some(ValueKindSet::REFERRER_POLICY_MODIFIER),
+        "relative-size" => Some(ValueKindSet::RELATIVE_SIZE),
+        "repeat-style" => Some(ValueKindSet::REPEAT_STYLE),
+        "request-modifier" => Some(ValueKindSet::REQUEST_MODIFIER),
+        "resolution" => Some(ValueKindSet::RESOLUTION),
+        "rounding-strategy" => Some(ValueKindSet::ROUNDING_STRATEGY),
+        "scroll-button-direction" => Some(ValueKindSet::SCROLL_BUTTON_DIRECTION),
+        "shape-command-position" => Some(ValueKindSet::SHAPE_COMMAND_POSITION),
+        "snap" => Some(ValueKindSet::SNAP),
+        "source" => Some(ValueKindSet::SOURCE),
+        "spacing-trim" => Some(ValueKindSet::SPACING_TRIM),
+        "step-position" => Some(ValueKindSet::STEP_POSITION),
+        "string" => Some(ValueKindSet::STRING),
+        "symbols-type" => Some(ValueKindSet::SYMBOLS_TYPE),
+        "syntax-type-name" => Some(ValueKindSet::SYNTAX_TYPE_NAME),
+        "system-family-name" => Some(ValueKindSet::SYSTEM_FAMILY_NAME),
+        "text-edge" => Some(ValueKindSet::TEXT_EDGE),
+        "time" => Some(ValueKindSet::TIME),
+        "track-breadth" => Some(ValueKindSet::TRACK_BREADTH),
+        "transform-function" => Some(ValueKindSet::TRANSFORM_FUNCTION),
+        "transform-list" => Some(ValueKindSet::TRANSFORM_LIST),
+        "transition-behavior" => Some(ValueKindSet::TRANSITION_BEHAVIOR),
+        "try-size" => Some(ValueKindSet::TRY_SIZE),
+        "try-tactic" => Some(ValueKindSet::TRY_TACTIC),
+        "url" => Some(ValueKindSet::URL),
+        "wcag2" => Some(ValueKindSet::WCAG2),
+        "length-percentage" => Some(ValueKindSet::LENGTH_PERCENTAGE),
+        _ => None,
     }
 }
 
@@ -323,9 +402,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "all-scroll" => Some(ValueKindSet::CURSOR_PREDEFINED),
         "allow-discrete" => Some(ValueKindSet::TRANSITION_BEHAVIOR),
         "alpha" => Some(ValueKindSet::MASKING_MODE),
-        "alphabetic" => Some(
-            ValueKindSet::BASELINE_METRIC | ValueKindSet::SYMBOLS_TYPE | ValueKindSet::TEXT_EDGE,
-        ),
+        "alphabetic" => Some(ValueKindSet::BASELINE_METRIC | ValueKindSet::SYMBOLS_TYPE | ValueKindSet::TEXT_EDGE),
         "alternate" => Some(ValueKindSet::ANIMATION_DIRECTION),
         "alternate-reverse" => Some(ValueKindSet::ANIMATION_DIRECTION),
         "angle" => Some(ValueKindSet::SYNTAX_TYPE_NAME),
@@ -335,13 +412,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "aqua" => Some(ValueKindSet::COLOR),
         "aquamarine" => Some(ValueKindSet::COLOR),
         "at" => Some(ValueKindSet::NAVIGATION_LOCATION_KEYWORD),
-        "auto" => Some(
-            ValueKindSet::CURSOR_PREDEFINED
-                | ValueKindSet::TRACK_BREADTH
-                | ValueKindSet::ISOLATION_MODE
-                | ValueKindSet::LINE_STYLE
-                | ValueKindSet::ANIMATION_TIMELINE,
-        ),
+        "auto" => Some(ValueKindSet::CURSOR_PREDEFINED | ValueKindSet::TRACK_BREADTH | ValueKindSet::ISOLATION_MODE | ValueKindSet::LINE_STYLE | ValueKindSet::ANIMATION_TIMELINE),
         "azure" => Some(ValueKindSet::COLOR),
         "b4" => Some(ValueKindSet::PAGE_SIZE),
         "b5" => Some(ValueKindSet::PAGE_SIZE),
@@ -356,28 +427,15 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "blanchedalmond" => Some(ValueKindSet::COLOR),
         "blank" => Some(ValueKindSet::PSEUDO_PAGE),
         "block" => Some(ValueKindSet::ANCHOR_SIZE | ValueKindSet::AXIS | ValueKindSet::DISPLAY),
-        "block-end" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
-        "block-start" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
+        "block-end" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SCROLL_BUTTON_DIRECTION),
+        "block-start" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SCROLL_BUTTON_DIRECTION),
         "blue" => Some(ValueKindSet::COLOR),
         "blueviolet" => Some(ValueKindSet::COLOR),
         "bold" => Some(ValueKindSet::FONT_WEIGHT_ABSOLUTE),
         "border-area" => Some(ValueKindSet::BG_CLIP),
         "border-box" => Some(ValueKindSet::BOX),
         "both" => Some(ValueKindSet::ANIMATION_FILL_MODE),
-        "bottom" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SHAPE_COMMAND_POSITION,
-        ),
+        "bottom" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SHAPE_COMMAND_POSITION),
         "brown" => Some(ValueKindSet::COLOR),
         "burlywood" => Some(ValueKindSet::COLOR),
         "button" => Some(ValueKindSet::COMPAT_AUTO),
@@ -394,13 +452,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "captiontext" => Some(ValueKindSet::COLOR),
         "ccw" => Some(ValueKindSet::ARC_SWEEP),
         "cell" => Some(ValueKindSet::CURSOR_PREDEFINED),
-        "center" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::ALIGNMENT
-                | ValueKindSet::SHAPE_COMMAND_POSITION
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION,
-        ),
+        "center" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::ALIGNMENT | ValueKindSet::SHAPE_COMMAND_POSITION | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION),
         "central" => Some(ValueKindSet::BASELINE_METRIC),
         "chartreuse" => Some(ValueKindSet::COLOR),
         "checkbox" => Some(ValueKindSet::COMPAT_AUTO),
@@ -491,12 +543,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "element" => Some(ValueKindSet::CONTENT_LEVEL),
         "ellipse" => Some(ValueKindSet::RADIAL_SHAPE),
         "embedded-opentype" => Some(ValueKindSet::FONT_FORMAT),
-        "end" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::ALIGNMENT
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::STEP_POSITION,
-        ),
+        "end" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::ALIGNMENT | ValueKindSet::POSITION_AREA | ValueKindSet::STEP_POSITION),
         "even" => Some(ValueKindSet::AN_PLUS_B),
         "ew-resize" => Some(ValueKindSet::CURSOR_PREDEFINED),
         "exclude" => Some(ValueKindSet::COMPOSITING_OPERATOR),
@@ -584,18 +631,10 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "infotext" => Some(ValueKindSet::COLOR),
         "inline" => Some(ValueKindSet::ANCHOR_SIZE | ValueKindSet::AXIS | ValueKindSet::DISPLAY),
         "inline-block" => Some(ValueKindSet::DISPLAY),
-        "inline-end" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
+        "inline-end" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SCROLL_BUTTON_DIRECTION),
         "inline-flex" => Some(ValueKindSet::DISPLAY),
         "inline-grid" => Some(ValueKindSet::DISPLAY),
-        "inline-start" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
+        "inline-start" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SCROLL_BUTTON_DIRECTION),
         "inline-table" => Some(ValueKindSet::DISPLAY),
         "insert" => Some(ValueKindSet::AUTOSPACE),
         "inset" => Some(ValueKindSet::LINE_STYLE),
@@ -624,12 +663,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "lawngreen" => Some(ValueKindSet::COLOR),
         "lch" => Some(ValueKindSet::COLOR_SPACE),
         "ledger" => Some(ValueKindSet::PAGE_SIZE),
-        "left" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::SHAPE_COMMAND_POSITION
-                | ValueKindSet::POSITION
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
+        "left" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::SHAPE_COMMAND_POSITION | ValueKindSet::POSITION | ValueKindSet::SCROLL_BUTTON_DIRECTION),
         "legal" => Some(ValueKindSet::PAGE_SIZE),
         "lemonchiffon" => Some(ValueKindSet::COLOR),
         "length" => Some(ValueKindSet::SYNTAX_TYPE_NAME),
@@ -721,22 +755,8 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "no-open-quote" => Some(ValueKindSet::QUOTE),
         "no-referrer-when-downgrade" => Some(ValueKindSet::REFERRER_POLICY_MODIFIER),
         "no-repeat" => Some(ValueKindSet::REPEAT_STYLE),
-        "none" => Some(
-            ValueKindSet::CURSOR_PREDEFINED
-                | ValueKindSet::DISPLAY
-                | ValueKindSet::LINE_STYLE
-                | ValueKindSet::ANIMATION_FILL_MODE
-                | ValueKindSet::ANIMATION_TIMELINE,
-        ),
-        "normal" => Some(
-            ValueKindSet::BLEND_MODE
-                | ValueKindSet::FONT_VARIANT_CSS2
-                | ValueKindSet::FONT_WEIGHT_ABSOLUTE
-                | ValueKindSet::FONT_WIDTH_CSS3
-                | ValueKindSet::ANIMATION_DIRECTION
-                | ValueKindSet::SPACING_TRIM
-                | ValueKindSet::TRANSITION_BEHAVIOR,
-        ),
+        "none" => Some(ValueKindSet::CURSOR_PREDEFINED | ValueKindSet::DISPLAY | ValueKindSet::LINE_STYLE | ValueKindSet::ANIMATION_FILL_MODE | ValueKindSet::ANIMATION_TIMELINE),
+        "normal" => Some(ValueKindSet::BLEND_MODE | ValueKindSet::FONT_VARIANT_CSS2 | ValueKindSet::FONT_WEIGHT_ABSOLUTE | ValueKindSet::FONT_WIDTH_CSS3 | ValueKindSet::ANIMATION_DIRECTION | ValueKindSet::SPACING_TRIM | ValueKindSet::TRANSITION_BEHAVIOR),
         "not-allowed" => Some(ValueKindSet::CURSOR_PREDEFINED),
         "notch" => Some(ValueKindSet::CORNER_SHAPE),
         "ns-resize" => Some(ValueKindSet::CURSOR_PREDEFINED),
@@ -808,14 +828,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "resolution" => Some(ValueKindSet::SYNTAX_TYPE_NAME),
         "reverse" => Some(ValueKindSet::ANIMATION_DIRECTION),
         "ridge" => Some(ValueKindSet::LINE_STYLE),
-        "right" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::SHAPE_COMMAND_POSITION
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::PSEUDO_PAGE
-                | ValueKindSet::SCROLL_BUTTON_DIRECTION,
-        ),
+        "right" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::SHAPE_COMMAND_POSITION | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::PSEUDO_PAGE | ValueKindSet::SCROLL_BUTTON_DIRECTION),
         "root" => Some(ValueKindSet::SOURCE),
         "rosybrown" => Some(ValueKindSet::COLOR),
         "round" => Some(ValueKindSet::CORNER_SHAPE | ValueKindSet::REPEAT_STYLE),
@@ -854,15 +867,11 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "self-block" => Some(ValueKindSet::ANCHOR_SIZE),
         "self-block-end" => Some(ValueKindSet::POSITION_AREA),
         "self-block-start" => Some(ValueKindSet::POSITION_AREA),
-        "self-end" => {
-            Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::ALIGNMENT)
-        }
+        "self-end" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::ALIGNMENT),
         "self-inline" => Some(ValueKindSet::ANCHOR_SIZE),
         "self-inline-end" => Some(ValueKindSet::POSITION_AREA),
         "self-inline-start" => Some(ValueKindSet::POSITION_AREA),
-        "self-start" => {
-            Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::ALIGNMENT)
-        }
+        "self-start" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::ALIGNMENT),
         "self-x-end" => Some(ValueKindSet::POSITION_AREA),
         "self-x-start" => Some(ValueKindSet::POSITION_AREA),
         "self-y-end" => Some(ValueKindSet::POSITION_AREA),
@@ -927,13 +936,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "srgb" => Some(ValueKindSet::COLOR_SPACE),
         "srgb-linear" => Some(ValueKindSet::COLOR_SPACE),
         "stacked-fractions" => Some(ValueKindSet::NUMERIC_FRACTION_VALUES),
-        "start" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::ALIGNMENT
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::STEP_POSITION,
-        ),
+        "start" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::ALIGNMENT | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::STEP_POSITION),
         "status-bar" => Some(ValueKindSet::SYSTEM_FAMILY_NAME),
         "steelblue" => Some(ValueKindSet::COLOR),
         "step-end" => Some(ValueKindSet::EASING_FUNCTION),
@@ -960,12 +963,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "tabular-nums" => Some(ValueKindSet::NUMERIC_SPACING_VALUES),
         "tan" => Some(ValueKindSet::COLOR),
         "teal" => Some(ValueKindSet::COLOR),
-        "text" => Some(
-            ValueKindSet::BG_CLIP
-                | ValueKindSet::CONTENT_LEVEL
-                | ValueKindSet::CURSOR_PREDEFINED
-                | ValueKindSet::TEXT_EDGE,
-        ),
+        "text" => Some(ValueKindSet::BG_CLIP | ValueKindSet::CONTENT_LEVEL | ValueKindSet::CURSOR_PREDEFINED | ValueKindSet::TEXT_EDGE),
         "text-bottom" => Some(ValueKindSet::BASELINE_METRIC),
         "text-top" => Some(ValueKindSet::BASELINE_METRIC),
         "textarea" => Some(ValueKindSet::COMPAT_AUTO),
@@ -982,12 +980,7 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "to" => Some(ValueKindSet::KEYFRAME_SELECTOR | ValueKindSet::NAVIGATION_LOCATION_KEYWORD),
         "to-zero" => Some(ValueKindSet::ROUNDING_STRATEGY),
         "tomato" => Some(ValueKindSet::COLOR),
-        "top" => Some(
-            ValueKindSet::ANCHOR_SIDE
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SHAPE_COMMAND_POSITION,
-        ),
+        "top" => Some(ValueKindSet::ANCHOR_SIDE | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SHAPE_COMMAND_POSITION),
         "touch" => Some(ValueKindSet::EVENT_TRIGGER_EVENT),
         "traditional" => Some(ValueKindSet::EAST_ASIAN_VARIANT_VALUES),
         "transform-function" => Some(ValueKindSet::SYNTAX_TYPE_NAME),
@@ -1026,18 +1019,10 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "woff" => Some(ValueKindSet::FONT_FORMAT),
         "woff2" => Some(ValueKindSet::FONT_FORMAT),
         "x" => Some(ValueKindSet::AXIS),
-        "x-end" => Some(
-            ValueKindSet::SHAPE_COMMAND_POSITION
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION,
-        ),
+        "x-end" => Some(ValueKindSet::SHAPE_COMMAND_POSITION | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION),
         "x-large" => Some(ValueKindSet::ABSOLUTE_SIZE),
         "x-small" => Some(ValueKindSet::ABSOLUTE_SIZE),
-        "x-start" => Some(
-            ValueKindSet::SHAPE_COMMAND_POSITION
-                | ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION,
-        ),
+        "x-start" => Some(ValueKindSet::SHAPE_COMMAND_POSITION | ValueKindSet::POSITION_AREA | ValueKindSet::POSITION),
         "xor" => Some(ValueKindSet::COMPOSITE_MODE),
         "xx-large" => Some(ValueKindSet::ABSOLUTE_SIZE),
         "xx-small" => Some(ValueKindSet::ABSOLUTE_SIZE),
@@ -1046,16 +1031,8 @@ pub fn lookup_keyword_kinds(name: &str) -> Option<ValueKindSet> {
         "xyz-d50" => Some(ValueKindSet::COLOR_SPACE),
         "xyz-d65" => Some(ValueKindSet::COLOR_SPACE),
         "y" => Some(ValueKindSet::AXIS),
-        "y-end" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SHAPE_COMMAND_POSITION,
-        ),
-        "y-start" => Some(
-            ValueKindSet::POSITION_AREA
-                | ValueKindSet::POSITION
-                | ValueKindSet::SHAPE_COMMAND_POSITION,
-        ),
+        "y-end" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SHAPE_COMMAND_POSITION),
+        "y-start" => Some(ValueKindSet::POSITION_AREA | ValueKindSet::POSITION | ValueKindSet::SHAPE_COMMAND_POSITION),
         "yellow" => Some(ValueKindSet::COLOR),
         "yellowgreen" => Some(ValueKindSet::COLOR),
         "zoom-in" => Some(ValueKindSet::CURSOR_PREDEFINED),

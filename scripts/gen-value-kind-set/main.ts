@@ -119,6 +119,29 @@ function generateKindNames(allKinds: string[]): string {
   return lines.join("\n");
 }
 
+function generateLookupKindByName(allKinds: string[]): string {
+  const lines: string[] = [];
+  lines.push(
+    "pub fn lookup_kind_by_name(name: &str) -> Option<ValueKindSet> {",
+  );
+  lines.push("    match &*name.to_ascii_lowercase() {");
+
+  for (const kind of allKinds) {
+    const constName = kindToConstName(kind);
+    lines.push(`        "${kind}" => Some(ValueKindSet::${constName}),`);
+  }
+
+  // Composite alias
+  lines.push(
+    `        "length-percentage" => Some(ValueKindSet::LENGTH_PERCENTAGE),`,
+  );
+
+  lines.push("        _ => None,");
+  lines.push("    }");
+  lines.push("}");
+  return lines.join("\n");
+}
+
 function generateLookupFn(
   fnName: string,
   map: Record<string, string[]>,
@@ -184,6 +207,8 @@ async function main() {
     generateKindNames(allKinds),
     "",
     generateFromSyntaxComponentKind(),
+    "",
+    generateLookupKindByName(allKinds),
     "",
     generateLookupFn("lookup_keyword_kinds", keywordMap),
     "",

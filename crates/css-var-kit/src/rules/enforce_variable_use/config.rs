@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde::Deserialize;
 
 use crate::config::ConfigError;
-use crate::type_checker::value_kind::ValueKindSet;
+use crate::type_checker::value_kind::{ValueKindSet, lookup_kind_by_name};
 
 #[derive(Default, Debug, Deserialize)]
 #[serde(untagged)]
@@ -96,27 +96,8 @@ impl EnforceVariableUseConfig {
 }
 
 fn parse_type_name(name: &str) -> Result<ValueKindSet, ConfigError> {
-    let r = match name {
-        "color" => ValueKindSet::COLOR,
-        "length" => ValueKindSet::LENGTH,
-        "number" => ValueKindSet::NUMBER,
-        "percentage" => ValueKindSet::PERCENTAGE,
-        "length-percentage" => ValueKindSet::LENGTH_PERCENTAGE,
-        "integer" => ValueKindSet::INTEGER,
-        "angle" => ValueKindSet::ANGLE,
-        "time" => ValueKindSet::TIME,
-        "resolution" => ValueKindSet::RESOLUTION,
-        "image" => ValueKindSet::IMAGE,
-        "url" => ValueKindSet::URL,
-        "transform-function" => ValueKindSet::TRANSFORM_FUNCTION,
-        "transform-list" => ValueKindSet::TRANSFORM_LIST,
-        _ => {
-            return Err(ConfigError::InvalidRuleOption {
-                raw: name.to_string(),
-                reason: format!("unknown type '{name}'"),
-            });
-        }
-    };
-
-    Ok(r)
+    lookup_kind_by_name(name).ok_or_else(|| ConfigError::InvalidRuleOption {
+        raw: name.to_string(),
+        reason: format!("unknown type '{name}'"),
+    })
 }

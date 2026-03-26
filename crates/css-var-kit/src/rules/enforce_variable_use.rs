@@ -7,7 +7,7 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
-use crate::type_checker::value_kind::{ValueKind, ValueKindSet, kind_of};
+use crate::type_checker::value_kind::{ValueKindSet, lookup_keyword_kinds};
 use config::EnforceVariableUseConfig;
 
 pub mod config;
@@ -81,9 +81,13 @@ impl EnforceVariableUse {
                     }
                 }
 
-                // UnresolvedColor contains var() references in color functions
-                // (e.g. rgb(var(--r), 0, 0)), so it's not a pure literal
-                TokenOrValue::UnresolvedColor(_) => vec![],
+                TokenOrValue::UnresolvedColor(_) => {
+                    if self.types.intersects(ValueKindSet::COLOR) {
+                        vec![make_diagnostic(prop, "color")]
+                    } else {
+                        vec![]
+                    }
+                }
 
                 TokenOrValue::Length(_) => {
                     if self.types.intersects(ValueKindSet::LENGTH) {
@@ -178,8 +182,9 @@ impl EnforceVariableUse {
                 if is_allowed_value(&css_str, &self.allowed_values) {
                     return vec![];
                 }
-                let ValueKind::Single(kinds) = kind_of(&css_str) else {
-                    return vec![];
+                let kinds = match int_value {
+                    Some(_) => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
+                    None => ValueKindSet::NUMBER,
                 };
                 let matched = kinds & self.types;
                 if matched.is_empty() {
@@ -196,8 +201,9 @@ impl EnforceVariableUse {
                 if is_allowed_value(s, &self.allowed_values) {
                     return vec![];
                 }
-                let ValueKind::Single(kinds) = kind_of(s) else {
-                    return vec![];
+                let kinds = match lookup_keyword_kinds(s) {
+                    Some(k) => k,
+                    None => return vec![],
                 };
                 let matched = kinds & self.types;
                 if matched.is_empty() {
@@ -486,6 +492,36 @@ mod tests {
                 "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
                 "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
             ],
+        );
+    }
+
+    #[test]
+    fn detects_light_dark_literal_colors() {
+        // Fully resolvable light-dark() is parsed as TokenOrValue::Color
+        assert_messages(
+            ".a { color: light-dark(white, black); }",
+            &["color"],
+            &["use a CSS variable instead of the literal color `light-dark(white, black)`"],
+        );
+    }
+
+    #[test]
+    fn detects_light_dark_with_var() {
+        // UnresolvedColor is always flagged as color
+        assert_messages(
+            ".a { color: light-dark(red, var(--dark)); }",
+            &["color"],
+            &["use a CSS variable instead of the literal color `light-dark(red, var(--dark))`"],
+        );
+    }
+
+    #[test]
+    fn detects_rgb_with_var_alpha() {
+        // UnresolvedColor::RGB is flagged as color even with var() in alpha
+        assert_messages(
+            ".a { color: rgb(255 0 0 / var(--alpha)); }",
+            &["color"],
+            &["use a CSS variable instead of the literal color `rgb(255 0 0 / var(--alpha))`"],
         );
     }
 
