@@ -1,14 +1,15 @@
 use std::collections::HashSet;
 
-use lightningcss::properties::custom::{Token, TokenList, TokenOrValue};
-
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
-use crate::type_checker::value_kind::{ValueKindSet, lookup_keyword_kinds};
+use crate::type_checker::value_kind::{
+    ValueKindSet, lookup_dimension_unit_kinds, lookup_keyword_kinds,
+};
 use config::EnforceVariableUseConfig;
+use cssparser::{ParseError, Parser, ParserInput, Token};
 
 pub mod config;
 
@@ -40,189 +41,151 @@ impl Rule for EnforceVariableUse {
         props
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
-            .flat_map(|p| {
-                p.value
-                    .token_list
-                    .as_ref()
-                    .map(|tl| self.walk_tokens(tl, p))
-                    .unwrap_or_default()
-            })
+            .flat_map(|p| self.check_tokens(p.value.raw, p))
             .collect()
     }
 }
 
 impl EnforceVariableUse {
-    fn walk_tokens<'src>(
-        &self,
-        token_list: &TokenList<'_>,
-        prop: &'src Property<'src>,
-    ) -> Vec<Diagnostic<'src>> {
-        token_list
-            .0
-            .iter()
-            .flat_map(|token| match token {
-                TokenOrValue::Var(_) | TokenOrValue::DashedIdent(_) => vec![],
-
-                TokenOrValue::Function(func) => {
-                    if self.allowed_functions.contains(&*func.name) {
-                        vec![]
-                    } else {
-                        self.walk_tokens(&func.arguments, prop)
-                    }
-                }
-
-                TokenOrValue::Env(_) => vec![],
-
-                TokenOrValue::Color(_) => {
-                    if self.types.intersects(ValueKindSet::COLOR) {
-                        vec![make_diagnostic(prop, "color")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::UnresolvedColor(_) => {
-                    if self.types.intersects(ValueKindSet::COLOR) {
-                        vec![make_diagnostic(prop, "color")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Length(_) => {
-                    if self.types.intersects(ValueKindSet::LENGTH) {
-                        vec![make_diagnostic(prop, "length")]
-                    } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
-                        vec![make_diagnostic(prop, "length-percentage")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Angle(_) => {
-                    if self.types.intersects(ValueKindSet::ANGLE) {
-                        vec![make_diagnostic(prop, "angle")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Time(_) => {
-                    if self.types.intersects(ValueKindSet::TIME) {
-                        vec![make_diagnostic(prop, "time")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Resolution(_) => {
-                    if self.types.intersects(ValueKindSet::RESOLUTION) {
-                        vec![make_diagnostic(prop, "resolution")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Url(_) => {
-                    if self.types.intersects(ValueKindSet::URL) {
-                        vec![make_diagnostic(prop, "url")]
-                    } else if self.types.intersects(ValueKindSet::IMAGE) {
-                        vec![make_diagnostic(prop, "image")]
-                    } else {
-                        vec![]
-                    }
-                }
-
-                TokenOrValue::Token(tok) => self.check_raw_token(tok, prop),
-
-                _ => vec![],
-            })
-            .collect()
+    fn check_tokens<'src>(&self, raw: &str, prop: &'src Property<'src>) -> Vec<Diagnostic<'src>> {
+        let mut input = ParserInput::new(raw);
+        let mut parser = Parser::new(&mut input);
+        self.check_tokens_inner(&mut parser, prop)
     }
 
-    fn check_raw_token<'src>(
+    fn check_tokens_inner<'src>(
         &self,
-        tok: &Token<'_>,
+        parser: &mut Parser<'_, '_>,
         prop: &'src Property<'src>,
     ) -> Vec<Diagnostic<'src>> {
-        match tok {
-            Token::Percentage {
-                unit_value,
-                int_value,
-                ..
-            } => {
-                if !self
-                    .types
-                    .intersects(ValueKindSet::PERCENTAGE | ValueKindSet::LENGTH_PERCENTAGE)
-                {
-                    return vec![];
-                }
-                let css_str = match int_value {
-                    Some(i) => format!("{i}%"),
-                    None => format!("{}%", unit_value * 100.0),
-                };
-                if is_allowed_value(&css_str, &self.allowed_values) {
-                    return vec![];
+        let mut diagnostics = Vec::new();
+
+        loop {
+            let start = parser.position();
+            let token = match parser.next_including_whitespace_and_comments() {
+                Ok(t) => t.clone(),
+                Err(_) => break,
+            };
+
+            match token {
+                Token::WhiteSpace(_)
+                | Token::Comment(_)
+                | Token::Comma
+                | Token::Semicolon
+                | Token::Delim(_) => {}
+
+                Token::Function(ref name) => {
+                    let func_name: &str = name;
+
+                    if func_name == "var"
+                        || func_name == "env"
+                        || self
+                            .allowed_functions
+                            .contains(&func_name.to_ascii_lowercase())
+                    {
+                        continue;
+                    }
+
+                    let inner_diagnostics = parser
+                        .parse_nested_block(
+                            |inner| -> Result<Vec<Diagnostic>, ParseError<'_, ()>> {
+                                Ok(self.check_tokens_inner(inner, prop))
+                            },
+                        )
+                        // this function never returns Err
+                        .unwrap();
+
+                    diagnostics.extend(inner_diagnostics);
                 }
 
-                if self.types.intersects(ValueKindSet::PERCENTAGE) {
-                    vec![make_diagnostic(prop, "percentage")]
+                ref token => {
+                    if self.allowed_values.contains(parser.slice_from(start)) {
+                        continue;
+                    }
+                    if let Some(diagnostic) = self.check_token(token, prop) {
+                        diagnostics.push(diagnostic);
+                    }
+                }
+            }
+        }
+
+        diagnostics
+    }
+
+    fn check_token<'src>(
+        &self,
+        token: &Token<'_>,
+        prop: &'src Property<'src>,
+    ) -> Option<Diagnostic<'src>> {
+        match token {
+            Token::Hash(_) | Token::IDHash(_) => self
+                .types
+                .intersects(ValueKindSet::COLOR)
+                .then(|| make_diagnostic(prop, "color")),
+
+            Token::Dimension { unit, .. } => {
+                let kinds = lookup_dimension_unit_kinds(unit)?;
+                if kinds.intersects(ValueKindSet::LENGTH) {
+                    if self.types.intersects(ValueKindSet::LENGTH) {
+                        Some(make_diagnostic(prop, "length"))
+                    } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
+                        Some(make_diagnostic(prop, "length-percentage"))
+                    } else {
+                        None
+                    }
                 } else {
-                    vec![make_diagnostic(prop, "length-percentage")]
+                    let matched = kinds & self.types;
+                    matched
+                        .iter_kind_names()
+                        .next()
+                        .map(|name| make_diagnostic(prop, name))
                 }
             }
 
-            Token::Number {
-                value, int_value, ..
-            } => {
-                let css_str = match int_value {
-                    Some(i) => i.to_string(),
-                    None => value.to_string(),
-                };
-                if is_allowed_value(&css_str, &self.allowed_values) {
-                    return vec![];
-                }
+            Token::Number { int_value, .. } => {
                 let kinds = match int_value {
                     Some(_) => ValueKindSet::INTEGER | ValueKindSet::NUMBER,
                     None => ValueKindSet::NUMBER,
                 };
+
                 let matched = kinds & self.types;
-                if matched.is_empty() {
-                    return vec![];
-                }
                 matched
                     .iter_kind_names()
                     .next()
-                    .map(|name| vec![make_diagnostic(prop, name)])
-                    .unwrap_or_default()
+                    .map(|name| make_diagnostic(prop, name))
             }
 
-            Token::Ident(s) => {
-                if is_allowed_value(s, &self.allowed_values) {
-                    return vec![];
+            Token::Percentage { .. } => {
+                if self.types.intersects(ValueKindSet::PERCENTAGE) {
+                    Some(make_diagnostic(prop, "percentage"))
+                } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
+                    Some(make_diagnostic(prop, "length-percentage"))
+                } else {
+                    None
                 }
-                let kinds = match lookup_keyword_kinds(s) {
-                    Some(k) => k,
-                    None => return vec![],
-                };
-                let matched = kinds & self.types;
-                if matched.is_empty() {
-                    return vec![];
-                }
+            }
+
+            Token::Ident(name) => {
+                let matched = lookup_keyword_kinds(name)? & self.types;
                 matched
                     .iter_kind_names()
                     .next()
-                    .map(|name| vec![make_diagnostic(prop, name)])
-                    .unwrap_or_default()
+                    .map(|name| make_diagnostic(prop, name))
             }
 
-            _ => vec![],
+            Token::QuotedString(_) => self
+                .types
+                .intersects(ValueKindSet::STRING)
+                .then(|| make_diagnostic(prop, "string")),
+
+            Token::UnquotedUrl(_) => self
+                .types
+                .intersects(ValueKindSet::URL)
+                .then(|| make_diagnostic(prop, "url")),
+
+            _ => None,
         }
     }
-}
-
-fn is_allowed_value(value: &str, allowed_values: &HashSet<String>) -> bool {
-    allowed_values.contains(value)
 }
 
 fn make_diagnostic<'src>(prop: &'src Property<'src>, kind_name: &str) -> Diagnostic<'src> {
@@ -263,6 +226,8 @@ mod tests {
                 "revert-layer",
                 "currentColor",
                 "transparent",
+                "#000000",
+                "999px",
             ]
             .iter()
             .map(|s| s.to_string())
@@ -347,6 +312,16 @@ mod tests {
     }
 
     #[test]
+    fn allows_literal_color() {
+        assert_messages(".a { color: #000000; }", &["color"], &[]);
+    }
+
+    #[test]
+    fn allows_literal_length() {
+        assert_messages(".a { width: 999px; }", &["length"], &[]);
+    }
+
+    #[test]
     fn allows_calc_function() {
         assert_messages(".a { width: calc(100% - 20px); }", &["length"], &[]);
     }
@@ -396,12 +371,8 @@ mod tests {
     }
 
     #[test]
-    fn detects_rgb_function_color() {
-        assert_messages(
-            ".a { color: rgb(255, 0, 0); }",
-            &["color"],
-            &["use a CSS variable instead of the literal color `rgb(255, 0, 0)`"],
-        );
+    fn rgb_arguments_are_not_colors() {
+        assert_messages(".a { color: rgb(255, 0, 0); }", &["color"], &[]);
     }
 
     #[test]
@@ -414,7 +385,7 @@ mod tests {
     }
 
     #[test]
-    fn detects_angle() {
+    fn detects_angle_inside_function() {
         assert_messages(
             ".a { transform: rotate(90deg); }",
             &["angle"],
@@ -497,17 +468,18 @@ mod tests {
 
     #[test]
     fn detects_light_dark_literal_colors() {
-        // Fully resolvable light-dark() is parsed as TokenOrValue::Color
         assert_messages(
             ".a { color: light-dark(white, black); }",
             &["color"],
-            &["use a CSS variable instead of the literal color `light-dark(white, black)`"],
+            &[
+                "use a CSS variable instead of the literal color `light-dark(white, black)`",
+                "use a CSS variable instead of the literal color `light-dark(white, black)`",
+            ],
         );
     }
 
     #[test]
     fn detects_light_dark_with_var() {
-        // UnresolvedColor is always flagged as color
         assert_messages(
             ".a { color: light-dark(red, var(--dark)); }",
             &["color"],
@@ -516,12 +488,11 @@ mod tests {
     }
 
     #[test]
-    fn detects_rgb_with_var_alpha() {
-        // UnresolvedColor::RGB is flagged as color even with var() in alpha
+    fn rgb_with_var_alpha_no_color_detection() {
         assert_messages(
             ".a { color: rgb(255 0 0 / var(--alpha)); }",
             &["color"],
-            &["use a CSS variable instead of the literal color `rgb(255 0 0 / var(--alpha))`"],
+            &[],
         );
     }
 

@@ -323,6 +323,21 @@ fn raw_token_to_value_kind(tok: &Token) -> Option<ValueKind> {
     Some(kind)
 }
 
+pub fn lookup_dimension_unit_kinds(unit: &str) -> Option<ValueKindSet> {
+    match &*unit.to_ascii_lowercase() {
+        "px" | "in" | "cm" | "mm" | "q" | "pt" | "pc" | "em" | "rem" | "ex" | "rex" | "ch"
+        | "rch" | "cap" | "rcap" | "ic" | "ric" | "lh" | "rlh" | "vw" | "lvw" | "svw" | "dvw"
+        | "vh" | "lvh" | "svh" | "dvh" | "vi" | "svi" | "lvi" | "dvi" | "vb" | "svb" | "lvb"
+        | "dvb" | "vmin" | "svmin" | "lvmin" | "dvmin" | "vmax" | "svmax" | "lvmax" | "dvmax"
+        | "cqw" | "cqh" | "cqi" | "cqb" | "cqmin" | "cqmax" => Some(ValueKindSet::LENGTH),
+
+        "deg" | "rad" | "grad" | "turn" => Some(ValueKindSet::ANGLE),
+        "s" | "ms" => Some(ValueKindSet::TIME),
+        "dpi" | "dpcm" | "dppx" | "x" => Some(ValueKindSet::RESOLUTION),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
