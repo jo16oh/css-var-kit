@@ -44,74 +44,78 @@ bitflags::bitflags! {
         const CORNER_SHAPE = 1 << 37;
         const CURSOR_PREDEFINED = 1 << 38;
         const CUSTOM_IDENT = 1 << 39;
-        const DISPLAY = 1 << 40;
-        const EASING_FUNCTION = 1 << 41;
-        const EAST_ASIAN_VARIANT_VALUES = 1 << 42;
-        const EAST_ASIAN_WIDTH_VALUES = 1 << 43;
-        const EVENT_TRIGGER_EVENT = 1 << 44;
-        const FILTER = 1 << 45;
-        const FONT_FEATURES_TECH = 1 << 46;
-        const FONT_FORMAT = 1 << 47;
-        const FONT_TECH = 1 << 48;
-        const FONT_VARIANT_CSS2 = 1 << 49;
-        const FONT_WEIGHT_ABSOLUTE = 1 << 50;
-        const FONT_WIDTH_CSS3 = 1 << 51;
-        const GENERIC_FAMILY = 1 << 52;
-        const GRID_TRACK = 1 << 53;
-        const HUE_INTERPOLATION_METHOD = 1 << 54;
-        const IMAGE = 1 << 55;
-        const IMAGE_TAGS = 1 << 56;
-        const INIT_DESCRIPTOR_NAME = 1 << 57;
-        const INTEGER = 1 << 58;
-        const ISOLATION_MODE = 1 << 59;
-        const KEYFRAME_SELECTOR = 1 << 60;
-        const LEADER_TYPE = 1 << 61;
-        const LEGACY_PSEUDO_ELEMENT_SELECTOR = 1 << 62;
-        const LENGTH = 1 << 63;
-        const LIGATURE_VALUES = 1 << 64;
-        const LINE_STYLE = 1 << 65;
-        const LINE_WIDTH = 1 << 66;
-        const MASKING_MODE = 1 << 67;
-        const NAVIGATION_LOCATION_KEYWORD = 1 << 68;
-        const NAVIGATION_TYPE_KEYWORD = 1 << 69;
-        const NUMBER = 1 << 70;
-        const NUMERIC_FIGURE_VALUES = 1 << 71;
-        const NUMERIC_FRACTION_VALUES = 1 << 72;
-        const NUMERIC_SPACING_VALUES = 1 << 73;
-        const PAGE_SIZE = 1 << 74;
-        const PERCENTAGE = 1 << 75;
-        const POSITION = 1 << 76;
-        const POSITION_AREA = 1 << 77;
-        const PSEUDO_PAGE = 1 << 78;
-        const QUOTE = 1 << 79;
-        const RADIAL_EXTENT = 1 << 80;
-        const RADIAL_SHAPE = 1 << 81;
-        const REFERRER_POLICY_MODIFIER = 1 << 82;
-        const RELATIVE_SIZE = 1 << 83;
-        const REPEAT_STYLE = 1 << 84;
-        const REQUEST_MODIFIER = 1 << 85;
-        const RESOLUTION = 1 << 86;
-        const ROUNDING_STRATEGY = 1 << 87;
-        const SCROLL_BUTTON_DIRECTION = 1 << 88;
-        const SHAPE_COMMAND_POSITION = 1 << 89;
-        const SNAP = 1 << 90;
-        const SOURCE = 1 << 91;
-        const SPACING_TRIM = 1 << 92;
-        const STEP_POSITION = 1 << 93;
-        const STRING = 1 << 94;
-        const SYMBOLS_TYPE = 1 << 95;
-        const SYNTAX_TYPE_NAME = 1 << 96;
-        const SYSTEM_FAMILY_NAME = 1 << 97;
-        const TEXT_EDGE = 1 << 98;
-        const TIME = 1 << 99;
-        const TRACK_BREADTH = 1 << 100;
-        const TRANSFORM_FUNCTION = 1 << 101;
-        const TRANSFORM_LIST = 1 << 102;
-        const TRANSITION_BEHAVIOR = 1 << 103;
-        const TRY_SIZE = 1 << 104;
-        const TRY_TACTIC = 1 << 105;
-        const URL = 1 << 106;
-        const WCAG2 = 1 << 107;
+        const DECIBEL = 1 << 40;
+        const DISPLAY = 1 << 41;
+        const EASING_FUNCTION = 1 << 42;
+        const EAST_ASIAN_VARIANT_VALUES = 1 << 43;
+        const EAST_ASIAN_WIDTH_VALUES = 1 << 44;
+        const EVENT_TRIGGER_EVENT = 1 << 45;
+        const FILTER = 1 << 46;
+        const FLEX = 1 << 47;
+        const FONT_FEATURES_TECH = 1 << 48;
+        const FONT_FORMAT = 1 << 49;
+        const FONT_TECH = 1 << 50;
+        const FONT_VARIANT_CSS2 = 1 << 51;
+        const FONT_WEIGHT_ABSOLUTE = 1 << 52;
+        const FONT_WIDTH_CSS3 = 1 << 53;
+        const FREQUENCY = 1 << 54;
+        const GENERIC_FAMILY = 1 << 55;
+        const GRID_TRACK = 1 << 56;
+        const HUE_INTERPOLATION_METHOD = 1 << 57;
+        const IMAGE = 1 << 58;
+        const IMAGE_TAGS = 1 << 59;
+        const INIT_DESCRIPTOR_NAME = 1 << 60;
+        const INTEGER = 1 << 61;
+        const ISOLATION_MODE = 1 << 62;
+        const KEYFRAME_SELECTOR = 1 << 63;
+        const LEADER_TYPE = 1 << 64;
+        const LEGACY_PSEUDO_ELEMENT_SELECTOR = 1 << 65;
+        const LENGTH = 1 << 66;
+        const LIGATURE_VALUES = 1 << 67;
+        const LINE_STYLE = 1 << 68;
+        const LINE_WIDTH = 1 << 69;
+        const MASKING_MODE = 1 << 70;
+        const NAVIGATION_LOCATION_KEYWORD = 1 << 71;
+        const NAVIGATION_TYPE_KEYWORD = 1 << 72;
+        const NUMBER = 1 << 73;
+        const NUMERIC_FIGURE_VALUES = 1 << 74;
+        const NUMERIC_FRACTION_VALUES = 1 << 75;
+        const NUMERIC_SPACING_VALUES = 1 << 76;
+        const PAGE_SIZE = 1 << 77;
+        const PERCENTAGE = 1 << 78;
+        const POSITION = 1 << 79;
+        const POSITION_AREA = 1 << 80;
+        const PSEUDO_PAGE = 1 << 81;
+        const QUOTE = 1 << 82;
+        const RADIAL_EXTENT = 1 << 83;
+        const RADIAL_SHAPE = 1 << 84;
+        const REFERRER_POLICY_MODIFIER = 1 << 85;
+        const RELATIVE_SIZE = 1 << 86;
+        const REPEAT_STYLE = 1 << 87;
+        const REQUEST_MODIFIER = 1 << 88;
+        const RESOLUTION = 1 << 89;
+        const ROUNDING_STRATEGY = 1 << 90;
+        const SCROLL_BUTTON_DIRECTION = 1 << 91;
+        const SEMITONES = 1 << 92;
+        const SHAPE_COMMAND_POSITION = 1 << 93;
+        const SNAP = 1 << 94;
+        const SOURCE = 1 << 95;
+        const SPACING_TRIM = 1 << 96;
+        const STEP_POSITION = 1 << 97;
+        const STRING = 1 << 98;
+        const SYMBOLS_TYPE = 1 << 99;
+        const SYNTAX_TYPE_NAME = 1 << 100;
+        const SYSTEM_FAMILY_NAME = 1 << 101;
+        const TEXT_EDGE = 1 << 102;
+        const TIME = 1 << 103;
+        const TRACK_BREADTH = 1 << 104;
+        const TRANSFORM_FUNCTION = 1 << 105;
+        const TRANSFORM_LIST = 1 << 106;
+        const TRANSITION_BEHAVIOR = 1 << 107;
+        const TRY_SIZE = 1 << 108;
+        const TRY_TACTIC = 1 << 109;
+        const URL = 1 << 110;
+        const WCAG2 = 1 << 111;
 
         // Composite alias: LengthPercentage = Length | Percentage
         const LENGTH_PERCENTAGE = ValueKindSet::LENGTH.bits() | ValueKindSet::PERCENTAGE.bits();
@@ -159,18 +163,21 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::CORNER_SHAPE, "corner-shape"),
     (ValueKindSet::CURSOR_PREDEFINED, "cursor-predefined"),
     (ValueKindSet::CUSTOM_IDENT, "custom-ident"),
+    (ValueKindSet::DECIBEL, "decibel"),
     (ValueKindSet::DISPLAY, "display"),
     (ValueKindSet::EASING_FUNCTION, "easing-function"),
     (ValueKindSet::EAST_ASIAN_VARIANT_VALUES, "east-asian-variant-values"),
     (ValueKindSet::EAST_ASIAN_WIDTH_VALUES, "east-asian-width-values"),
     (ValueKindSet::EVENT_TRIGGER_EVENT, "event-trigger-event"),
     (ValueKindSet::FILTER, "filter"),
+    (ValueKindSet::FLEX, "flex"),
     (ValueKindSet::FONT_FEATURES_TECH, "font-features-tech"),
     (ValueKindSet::FONT_FORMAT, "font-format"),
     (ValueKindSet::FONT_TECH, "font-tech"),
     (ValueKindSet::FONT_VARIANT_CSS2, "font-variant-css2"),
     (ValueKindSet::FONT_WEIGHT_ABSOLUTE, "font-weight-absolute"),
     (ValueKindSet::FONT_WIDTH_CSS3, "font-width-css3"),
+    (ValueKindSet::FREQUENCY, "frequency"),
     (ValueKindSet::GENERIC_FAMILY, "generic-family"),
     (ValueKindSet::GRID_TRACK, "grid-track"),
     (ValueKindSet::HUE_INTERPOLATION_METHOD, "hue-interpolation-method"),
@@ -208,6 +215,7 @@ const KIND_NAMES: &[(ValueKindSet, &str)] = &[
     (ValueKindSet::RESOLUTION, "resolution"),
     (ValueKindSet::ROUNDING_STRATEGY, "rounding-strategy"),
     (ValueKindSet::SCROLL_BUTTON_DIRECTION, "scroll-button-direction"),
+    (ValueKindSet::SEMITONES, "semitones"),
     (ValueKindSet::SHAPE_COMMAND_POSITION, "shape-command-position"),
     (ValueKindSet::SNAP, "snap"),
     (ValueKindSet::SOURCE, "source"),
@@ -300,18 +308,21 @@ pub fn lookup_kind_by_name(name: &str) -> Option<ValueKindSet> {
         "corner-shape" => Some(ValueKindSet::CORNER_SHAPE),
         "cursor-predefined" => Some(ValueKindSet::CURSOR_PREDEFINED),
         "custom-ident" => Some(ValueKindSet::CUSTOM_IDENT),
+        "decibel" => Some(ValueKindSet::DECIBEL),
         "display" => Some(ValueKindSet::DISPLAY),
         "easing-function" => Some(ValueKindSet::EASING_FUNCTION),
         "east-asian-variant-values" => Some(ValueKindSet::EAST_ASIAN_VARIANT_VALUES),
         "east-asian-width-values" => Some(ValueKindSet::EAST_ASIAN_WIDTH_VALUES),
         "event-trigger-event" => Some(ValueKindSet::EVENT_TRIGGER_EVENT),
         "filter" => Some(ValueKindSet::FILTER),
+        "flex" => Some(ValueKindSet::FLEX),
         "font-features-tech" => Some(ValueKindSet::FONT_FEATURES_TECH),
         "font-format" => Some(ValueKindSet::FONT_FORMAT),
         "font-tech" => Some(ValueKindSet::FONT_TECH),
         "font-variant-css2" => Some(ValueKindSet::FONT_VARIANT_CSS2),
         "font-weight-absolute" => Some(ValueKindSet::FONT_WEIGHT_ABSOLUTE),
         "font-width-css3" => Some(ValueKindSet::FONT_WIDTH_CSS3),
+        "frequency" => Some(ValueKindSet::FREQUENCY),
         "generic-family" => Some(ValueKindSet::GENERIC_FAMILY),
         "grid-track" => Some(ValueKindSet::GRID_TRACK),
         "hue-interpolation-method" => Some(ValueKindSet::HUE_INTERPOLATION_METHOD),
@@ -349,6 +360,7 @@ pub fn lookup_kind_by_name(name: &str) -> Option<ValueKindSet> {
         "resolution" => Some(ValueKindSet::RESOLUTION),
         "rounding-strategy" => Some(ValueKindSet::ROUNDING_STRATEGY),
         "scroll-button-direction" => Some(ValueKindSet::SCROLL_BUTTON_DIRECTION),
+        "semitones" => Some(ValueKindSet::SEMITONES),
         "shape-command-position" => Some(ValueKindSet::SHAPE_COMMAND_POSITION),
         "snap" => Some(ValueKindSet::SNAP),
         "source" => Some(ValueKindSet::SOURCE),
@@ -1154,6 +1166,76 @@ pub fn lookup_function_kinds(name: &str) -> Option<ValueKindSet> {
         "url-pattern" => Some(ValueKindSet::URL),
         "view" => Some(ValueKindSet::ANIMATION_TIMELINE),
         "xywh" => Some(ValueKindSet::BASIC_SHAPE),
+        _ => None,
+    }
+}
+
+pub fn lookup_dimension_unit_kinds(name: &str) -> Option<ValueKindSet> {
+    match &*name.to_ascii_lowercase() {
+        "cap" => Some(ValueKindSet::LENGTH),
+        "ch" => Some(ValueKindSet::LENGTH),
+        "cm" => Some(ValueKindSet::LENGTH),
+        "cqb" => Some(ValueKindSet::LENGTH),
+        "cqh" => Some(ValueKindSet::LENGTH),
+        "cqi" => Some(ValueKindSet::LENGTH),
+        "cqmax" => Some(ValueKindSet::LENGTH),
+        "cqmin" => Some(ValueKindSet::LENGTH),
+        "cqw" => Some(ValueKindSet::LENGTH),
+        "db" => Some(ValueKindSet::DECIBEL),
+        "deg" => Some(ValueKindSet::ANGLE),
+        "dpcm" => Some(ValueKindSet::RESOLUTION),
+        "dpi" => Some(ValueKindSet::RESOLUTION),
+        "dppx" => Some(ValueKindSet::RESOLUTION),
+        "dvb" => Some(ValueKindSet::LENGTH),
+        "dvh" => Some(ValueKindSet::LENGTH),
+        "dvi" => Some(ValueKindSet::LENGTH),
+        "dvmax" => Some(ValueKindSet::LENGTH),
+        "dvmin" => Some(ValueKindSet::LENGTH),
+        "dvw" => Some(ValueKindSet::LENGTH),
+        "em" => Some(ValueKindSet::LENGTH),
+        "ex" => Some(ValueKindSet::LENGTH),
+        "fr" => Some(ValueKindSet::FLEX),
+        "grad" => Some(ValueKindSet::ANGLE),
+        "hz" => Some(ValueKindSet::FREQUENCY),
+        "ic" => Some(ValueKindSet::LENGTH),
+        "in" => Some(ValueKindSet::LENGTH),
+        "khz" => Some(ValueKindSet::FREQUENCY),
+        "lh" => Some(ValueKindSet::LENGTH),
+        "lvb" => Some(ValueKindSet::LENGTH),
+        "lvh" => Some(ValueKindSet::LENGTH),
+        "lvi" => Some(ValueKindSet::LENGTH),
+        "lvmax" => Some(ValueKindSet::LENGTH),
+        "lvmin" => Some(ValueKindSet::LENGTH),
+        "lvw" => Some(ValueKindSet::LENGTH),
+        "mm" => Some(ValueKindSet::LENGTH),
+        "ms" => Some(ValueKindSet::TIME),
+        "pc" => Some(ValueKindSet::LENGTH),
+        "pt" => Some(ValueKindSet::LENGTH),
+        "px" => Some(ValueKindSet::LENGTH),
+        "q" => Some(ValueKindSet::LENGTH),
+        "rad" => Some(ValueKindSet::ANGLE),
+        "rcap" => Some(ValueKindSet::LENGTH),
+        "rch" => Some(ValueKindSet::LENGTH),
+        "rem" => Some(ValueKindSet::LENGTH),
+        "rex" => Some(ValueKindSet::LENGTH),
+        "ric" => Some(ValueKindSet::LENGTH),
+        "rlh" => Some(ValueKindSet::LENGTH),
+        "s" => Some(ValueKindSet::TIME),
+        "st" => Some(ValueKindSet::SEMITONES),
+        "svb" => Some(ValueKindSet::LENGTH),
+        "svh" => Some(ValueKindSet::LENGTH),
+        "svi" => Some(ValueKindSet::LENGTH),
+        "svmax" => Some(ValueKindSet::LENGTH),
+        "svmin" => Some(ValueKindSet::LENGTH),
+        "svw" => Some(ValueKindSet::LENGTH),
+        "turn" => Some(ValueKindSet::ANGLE),
+        "vb" => Some(ValueKindSet::LENGTH),
+        "vh" => Some(ValueKindSet::LENGTH),
+        "vi" => Some(ValueKindSet::LENGTH),
+        "vmax" => Some(ValueKindSet::LENGTH),
+        "vmin" => Some(ValueKindSet::LENGTH),
+        "vw" => Some(ValueKindSet::LENGTH),
+        "x" => Some(ValueKindSet::RESOLUTION),
         _ => None,
     }
 }

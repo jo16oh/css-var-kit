@@ -1,6 +1,7 @@
 import css from "@webref/css";
 import { buildKeywordToTypes, extractTerminalTypes } from "./keyword-kinds.ts";
 import { buildFunctionToKinds } from "./function-kinds.ts";
+import { buildDimensionUnitToKinds } from "./dimension-unit-kinds.ts";
 
 // lightningcss SyntaxComponentKind variants that share a bit with keyword kinds.
 // Names must match the keyword-kinds naming convention so that overlapping
@@ -27,16 +28,14 @@ function kindToConstName(kind: string): string {
 }
 
 function collectAllKinds(
-  keywordMap: Record<string, string[]>,
-  functionMap: Record<string, string[]>,
+  ...maps: Record<string, string[]>[]
 ): string[] {
   const kinds = new Set<string>();
 
-  for (const values of Object.values(keywordMap)) {
-    for (const kind of values) kinds.add(kind);
-  }
-  for (const values of Object.values(functionMap)) {
-    for (const kind of values) kinds.add(kind);
+  for (const map of maps) {
+    for (const values of Object.values(map)) {
+      for (const kind of values) kinds.add(kind);
+    }
   }
   for (const { kind } of SYNTAX_COMPONENT_KINDS) {
     kinds.add(kind);
@@ -189,7 +188,8 @@ async function main() {
   const terminalTypes = extractTerminalTypes(data.types ?? []);
   const keywordMap = buildKeywordToTypes(terminalTypes);
   const functionMap = buildFunctionToKinds(data.functions ?? []);
-  const allKinds = collectAllKinds(keywordMap, functionMap);
+  const dimensionUnitMap = buildDimensionUnitToKinds();
+  const allKinds = collectAllKinds(keywordMap, functionMap, dimensionUnitMap);
 
   if (allKinds.length > 128) {
     console.error(
@@ -213,6 +213,8 @@ async function main() {
     generateLookupFn("lookup_keyword_kinds", keywordMap),
     "",
     generateLookupFn("lookup_function_kinds", functionMap),
+    "",
+    generateLookupFn("lookup_dimension_unit_kinds", dimensionUnitMap),
     "",
   ];
 
