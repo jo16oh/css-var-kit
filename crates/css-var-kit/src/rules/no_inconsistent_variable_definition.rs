@@ -3,8 +3,8 @@ use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
 use crate::searcher::{SearchResult, SearcherBuilder};
-use crate::type_checker::resolve_value;
 use crate::type_checker::value_kind::{ValueKind, kind_of};
+use crate::variable_resolver::resolve_variables;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
@@ -34,7 +34,7 @@ fn check_variable_definitions<'src>(
         .iter()
         .filter_map(|&p| {
             let token_list = p.value.token_list.as_ref()?;
-            let resolved = resolve_value(token_list, vars).ok()?;
+            let resolved = resolve_variables(token_list, vars).ok()?;
             let kinds = kind_of(&resolved);
             let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
             Some((p, kinds, is_ignored))

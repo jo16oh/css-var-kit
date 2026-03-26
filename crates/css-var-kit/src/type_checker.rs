@@ -2,15 +2,13 @@ pub mod value_kind;
 
 use std::collections::HashMap;
 
-use lightningcss::printer::PrinterOptions;
 use lightningcss::properties::Property as CssProperty;
 use lightningcss::properties::PropertyId;
-use lightningcss::properties::custom::{
-    CustomProperty, CustomPropertyName, Function, TokenList, TokenOrValue, Variable,
-};
+use lightningcss::properties::custom::TokenList;
 use lightningcss::stylesheet::ParserOptions;
-use lightningcss::values::ident::DashedIdent;
 use thiserror::Error;
+
+use crate::variable_resolver::contains_var;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum TypeCheckError {
@@ -52,40 +50,6 @@ pub fn check_property_type(
         },
         _ => Ok(()),
     }
-}
-
-#[derive(Debug, PartialEq, Error)]
-#[error("unresolved variable remains after substitution")]
-pub struct ResolveError;
-
-pub fn resolve_value(
-    token_list: &TokenList,
-    vars: &HashMap<&str, TokenList>,
-) -> Result<String, ResolveError> {
-    let mut resolved = token_list.clone();
-    resolved.substitute_variables(vars);
-
-    if contains_var(&resolved) {
-        return Err(ResolveError);
-    }
-
-    CssProperty::Custom(CustomProperty {
-        name: CustomPropertyName::Custom(DashedIdent("--tmp".into())),
-        value: resolved,
-    })
-    .value_to_css_string(PrinterOptions::default())
-    .map_err(|_| ResolveError)
-}
-
-fn contains_var(tokens: &TokenList) -> bool {
-    tokens.0.iter().any(|t| match t {
-        TokenOrValue::Var(Variable { fallback: None, .. }) => true,
-        TokenOrValue::Var(Variable {
-            fallback: Some(fb), ..
-        }) => contains_var(fb),
-        TokenOrValue::Function(Function { arguments, .. }) => contains_var(arguments),
-        _ => false,
-    })
 }
 
 #[cfg(test)]

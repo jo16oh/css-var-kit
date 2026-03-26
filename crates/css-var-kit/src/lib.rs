@@ -5,3 +5,4 @@ pub mod parser;
 pub mod rules;
 pub mod searcher;
 pub mod type_checker;
+pub mod variable_resolver;
