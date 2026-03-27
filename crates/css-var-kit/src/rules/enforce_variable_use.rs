@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
@@ -19,6 +19,7 @@ pub struct EnforceVariableUse {
     types: ValueKindSet,
     allowed_functions: HashSet<String>,
     allowed_values: HashSet<String>,
+    allowed_properties: HashMap<String, ValueKindSet>,
 }
 
 impl EnforceVariableUse {
@@ -27,6 +28,7 @@ impl EnforceVariableUse {
             types: config.types,
             allowed_functions: config.allowed_functions.clone(),
             allowed_values: config.allowed_values.clone(),
+            allowed_properties: config.allowed_properties.clone(),
         }
     }
 }
@@ -41,22 +43,42 @@ impl Rule for EnforceVariableUse {
         props
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
-            .flat_map(|p| self.check_tokens(p.value.raw, p))
+            .flat_map(|p| {
+                let allowed_kinds = self.allowed_property_kinds(p.name.raw);
+                let enforced_types = self.types & !allowed_kinds;
+                if enforced_types.is_empty() {
+                    return vec![];
+                }
+                self.check_tokens(p.value.raw, p, enforced_types)
+            })
             .collect()
     }
 }
 
 impl EnforceVariableUse {
-    fn check_tokens<'src>(&self, raw: &str, prop: &'src Property<'src>) -> Vec<Diagnostic<'src>> {
+    fn allowed_property_kinds(&self, property_name: &str) -> ValueKindSet {
+        self.allowed_properties
+            .get(&property_name.to_ascii_lowercase())
+            .copied()
+            .unwrap_or(ValueKindSet::empty())
+    }
+
+    fn check_tokens<'src>(
+        &self,
+        raw: &str,
+        prop: &'src Property<'src>,
+        types: ValueKindSet,
+    ) -> Vec<Diagnostic<'src>> {
         let mut input = ParserInput::new(raw);
         let mut parser = Parser::new(&mut input);
-        self.check_tokens_inner(&mut parser, prop)
+        self.check_tokens_inner(&mut parser, prop, types)
     }
 
     fn check_tokens_inner<'src>(
         &self,
         parser: &mut Parser<'_, '_>,
         prop: &'src Property<'src>,
+        types: ValueKindSet,
     ) -> Vec<Diagnostic<'src>> {
         let mut diagnostics = Vec::new();
 
@@ -89,7 +111,7 @@ impl EnforceVariableUse {
                     let inner_diagnostics = parser
                         .parse_nested_block(
                             |inner| -> Result<Vec<Diagnostic>, ParseError<'_, ()>> {
-                                Ok(self.check_tokens_inner(inner, prop))
+                                Ok(self.check_tokens_inner(inner, prop, types))
                             },
                         )
                         // this function never returns Err
@@ -102,7 +124,7 @@ impl EnforceVariableUse {
                     if self.allowed_values.contains(parser.slice_from(start)) {
                         continue;
                     }
-                    if let Some(diagnostic) = self.check_token(token, prop) {
+                    if let Some(diagnostic) = self.check_token(token, prop, types) {
                         diagnostics.push(diagnostic);
                     }
                 }
@@ -116,25 +138,25 @@ impl EnforceVariableUse {
         &self,
         token: &Token<'_>,
         prop: &'src Property<'src>,
+        types: ValueKindSet,
     ) -> Option<Diagnostic<'src>> {
         match token {
-            Token::Hash(_) | Token::IDHash(_) => self
-                .types
+            Token::Hash(_) | Token::IDHash(_) => types
                 .intersects(ValueKindSet::COLOR)
                 .then(|| make_diagnostic(prop, "color")),
 
             Token::Dimension { unit, .. } => {
                 let kinds = lookup_dimension_unit_kinds(unit)?;
                 if kinds.intersects(ValueKindSet::LENGTH) {
-                    if self.types.intersects(ValueKindSet::LENGTH) {
+                    if types.intersects(ValueKindSet::LENGTH) {
                         Some(make_diagnostic(prop, "length"))
-                    } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
+                    } else if types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
                         Some(make_diagnostic(prop, "length-percentage"))
                     } else {
                         None
                     }
                 } else {
-                    let matched = kinds & self.types;
+                    let matched = kinds & types;
                     matched
                         .iter_kind_names()
                         .next()
@@ -148,7 +170,7 @@ impl EnforceVariableUse {
                     None => ValueKindSet::NUMBER,
                 };
 
-                let matched = kinds & self.types;
+                let matched = kinds & types;
                 matched
                     .iter_kind_names()
                     .next()
@@ -156,9 +178,9 @@ impl EnforceVariableUse {
             }
 
             Token::Percentage { .. } => {
-                if self.types.intersects(ValueKindSet::PERCENTAGE) {
+                if types.intersects(ValueKindSet::PERCENTAGE) {
                     Some(make_diagnostic(prop, "percentage"))
-                } else if self.types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
+                } else if types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
                     Some(make_diagnostic(prop, "length-percentage"))
                 } else {
                     None
@@ -166,20 +188,18 @@ impl EnforceVariableUse {
             }
 
             Token::Ident(name) => {
-                let matched = lookup_keyword_kinds(name)? & self.types;
+                let matched = lookup_keyword_kinds(name)? & types;
                 matched
                     .iter_kind_names()
                     .next()
                     .map(|name| make_diagnostic(prop, name))
             }
 
-            Token::QuotedString(_) => self
-                .types
+            Token::QuotedString(_) => types
                 .intersects(ValueKindSet::STRING)
                 .then(|| make_diagnostic(prop, "string")),
 
-            Token::UnquotedUrl(_) => self
-                .types
+            Token::UnquotedUrl(_) => types
                 .intersects(ValueKindSet::URL)
                 .then(|| make_diagnostic(prop, "url")),
 
@@ -206,12 +226,21 @@ fn make_diagnostic<'src>(prop: &'src Property<'src>, kind_name: &str) -> Diagnos
 mod tests {
     use std::path::Path;
 
-    use super::config::{EnforceVariableUseConfig, RawEnforceVariableUseConfig};
+    use super::config::{
+        EnforceVariableUseConfig, RawAllowedProperty, RawEnforceVariableUseConfig,
+    };
     use super::*;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
 
     fn make_config(types: &[&str]) -> EnforceVariableUseConfig {
+        make_config_with_allowed_properties(types, vec![])
+    }
+
+    fn make_config_with_allowed_properties(
+        types: &[&str],
+        allowed_properties: Vec<RawAllowedProperty>,
+    ) -> EnforceVariableUseConfig {
         let raw = RawEnforceVariableUseConfig {
             types: types.iter().map(|s| s.to_string()).collect(),
             allowed_functions: ["calc", "min", "max", "clamp", "env"]
@@ -232,6 +261,7 @@ mod tests {
             .iter()
             .map(|s| s.to_string())
             .collect(),
+            allowed_properties,
         };
 
         EnforceVariableUseConfig::from_raw(raw).unwrap()
@@ -445,6 +475,7 @@ mod tests {
             types: vec!["color".to_string()],
             allowed_functions: vec![],
             allowed_values: vec!["red".to_string()],
+            allowed_properties: vec![],
         })
         .unwrap();
         assert_messages_with_config(
@@ -502,6 +533,7 @@ mod tests {
             types: vec!["color".to_string()],
             allowed_functions: vec!["linear-gradient".to_string()],
             allowed_values: vec![],
+            allowed_properties: vec![],
         })
         .unwrap();
         assert_messages_with_config(
@@ -509,5 +541,86 @@ mod tests {
             &config,
             &[],
         );
+    }
+
+    #[test]
+    fn allowed_property_skips_all_checks() {
+        let config = make_config_with_allowed_properties(
+            &["color", "length"],
+            vec![RawAllowedProperty::Name("color".to_string())],
+        );
+        assert_messages_with_config(
+            ".a { color: red; margin: 16px; }",
+            &config,
+            &["use a CSS variable instead of the literal length `16px`"],
+        );
+    }
+
+    #[test]
+    fn allowed_property_with_kind_skips_only_that_kind() {
+        let config = make_config_with_allowed_properties(
+            &["color", "length"],
+            vec![RawAllowedProperty::WithKinds {
+                property_name: "border".to_string(),
+                allowed_kinds: vec!["color".to_string()],
+            }],
+        );
+        assert_messages_with_config(
+            ".a { border: 1px solid red; }",
+            &config,
+            &["use a CSS variable instead of the literal length `1px solid red`"],
+        );
+    }
+
+    #[test]
+    fn allowed_property_does_not_affect_other_properties() {
+        let config = make_config_with_allowed_properties(
+            &["color"],
+            vec![RawAllowedProperty::Name("color".to_string())],
+        );
+        assert_messages_with_config(
+            ".a { color: red; background: blue; }",
+            &config,
+            &["use a CSS variable instead of the literal color `blue`"],
+        );
+    }
+
+    #[test]
+    fn allowed_property_multiple_kinds() {
+        let config = make_config_with_allowed_properties(
+            &["color", "length"],
+            vec![RawAllowedProperty::WithKinds {
+                property_name: "border".to_string(),
+                allowed_kinds: vec!["color".to_string(), "length".to_string()],
+            }],
+        );
+        assert_messages_with_config(".a { border: 1px solid red; }", &config, &[]);
+    }
+
+    #[test]
+    fn allowed_property_multiple_entries_are_ored() {
+        let config = make_config_with_allowed_properties(
+            &["color", "length"],
+            vec![
+                RawAllowedProperty::WithKinds {
+                    property_name: "border".to_string(),
+                    allowed_kinds: vec!["color".to_string()],
+                },
+                RawAllowedProperty::WithKinds {
+                    property_name: "border".to_string(),
+                    allowed_kinds: vec!["length".to_string()],
+                },
+            ],
+        );
+        assert_messages_with_config(".a { border: 1px solid red; }", &config, &[]);
+    }
+
+    #[test]
+    fn allowed_property_is_case_insensitive() {
+        let config = make_config_with_allowed_properties(
+            &["color"],
+            vec![RawAllowedProperty::Name("Color".to_string())],
+        );
+        assert_messages_with_config(".a { color: red; }", &config, &[]);
     }
 }
