@@ -121,10 +121,11 @@ impl EnforceVariableUse {
                 }
 
                 ref token => {
-                    if self.allowed_values.contains(parser.slice_from(start)) {
+                    let raw = parser.slice_from(start);
+                    if self.allowed_values.contains(raw) {
                         continue;
                     }
-                    if let Some(diagnostic) = self.check_token(token, prop, types) {
+                    if let Some(diagnostic) = self.check_token(token, raw, prop, types) {
                         diagnostics.push(diagnostic);
                     }
                 }
@@ -137,21 +138,22 @@ impl EnforceVariableUse {
     fn check_token<'src>(
         &self,
         token: &Token<'_>,
+        token_raw: &str,
         prop: &'src Property<'src>,
         types: ValueKindSet,
     ) -> Option<Diagnostic<'src>> {
         match token {
             Token::Hash(_) | Token::IDHash(_) => types
                 .intersects(ValueKindSet::COLOR)
-                .then(|| make_diagnostic(prop, "color")),
+                .then(|| make_diagnostic(prop, token_raw, "color")),
 
             Token::Dimension { unit, .. } => {
                 let kinds = lookup_dimension_unit_kinds(unit)?;
                 if kinds.intersects(ValueKindSet::LENGTH) {
                     if types.intersects(ValueKindSet::LENGTH) {
-                        Some(make_diagnostic(prop, "length"))
+                        Some(make_diagnostic(prop, token_raw, "length"))
                     } else if types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
-                        Some(make_diagnostic(prop, "length-percentage"))
+                        Some(make_diagnostic(prop, token_raw, "length-percentage"))
                     } else {
                         None
                     }
@@ -160,7 +162,7 @@ impl EnforceVariableUse {
                     matched
                         .iter_kind_names()
                         .next()
-                        .map(|name| make_diagnostic(prop, name))
+                        .map(|name| make_diagnostic(prop, token_raw, name))
                 }
             }
 
@@ -174,14 +176,14 @@ impl EnforceVariableUse {
                 matched
                     .iter_kind_names()
                     .next()
-                    .map(|name| make_diagnostic(prop, name))
+                    .map(|name| make_diagnostic(prop, token_raw, name))
             }
 
             Token::Percentage { .. } => {
                 if types.intersects(ValueKindSet::PERCENTAGE) {
-                    Some(make_diagnostic(prop, "percentage"))
+                    Some(make_diagnostic(prop, token_raw, "percentage"))
                 } else if types.intersects(ValueKindSet::LENGTH_PERCENTAGE) {
-                    Some(make_diagnostic(prop, "length-percentage"))
+                    Some(make_diagnostic(prop, token_raw, "length-percentage"))
                 } else {
                     None
                 }
@@ -192,32 +194,33 @@ impl EnforceVariableUse {
                 matched
                     .iter_kind_names()
                     .next()
-                    .map(|name| make_diagnostic(prop, name))
+                    .map(|name| make_diagnostic(prop, token_raw, name))
             }
 
             Token::QuotedString(_) => types
                 .intersects(ValueKindSet::STRING)
-                .then(|| make_diagnostic(prop, "string")),
+                .then(|| make_diagnostic(prop, token_raw, "string")),
 
             Token::UnquotedUrl(_) => types
                 .intersects(ValueKindSet::URL)
-                .then(|| make_diagnostic(prop, "url")),
+                .then(|| make_diagnostic(prop, token_raw, "url")),
 
             _ => None,
         }
     }
 }
 
-fn make_diagnostic<'src>(prop: &'src Property<'src>, kind_name: &str) -> Diagnostic<'src> {
+fn make_diagnostic<'src>(
+    prop: &'src Property<'src>,
+    token_raw: &str,
+    kind_name: &str,
+) -> Diagnostic<'src> {
     Diagnostic {
         file_path: prop.file_path,
         source: prop.source,
         line: prop.value.line,
         column: prop.value.column,
-        message: format!(
-            "use a CSS variable instead of the literal {kind_name} `{}`",
-            prop.value.raw,
-        ),
+        message: format!("use a CSS variable instead of the literal {kind_name} `{token_raw}`",),
         severity: Severity::Warning,
     }
 }
@@ -310,7 +313,7 @@ mod tests {
         assert_messages(
             ".a { border: 1px solid red; }",
             &["color"],
-            &["use a CSS variable instead of the literal color `1px solid red`"],
+            &["use a CSS variable instead of the literal color `red`"],
         );
     }
 
@@ -320,8 +323,8 @@ mod tests {
             ".a { border: 1px solid red; }",
             &["color", "length"],
             &[
-                "use a CSS variable instead of the literal color `1px solid red`",
-                "use a CSS variable instead of the literal length `1px solid red`",
+                "use a CSS variable instead of the literal color `red`",
+                "use a CSS variable instead of the literal length `1px`",
             ],
         );
     }
@@ -362,8 +365,8 @@ mod tests {
             ".a { background: linear-gradient(red, blue); }",
             &["color"],
             &[
-                "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
-                "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
+                "use a CSS variable instead of the literal color `red`",
+                "use a CSS variable instead of the literal color `blue`",
             ],
         );
     }
@@ -419,7 +422,7 @@ mod tests {
         assert_messages(
             ".a { transform: rotate(90deg); }",
             &["angle"],
-            &["use a CSS variable instead of the literal angle `rotate(90deg)`"],
+            &["use a CSS variable instead of the literal angle `90deg`"],
         );
     }
 
@@ -491,8 +494,8 @@ mod tests {
             ".a { background: linear-gradient(red, blue); }",
             &["color"],
             &[
-                "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
-                "use a CSS variable instead of the literal color `linear-gradient(red, blue)`",
+                "use a CSS variable instead of the literal color `red`",
+                "use a CSS variable instead of the literal color `blue`",
             ],
         );
     }
@@ -503,8 +506,8 @@ mod tests {
             ".a { color: light-dark(white, black); }",
             &["color"],
             &[
-                "use a CSS variable instead of the literal color `light-dark(white, black)`",
-                "use a CSS variable instead of the literal color `light-dark(white, black)`",
+                "use a CSS variable instead of the literal color `white`",
+                "use a CSS variable instead of the literal color `black`",
             ],
         );
     }
@@ -514,7 +517,7 @@ mod tests {
         assert_messages(
             ".a { color: light-dark(red, var(--dark)); }",
             &["color"],
-            &["use a CSS variable instead of the literal color `light-dark(red, var(--dark))`"],
+            &["use a CSS variable instead of the literal color `red`"],
         );
     }
 
@@ -568,7 +571,7 @@ mod tests {
         assert_messages_with_config(
             ".a { border: 1px solid red; }",
             &config,
-            &["use a CSS variable instead of the literal length `1px solid red`"],
+            &["use a CSS variable instead of the literal length `1px`"],
         );
     }
 

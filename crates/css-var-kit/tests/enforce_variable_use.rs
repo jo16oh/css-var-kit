@@ -27,7 +27,7 @@ fn reports_literal_color_in_shorthand() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "use a CSS variable instead of the literal color `1px solid blue`",
+            "use a CSS variable instead of the literal color `blue`",
         ));
 }
 
