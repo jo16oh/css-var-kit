@@ -178,6 +178,16 @@ mod tests {
     }
 
     #[test]
+    fn mismatch_single_value_variable_in_compound_value() {
+        assert_messages(
+            ":root { --my-size: 10px; } .a { border: solid 1px var(--my-size); }",
+            &[
+                "Type mismatch: resolved value of `solid 1px var(--my-size)` is not valid for property `border`",
+            ],
+        );
+    }
+
+    #[test]
     fn multiple_usages_mixed() {
         assert_messages(
             ":root { --color: red; --size: 16px; } .a { color: var(--color); width: var(--color); }",
