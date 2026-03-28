@@ -48,6 +48,7 @@ mod tests {
             source: "",
             name: PropertyIdent {
                 raw: name,
+                unescaped: name.into(),
                 property_id: PropertyId::from(name),
                 offset: 0,
                 line: 0,

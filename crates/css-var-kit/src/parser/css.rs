@@ -1,13 +1,16 @@
+use std::borrow::Cow;
 use std::path::Path;
 
 use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::TokenList;
 use lightningcss::stylesheet::ParserOptions;
 use lightningcss::traits::ParseWithOptions;
+use lightningcss::values::string::CowArcStr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyIdent<'src> {
     pub raw: &'src str,
+    pub unescaped: Cow<'src, str>,
     pub property_id: PropertyId<'src>,
     pub offset: usize,
     pub line: u32,
@@ -91,6 +94,26 @@ impl<'a> Scanner<'a> {
         while self.pos < self.bytes.len()
             && (self.bytes[self.pos] == b' ' || self.bytes[self.pos] == b'\t')
         {
+            self.advance(1);
+        }
+    }
+
+    fn skip_escape(&mut self) {
+        self.advance(1); // skip '\'
+        if self.is_eof() {
+            return;
+        }
+        if self.bytes[self.pos].is_ascii_hexdigit() {
+            let mut count = 0;
+            while !self.is_eof() && count < 6 && self.bytes[self.pos].is_ascii_hexdigit() {
+                self.advance(1);
+                count += 1;
+            }
+            // Consume optional trailing whitespace (single space/tab/newline)
+            if !self.is_eof() && matches!(self.bytes[self.pos], b' ' | b'\t' | b'\n' | b'\r') {
+                self.advance(1);
+            }
+        } else if self.bytes[self.pos] != b'\n' && self.bytes[self.pos] != b'\r' {
             self.advance(1);
         }
     }
@@ -316,9 +339,15 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                     pending_ignores.clear();
                 }
 
-                // Read the identifier
-                while !s.is_eof() && is_ident_char(s.bytes[s.pos]) {
-                    s.advance(1);
+                // Read the identifier (including escape sequences and non-ASCII)
+                while !s.is_eof() {
+                    if s.bytes[s.pos] == b'\\' {
+                        s.skip_escape();
+                    } else if is_ident_char(s.bytes[s.pos]) {
+                        s.advance(1);
+                    } else {
+                        break;
+                    }
                 }
                 let name_end = s.pos;
 
@@ -345,12 +374,15 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
 
                     let ignore_comments = std::mem::take(&mut pending_ignores);
                     let raw_name = &css[name_start..name_end];
+                    let unescaped = unescape_css_ident(raw_name);
+                    let property_id = PropertyId::from(CowArcStr::from(unescaped.clone()));
                     properties.push(Property {
                         file_path,
                         source: css,
                         name: PropertyIdent {
                             raw: raw_name,
-                            property_id: PropertyId::from(raw_name),
+                            property_id,
+                            unescaped,
                             offset: name_start,
                             line: name_line,
                             column: name_col,
@@ -380,27 +412,94 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
 }
 
 fn is_ident_start(b: u8) -> bool {
-    b.is_ascii_alphabetic() || b == b'-' || b == b'_'
+    b.is_ascii_alphabetic() || b == b'-' || b == b'_' || b == b'\\' || b >= 0x80
 }
 
 fn is_ident_char(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'-' || b == b'_'
+    b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b >= 0x80
 }
 
-/// Check if the bytes at this position look like the start of a new property (ident followed by ':').
+fn skip_escape_bytes(bytes: &[u8], pos: usize) -> usize {
+    let mut j = pos + 1; // skip '\'
+    if j >= bytes.len() {
+        return j;
+    }
+    if bytes[j].is_ascii_hexdigit() {
+        let start = j;
+        while j < bytes.len() && j - start < 6 && bytes[j].is_ascii_hexdigit() {
+            j += 1;
+        }
+        if j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r') {
+            j += 1;
+        }
+    } else if bytes[j] != b'\n' && bytes[j] != b'\r' {
+        j += 1;
+    }
+    j
+}
+
 fn looks_like_property_start(bytes: &[u8]) -> bool {
     if bytes.is_empty() || !is_ident_start(bytes[0]) {
         return false;
     }
     let mut j = 0;
-    while j < bytes.len() && is_ident_char(bytes[j]) {
-        j += 1;
+    while j < bytes.len() {
+        if bytes[j] == b'\\' {
+            j = skip_escape_bytes(bytes, j);
+        } else if is_ident_char(bytes[j]) {
+            j += 1;
+        } else {
+            break;
+        }
     }
     // Skip whitespace
     while j < bytes.len() && (bytes[j] == b' ' || bytes[j] == b'\t') {
         j += 1;
     }
     j < bytes.len() && bytes[j] == b':'
+}
+
+pub fn unescape_css_ident<'a>(raw: &'a str) -> Cow<'a, str> {
+    if !raw.contains('\\') {
+        return Cow::Borrowed(raw);
+    }
+    let bytes = raw.as_bytes();
+    let mut result = String::with_capacity(raw.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i += 1;
+            if i >= bytes.len() {
+                break;
+            }
+            if bytes[i].is_ascii_hexdigit() {
+                let start = i;
+                while i < bytes.len() && i - start < 6 && bytes[i].is_ascii_hexdigit() {
+                    i += 1;
+                }
+                if let Ok(cp) = u32::from_str_radix(&raw[start..i], 16) {
+                    if let Some(c) = char::from_u32(cp) {
+                        result.push(c);
+                    }
+                }
+                // Consume optional trailing whitespace
+                if i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
+                    i += 1;
+                }
+            } else if bytes[i] != b'\n' && bytes[i] != b'\r' {
+                let rest = &raw[i..];
+                let c = rest.chars().next().unwrap();
+                result.push(c);
+                i += c.len_utf8();
+            }
+        } else {
+            let rest = &raw[i..];
+            let c = rest.chars().next().unwrap();
+            result.push(c);
+            i += c.len_utf8();
+        }
+    }
+    Cow::Owned(result)
 }
 
 #[cfg(test)]
@@ -945,5 +1044,122 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ignore_comments, vec!["cvk-ignore"]);
+    }
+
+    // CSS escape sequence tests
+
+    #[test]
+    fn hex_escape_in_property_name() {
+        // col\6fr → color (0x6f = 'o')
+        let css = ".a { col\\6fr: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].name.raw, "col\\6fr");
+        assert_eq!(&*result.properties[0].name.unescaped, "color");
+    }
+
+    #[test]
+    fn hex_escape_with_trailing_space() {
+        // col\\6f r → color (trailing space consumed by escape)
+        let css = ".a { col\\6f r: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(&*result.properties[0].name.unescaped, "color");
+    }
+
+    #[test]
+    fn literal_escape_in_property_name() {
+        // \.a is a selector escape, test in property context:
+        // --my\-var → --my-var
+        let css = ".a { --my\\-var: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].name.raw, "--my\\-var");
+        assert_eq!(&*result.properties[0].name.unescaped, "--my-var");
+    }
+
+    #[test]
+    fn escaped_property_matches_property_id() {
+        // col\6fr should produce the same PropertyId as color
+        let css = ".a { col\\6fr: red; }";
+        let result = test_parse(css);
+        assert_eq!(
+            result.properties[0].name.property_id,
+            PropertyId::from("color")
+        );
+    }
+
+    #[test]
+    fn escaped_custom_property_matches_property_id() {
+        let css = ".a { --my\\-color: red; }";
+        let result = test_parse(css);
+        assert_eq!(
+            result.properties[0].name.property_id,
+            PropertyId::from("--my-color")
+        );
+    }
+
+    #[test]
+    fn no_escape_leaves_unescaped_borrowed() {
+        let css = ".a { color: red; }";
+        let result = test_parse(css);
+        assert!(matches!(
+            result.properties[0].name.unescaped,
+            Cow::Borrowed(_)
+        ));
+    }
+
+    #[test]
+    fn escape_produces_owned_unescaped() {
+        let css = ".a { col\\6fr: red; }";
+        let result = test_parse(css);
+        assert!(matches!(result.properties[0].name.unescaped, Cow::Owned(_)));
+    }
+
+    #[test]
+    fn non_ascii_identifier() {
+        let css = ".a { --あいろ: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].name.raw, "--あいろ");
+    }
+
+    #[test]
+    fn looks_like_property_start_with_escape() {
+        // Missing semicolon recovery should work with escaped identifiers
+        let css = ".a {\n  color: red\n  col\\6fr: blue;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw, "red");
+        assert_eq!(&*result.properties[1].name.unescaped, "color");
+    }
+
+    #[test]
+    fn unescape_css_ident_no_escape() {
+        assert!(matches!(
+            unescape_css_ident("color"),
+            Cow::Borrowed("color")
+        ));
+    }
+
+    #[test]
+    fn unescape_css_ident_hex() {
+        assert_eq!(&*unescape_css_ident("col\\6fr"), "color");
+    }
+
+    #[test]
+    fn unescape_css_ident_hex_with_space() {
+        assert_eq!(&*unescape_css_ident("col\\6f r"), "color");
+    }
+
+    #[test]
+    fn unescape_css_ident_literal() {
+        assert_eq!(&*unescape_css_ident("my\\-var"), "my-var");
+    }
+
+    #[test]
+    fn unescape_css_ident_unicode() {
+        // \3042 = 'あ' (U+3042)
+        assert_eq!(&*unescape_css_ident("\\3042"), "あ");
     }
 }
