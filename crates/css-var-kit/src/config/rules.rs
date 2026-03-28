@@ -28,12 +28,34 @@ impl Rules {
             .map(EnforceVariableUseConfig::from_raw)
             .transpose()?;
 
-        Ok(Self {
+        let rules = Self {
             no_undefined_variable_use: raw.no_undefined_variable_use.is_on(),
             enforce_variable_use,
             no_variable_type_mismatch: raw.no_variable_type_mismatch.is_on(),
             no_inconsistent_variable_definition: raw.no_inconsistent_variable_definition.is_on(),
-        })
+        };
+
+        rules.validate_dependencies()?;
+
+        Ok(rules)
+    }
+
+    fn validate_dependencies(&self) -> Result<(), ConfigError> {
+        if self.no_variable_type_mismatch {
+            if !self.no_undefined_variable_use {
+                return Err(ConfigError::MissingRuleDependency {
+                    rule: "no-variable-type-mismatch",
+                    dependency: "no-undefined-variable-use",
+                });
+            }
+            if !self.no_inconsistent_variable_definition {
+                return Err(ConfigError::MissingRuleDependency {
+                    rule: "no-variable-type-mismatch",
+                    dependency: "no-inconsistent-variable-definition",
+                });
+            }
+        }
+        Ok(())
     }
 
     pub fn compile(&self) -> Vec<Box<dyn Rule>> {

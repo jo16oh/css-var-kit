@@ -31,6 +31,11 @@ pub enum ConfigError {
     InvalidPattern { source: globset::Error },
     #[error("invalid --rule value '{raw}': {reason}")]
     InvalidRuleOption { raw: String, reason: String },
+    #[error("rule '{rule}' requires '{dependency}' to be enabled")]
+    MissingRuleDependency {
+        rule: &'static str,
+        dependency: &'static str,
+    },
 }
 
 pub struct Config {

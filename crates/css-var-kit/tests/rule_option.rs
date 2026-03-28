@@ -5,7 +5,13 @@ use common::cvk;
 #[test]
 fn rule_off_disables_rule() {
     cvk()
-        .args(["lint", "--rule", "no-undefined-variable-use=off"])
+        .args([
+            "lint",
+            "--rule",
+            "no-undefined-variable-use=off",
+            "--rule",
+            "no-variable-type-mismatch=off",
+        ])
         .assert()
         .success()
         .stderr(predicates::str::is_empty());
@@ -59,6 +65,8 @@ fn enforce_variable_use_off() {
             "enforce-variable-use=off",
             "--rule",
             "no-undefined-variable-use=off",
+            "--rule",
+            "no-variable-type-mismatch=off",
         ])
         .assert()
         .success();
@@ -81,6 +89,32 @@ fn enforce_variable_use_invalid_value_errors() {
         .failure()
         .stderr(predicates::str::contains(
             "expected 'on', 'off', or a JSON object",
+        ));
+}
+
+#[test]
+fn missing_dependency_no_undefined_variable_use() {
+    cvk()
+        .args(["lint", "--rule", "no-undefined-variable-use=off"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains(
+            "rule 'no-variable-type-mismatch' requires 'no-undefined-variable-use' to be enabled",
+        ));
+}
+
+#[test]
+fn missing_dependency_no_inconsistent_variable_definition() {
+    cvk()
+        .args([
+            "lint",
+            "--rule",
+            "no-inconsistent-variable-definition=off",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains(
+            "rule 'no-variable-type-mismatch' requires 'no-inconsistent-variable-definition' to be enabled",
         ));
 }
 
