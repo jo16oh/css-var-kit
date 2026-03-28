@@ -15,17 +15,15 @@ pub mod conditions;
 
 pub struct Property<'src> {
     inner: &'src CssProperty<'src>,
-    token_list: OnceCell<Option<TokenList<'src>>>,
+    token_list: OnceCell<TokenList<'src>>,
 }
 
 impl<'src> Property<'src> {
-    pub fn token_list(&self) -> Option<&TokenList<'src>> {
-        self.token_list
-            .get_or_init(|| {
-                TokenList::parse_string_with_options(self.inner.value.raw, ParserOptions::default())
-                    .ok()
-            })
-            .as_ref()
+    pub fn token_list(&self) -> &TokenList<'src> {
+        self.token_list.get_or_init(|| {
+            TokenList::parse_string_with_options(self.inner.value.raw, ParserOptions::default())
+                .unwrap_or_else(|_| TokenList(vec![]))
+        })
     }
 }
 

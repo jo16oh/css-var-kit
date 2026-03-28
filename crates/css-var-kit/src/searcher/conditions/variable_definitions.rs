@@ -20,8 +20,11 @@ impl<'src> PropMapFor<'src, '_, VariableDefinitions> {
         self.values()
             .filter_map(|props| {
                 let prop = props.last()?;
-                let token_list = prop.token_list()?.clone();
-                Some((prop.name.raw, token_list))
+                let token_list = prop.token_list();
+                if token_list.0.is_empty() {
+                    return None;
+                }
+                Some((prop.name.raw, token_list.clone()))
             })
             .collect()
     }
