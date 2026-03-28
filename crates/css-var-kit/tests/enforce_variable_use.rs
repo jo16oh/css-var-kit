@@ -37,7 +37,7 @@ fn skips_variable_use() {
         .args(["lint"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("var(--bg)").not());
+        .stderr(predicates::str::contains("literal color `var(--bg)`").not());
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn skips_inherit() {
         .args(["lint"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("inherit").not());
+        .stderr(predicates::str::contains("literal color `inherit`").not());
 }
 
 #[test]

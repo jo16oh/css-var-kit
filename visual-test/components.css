@@ -1,0 +1,23 @@
+.button {
+    background: var(--primary-color);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    border: 1px solid #e2e8f0;
+    font-size: var(--font-size-base);
+}
+
+.card {
+    background: var(--undefined-bg);
+    padding: var(--spacing-md);
+    border-radius: var(--missing-radius);
+    margin-bottom: 32px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    color: var(--primary-color);
+    width: var(--radius);
+    font-size: 20px;
+    line-height: 1.5;
+}

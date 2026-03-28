@@ -233,11 +233,15 @@ fn make_diagnostic<'src>(
     severity: Severity,
     kind_name: &str,
 ) -> Diagnostic<'src> {
+    let token_byte_offset =
+        (token_raw.as_ptr() as usize).wrapping_sub(prop.value.raw.as_ptr() as usize);
     Diagnostic {
         file_path: prop.file_path,
         source: prop.source,
         line: prop.value.line,
-        column: prop.value.column,
+        column: prop.value.column + token_byte_offset as u32,
+        span_length: Some(token_raw.len() as u32),
+        rule_name: RULE_NAME,
         message: format!("use a CSS variable instead of the literal {kind_name} `{token_raw}`",),
         severity,
     }

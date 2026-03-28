@@ -8,6 +8,7 @@ use css_var_kit::commands;
 use css_var_kit::config::Config;
 
 fn main() {
+    yansi::whenever(yansi::Condition::STDERR_IS_TTY);
     let cli = Cli::parse();
     let cwd = env::current_dir().expect("failed to get current directory");
 

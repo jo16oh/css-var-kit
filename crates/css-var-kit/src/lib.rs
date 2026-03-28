@@ -1,6 +1,7 @@
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod diagnostic_renderer;
 pub mod parser;
 pub mod rules;
 pub mod searcher;

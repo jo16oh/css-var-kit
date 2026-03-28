@@ -26,7 +26,7 @@ fn consistent_definitions_no_warning() {
         .args(["lint"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("--color").not());
+        .stderr(predicates::str::contains("inconsistent variable definition: `--color`").not());
 }
 
 #[test]

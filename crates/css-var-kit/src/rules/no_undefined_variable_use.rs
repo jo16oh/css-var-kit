@@ -7,6 +7,8 @@ use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 
+const RULE_NAME: &str = "no-undefined-variable-use";
+
 pub struct NoUndefinedVariableUse {
     pub severity: Severity,
 }
@@ -33,7 +35,7 @@ fn check_undefined<'src>(
     let mut diagnostics = Vec::new();
 
     for prop in usages.iter() {
-        if is_ignored(&prop.ignore_comments, "no-undefined-variable-use") {
+        if is_ignored(&prop.ignore_comments, RULE_NAME) {
             continue;
         }
         if let Some(token_list) = &prop.value.token_list {
@@ -61,6 +63,8 @@ fn collect_undefined<'src>(
                         source: prop.source,
                         line: prop.value.line,
                         column: prop.value.column,
+                        span_length: None,
+                        rule_name: RULE_NAME,
                         message: format!("undefined variable `{}`", name),
                         severity,
                     });
@@ -77,6 +81,8 @@ fn collect_undefined<'src>(
                         source: prop.source,
                         line: prop.value.line,
                         column: prop.value.column,
+                        span_length: None,
+                        rule_name: RULE_NAME,
                         message: format!("undefined variable `{}`", name),
                         severity,
                     });

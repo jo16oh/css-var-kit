@@ -12,11 +12,11 @@ use crate::variable_resolver::contains_var;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum TypeCheckError {
-    #[error("Type mismatch: resolved value of `{0}` is not valid for property `{1}`")]
+    #[error("type mismatch: resolved value of `{0}` is not valid for property `{1}`")]
     TypeMismatch(String, String),
-    #[error("Variable not found: {0}")]
+    #[error("variable not found: {0}")]
     VariableNotFound(String),
-    #[error("Invalid syntax in variable declaration")]
+    #[error("invalid syntax in variable declaration")]
     InvalidSyntax,
 }
 

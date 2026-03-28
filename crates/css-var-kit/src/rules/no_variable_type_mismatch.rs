@@ -6,6 +6,8 @@ use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
+const RULE_NAME: &str = "no-variable-type-mismatch";
+
 pub struct NoVariableTypeMismatch {
     pub severity: Severity,
 }
@@ -33,7 +35,7 @@ fn check_type_mismatch<'src>(
 ) -> Vec<Diagnostic<'src>> {
     usages
         .iter()
-        .filter(|prop| !is_ignored(&prop.ignore_comments, "no-variable-type-mismatch"))
+        .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))
         .filter(|prop| !prop.name.raw.starts_with("--"))
         .filter_map(|prop| {
             let result = check_property_type(prop.name.raw, prop.value.raw, vars);
@@ -45,6 +47,8 @@ fn check_type_mismatch<'src>(
                     source: prop.source,
                     line: prop.value.line,
                     column: prop.value.column,
+                    span_length: None,
+                    rule_name: RULE_NAME,
                     message: e.to_string(),
                     severity,
                 }),
