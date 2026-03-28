@@ -1,5 +1,6 @@
 use std::fmt::Write;
 
+use unicode_width::UnicodeWidthChar;
 use yansi::Paint;
 
 use crate::rules::{Diagnostic, Severity};
@@ -8,23 +9,23 @@ const HEADER_WIDTH: usize = 80;
 
 pub fn render(diagnostic: &Diagnostic<'_>) -> String {
     let mut out = String::new();
-    let char_column =
-        byte_column_to_char_column(diagnostic.source, diagnostic.line, diagnostic.column);
+    let display_column =
+        byte_column_to_display_width(diagnostic.source, diagnostic.line, diagnostic.column);
     let lines: Vec<&str> = diagnostic.source.lines().collect();
 
-    render_header(&mut out, diagnostic, char_column);
+    render_header(&mut out, diagnostic, display_column);
     render_message(&mut out, diagnostic);
-    render_snippet(&mut out, diagnostic, &lines, char_column);
+    render_snippet(&mut out, diagnostic, &lines, display_column);
 
     out
 }
 
-fn render_header(out: &mut String, d: &Diagnostic<'_>, char_column: u32) {
+fn render_header(out: &mut String, d: &Diagnostic<'_>, display_column: u32) {
     let location = format!(
         "{}:{}:{}",
         d.file_path.display(),
         d.line + 1,
-        char_column + 1,
+        display_column + 1,
     );
     let prefix = format!("{location} {}", d.rule_name);
     let fill_len = HEADER_WIDTH.saturating_sub(prefix.len() + 1);
@@ -43,7 +44,7 @@ fn render_message(out: &mut String, d: &Diagnostic<'_>) {
     let _ = writeln!(out);
 }
 
-fn render_snippet(out: &mut String, d: &Diagnostic<'_>, lines: &[&str], char_column: u32) {
+fn render_snippet(out: &mut String, d: &Diagnostic<'_>, lines: &[&str], display_column: u32) {
     let target = d.line as usize;
     let start = target.saturating_sub(2);
     let end = (target + 2).min(lines.len());
@@ -61,10 +62,15 @@ fn render_snippet(out: &mut String, d: &Diagnostic<'_>, lines: &[&str], char_col
                 "  {marker} {line_num:>gutter_width$} {gutter_sep} {content}",
                 gutter_width = gutter_width,
             );
-            let char_span = d
+            let line_display_width = content
+                .chars()
+                .map(|c| c.width().unwrap_or(0))
+                .sum::<usize>() as u32;
+            let display_span = d
                 .span_length
-                .map(|byte_len| byte_span_to_char_len(content, d.column, byte_len));
-            let underline = render_underline(content, char_column, char_span, d.severity);
+                .map(|byte_len| byte_span_to_display_width(content, d.column, byte_len));
+            let underline =
+                render_underline(display_column, display_span, line_display_width, d.severity);
             let _ = writeln!(
                 out,
                 "    {blank:>gutter_width$} {gutter_sep} {underline}",
@@ -84,16 +90,15 @@ fn render_snippet(out: &mut String, d: &Diagnostic<'_>, lines: &[&str], char_col
 }
 
 fn render_underline(
-    line_content: &str,
-    char_column: u32,
-    char_span: Option<u32>,
+    display_column: u32,
+    display_span: Option<u32>,
+    line_display_width: u32,
     severity: Severity,
 ) -> String {
-    let chars: Vec<char> = line_content.chars().collect();
-    let col = char_column as usize;
-    let span_len = match char_span {
-        Some(len) => (len as usize).min(chars.len().saturating_sub(col)),
-        None => chars.len().saturating_sub(col),
+    let col = display_column as usize;
+    let span_len = match display_span {
+        Some(len) => len as usize,
+        None => (line_display_width as usize).saturating_sub(col),
     };
     if span_len == 0 {
         return String::new();
@@ -103,11 +108,14 @@ fn render_underline(
     format!("{padding}{}", severity_paint(severity, &carets))
 }
 
-fn byte_span_to_char_len(line_content: &str, byte_column: u32, byte_len: u32) -> u32 {
+fn byte_span_to_display_width(line_content: &str, byte_column: u32, byte_len: u32) -> u32 {
     let bytes = line_content.as_bytes();
     let start = (byte_column as usize).min(bytes.len());
     let end = (start + byte_len as usize).min(bytes.len());
-    line_content[start..end].chars().count() as u32
+    line_content[start..end]
+        .chars()
+        .map(|c| c.width().unwrap_or(0))
+        .sum::<usize>() as u32
 }
 
 fn severity_paint(severity: Severity, value: &str) -> yansi::Painted<&str> {
@@ -124,7 +132,7 @@ fn digit_count(n: u32) -> usize {
     ((n as f64).log10().floor() as usize) + 1
 }
 
-fn byte_column_to_char_column(source: &str, line: u32, byte_column: u32) -> u32 {
+fn byte_column_to_display_width(source: &str, line: u32, byte_column: u32) -> u32 {
     let mut line_start = 0;
     let bytes = source.as_bytes();
     let mut current_line = 0u32;
@@ -147,7 +155,10 @@ fn byte_column_to_char_column(source: &str, line: u32, byte_column: u32) -> u32 
         }
     }
     let byte_end = line_start + byte_column as usize;
-    source[line_start..byte_end].chars().count() as u32
+    source[line_start..byte_end]
+        .chars()
+        .map(|c| c.width().unwrap_or(0))
+        .sum::<usize>() as u32
 }
 
 #[cfg(test)]
@@ -214,12 +225,18 @@ mod tests {
     }
 
     #[test]
-    fn byte_column_to_char_ascii() {
-        assert_eq!(byte_column_to_char_column(".a { color: red; }", 0, 5), 5);
+    fn display_width_ascii() {
+        assert_eq!(byte_column_to_display_width(".a { color: red; }", 0, 5), 5);
     }
 
     #[test]
-    fn byte_column_to_char_multibyte() {
-        assert_eq!(byte_column_to_char_column(".あ { --color: red; }", 0, 7), 5);
+    fn display_width_fullwidth_char() {
+        // .あ { --color: red; }
+        // byte column 7 = "." (1) + "あ" (3 bytes) + " { " (3)
+        // display width 6 = "." (1) + "あ" (2 columns) + " { " (3)
+        assert_eq!(
+            byte_column_to_display_width(".あ { --color: red; }", 0, 7),
+            6
+        );
     }
 }
