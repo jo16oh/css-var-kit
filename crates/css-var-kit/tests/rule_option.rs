@@ -41,7 +41,9 @@ fn invalid_toggle_value_errors() {
         .args(["lint", "--rule", "no-undefined-variable-use=yes"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("expected 'on' or 'off'"));
+        .stderr(predicates::str::contains(
+            "expected 'error', 'warn', 'on', or 'off'",
+        ));
 }
 
 #[test]
@@ -88,7 +90,7 @@ fn enforce_variable_use_invalid_value_errors() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "expected 'on', 'off', or a JSON object",
+            "expected 'error', 'warn', 'on', 'off', or a JSON object",
         ));
 }
 

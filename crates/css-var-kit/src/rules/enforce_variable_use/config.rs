@@ -1,22 +1,51 @@
 use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
+use serde::de::{self, Deserializer};
 
 use crate::config::ConfigError;
+use crate::config::file::SeverityToggle;
+use crate::rules::Severity;
 use crate::type_checker::value_kind::{ValueKindSet, lookup_kind_by_name};
 
-#[derive(Default, Debug, Deserialize)]
-#[serde(untagged)]
+#[derive(Default, Debug)]
 pub enum RawEnforceVariableUse {
-    #[serde(rename = "off")]
     #[default]
     Off,
     Config(RawEnforceVariableUseConfig),
 }
 
+impl<'de> Deserialize<'de> for RawEnforceVariableUse {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match &value {
+            serde_json::Value::String(s) => match s.as_str() {
+                "off" => Ok(Self::Off),
+                "on" | "error" => Ok(Self::default_on()),
+                "warn" => Ok(Self::default_on_with_severity(SeverityToggle::Warn)),
+                _ => Err(de::Error::unknown_variant(
+                    s,
+                    &["off", "on", "warn", "error"],
+                )),
+            },
+            serde_json::Value::Object(_) => serde_json::from_value(value)
+                .map(Self::Config)
+                .map_err(de::Error::custom),
+            _ => Err(de::Error::custom("expected a string or object")),
+        }
+    }
+}
+
 impl RawEnforceVariableUse {
     pub fn default_on() -> Self {
         Self::Config(RawEnforceVariableUseConfig::default())
+    }
+
+    pub fn default_on_with_severity(severity: SeverityToggle) -> Self {
+        Self::Config(RawEnforceVariableUseConfig {
+            severity,
+            ..RawEnforceVariableUseConfig::default()
+        })
     }
 
     pub fn into_config(self) -> Option<RawEnforceVariableUseConfig> {
@@ -29,6 +58,8 @@ impl RawEnforceVariableUse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawEnforceVariableUseConfig {
+    #[serde(default = "default_severity")]
+    pub severity: SeverityToggle,
     #[serde(default)]
     pub types: Vec<String>,
     #[serde(default = "default_allowed_functions")]
@@ -42,12 +73,17 @@ pub struct RawEnforceVariableUseConfig {
 impl Default for RawEnforceVariableUseConfig {
     fn default() -> Self {
         Self {
+            severity: SeverityToggle::Error,
             types: Vec::new(),
             allowed_functions: default_allowed_functions(),
             allowed_values: default_allowed_values(),
             allowed_properties: Vec::new(),
         }
     }
+}
+
+fn default_severity() -> SeverityToggle {
+    SeverityToggle::Error
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,6 +122,7 @@ fn default_allowed_values() -> Vec<String> {
 
 #[derive(Debug, Clone)]
 pub struct EnforceVariableUseConfig {
+    pub severity: Severity,
     pub types: ValueKindSet,
     pub allowed_functions: HashSet<String>,
     pub allowed_values: HashSet<String>,
@@ -130,6 +167,7 @@ impl EnforceVariableUseConfig {
             });
 
         Ok(Self {
+            severity: raw.severity.severity().unwrap_or(Severity::Warning),
             types,
             allowed_functions: raw.allowed_functions.iter().cloned().collect(),
             allowed_values: raw.allowed_values.iter().cloned().collect(),

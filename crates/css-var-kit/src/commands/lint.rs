@@ -4,7 +4,7 @@ use std::process;
 
 use crate::config::Config;
 use crate::parser;
-use crate::rules::Diagnostic;
+use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
@@ -55,7 +55,12 @@ pub fn run(config: &Config) {
         d.print();
     }
 
-    process::exit(1);
+    if diagnostics
+        .iter()
+        .any(|d| matches!(d.severity, Severity::Error))
+    {
+        process::exit(1);
+    }
 }
 
 fn collect_css_files(dir: &Path) -> Vec<PathBuf> {

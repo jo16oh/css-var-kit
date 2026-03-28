@@ -8,7 +8,9 @@ use crate::variable_resolver::resolve_variables;
 
 const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
-pub struct NoInconsistentVariableDefinition;
+pub struct NoInconsistentVariableDefinition {
+    pub severity: Severity,
+}
 
 impl Rule for NoInconsistentVariableDefinition {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
@@ -18,10 +20,11 @@ impl Rule for NoInconsistentVariableDefinition {
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = def_map.vars_map();
+        let severity = self.severity;
         def_map
             .iter()
             .filter(|(_, props)| props.len() >= 2)
-            .flat_map(|(_, props)| check_variable_definitions(props.as_slice(), &vars))
+            .flat_map(|(_, props)| check_variable_definitions(props.as_slice(), &vars, severity))
             .collect()
     }
 }
@@ -29,6 +32,7 @@ impl Rule for NoInconsistentVariableDefinition {
 fn check_variable_definitions<'src>(
     props: &[&'src Property<'src>],
     vars: &VarsMap<'src>,
+    severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
@@ -72,7 +76,7 @@ fn check_variable_definitions<'src>(
                     "inconsistent variable definition: `{}` has value `{}` which conflicts with expected type <{}>",
                     prop.name.raw, prop.value.raw, baseline,
                 ),
-                severity: Severity::Warning,
+                severity,
             }
         })
         .collect()
@@ -87,7 +91,9 @@ mod tests {
 
     fn assert_messages(css: &str, expected: &[&str]) {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
-        let rule = NoInconsistentVariableDefinition;
+        let rule = NoInconsistentVariableDefinition {
+            severity: Severity::Warning,
+        };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))
             .build();

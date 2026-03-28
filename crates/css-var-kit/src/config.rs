@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{
     cli::LintArgs,
     config::{
-        file::{RawRules, Toggle},
+        file::{RawRules, SeverityToggle},
         rules::Rules,
     },
     rules::enforce_variable_use::config::RawEnforceVariableUse,
@@ -154,22 +154,26 @@ impl RawRules {
         Ok(self)
     }
 
-    fn parse_toggle(value: &str) -> Result<Toggle, String> {
+    fn parse_toggle(value: &str) -> Result<SeverityToggle, String> {
         match value {
-            "on" => Ok(Toggle::On),
-            "off" => Ok(Toggle::Off),
-            _ => Err("expected 'on' or 'off'".into()),
+            "on" | "error" => Ok(SeverityToggle::Error),
+            "warn" => Ok(SeverityToggle::Warn),
+            "off" => Ok(SeverityToggle::Off),
+            _ => Err("expected 'error', 'warn', 'on', or 'off'".into()),
         }
     }
 
     fn parse_enforce(value: &str) -> Result<RawEnforceVariableUse, String> {
         match value {
-            "on" => Ok(RawEnforceVariableUse::default_on()),
+            "on" | "error" => Ok(RawEnforceVariableUse::default_on()),
+            "warn" => Ok(RawEnforceVariableUse::default_on_with_severity(
+                SeverityToggle::Warn,
+            )),
             "off" => Ok(RawEnforceVariableUse::Off),
             v if v.starts_with('{') => serde_json::from_str(v)
                 .map(RawEnforceVariableUse::Config)
                 .map_err(|e| e.to_string()),
-            _ => Err("expected 'on', 'off', or a JSON object".into()),
+            _ => Err("expected 'error', 'warn', 'on', 'off', or a JSON object".into()),
         }
     }
 }

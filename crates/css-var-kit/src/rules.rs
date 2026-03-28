@@ -34,6 +34,7 @@ pub struct Diagnostic<'src> {
     pub severity: Severity,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Severity {
     Error,
     Warning,

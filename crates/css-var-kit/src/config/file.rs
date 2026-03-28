@@ -2,8 +2,10 @@ use std::fs;
 use std::path::Path;
 
 use serde::Deserialize;
+use serde::de::{self, Deserializer};
 
 use super::ConfigError;
+use crate::rules::Severity;
 use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
 #[derive(Debug, Deserialize)]
@@ -59,12 +61,12 @@ impl RawConfig {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(super) struct RawRules {
-    #[serde(default = "default_on")]
-    pub(super) no_undefined_variable_use: Toggle,
-    #[serde(default = "default_on")]
-    pub(super) no_variable_type_mismatch: Toggle,
-    #[serde(default = "default_on")]
-    pub(super) no_inconsistent_variable_definition: Toggle,
+    #[serde(default = "default_error")]
+    pub(super) no_undefined_variable_use: SeverityToggle,
+    #[serde(default = "default_error")]
+    pub(super) no_variable_type_mismatch: SeverityToggle,
+    #[serde(default = "default_error")]
+    pub(super) no_inconsistent_variable_definition: SeverityToggle,
     #[serde(default)]
     pub(super) enforce_variable_use: RawEnforceVariableUse,
 }
@@ -72,24 +74,43 @@ pub(super) struct RawRules {
 impl Default for RawRules {
     fn default() -> Self {
         Self {
-            no_undefined_variable_use: Toggle::On,
+            no_undefined_variable_use: SeverityToggle::Error,
             enforce_variable_use: RawEnforceVariableUse::Off,
-            no_variable_type_mismatch: Toggle::On,
-            no_inconsistent_variable_definition: Toggle::On,
+            no_variable_type_mismatch: SeverityToggle::Error,
+            no_inconsistent_variable_definition: SeverityToggle::Error,
         }
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub(super) enum Toggle {
-    On,
+#[derive(Debug, Clone, Copy)]
+pub enum SeverityToggle {
+    Error,
+    Warn,
     Off,
 }
 
-impl Toggle {
-    pub(super) fn is_on(&self) -> bool {
-        matches!(self, Toggle::On)
+impl SeverityToggle {
+    pub fn severity(self) -> Option<Severity> {
+        match self {
+            Self::Error => Some(Severity::Error),
+            Self::Warn => Some(Severity::Warning),
+            Self::Off => None,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SeverityToggle {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "on" | "error" => Ok(Self::Error),
+            "warn" => Ok(Self::Warn),
+            "off" => Ok(Self::Off),
+            _ => Err(de::Error::unknown_variant(
+                &s,
+                &["error", "warn", "on", "off"],
+            )),
+        }
     }
 }
 
@@ -101,6 +122,6 @@ fn default_lookup_files() -> Vec<String> {
     vec!["**/*.css".to_string()]
 }
 
-fn default_on() -> Toggle {
-    Toggle::On
+fn default_error() -> SeverityToggle {
+    SeverityToggle::Error
 }

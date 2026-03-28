@@ -1,7 +1,7 @@
 use crate::{
     config::ConfigError,
     rules::{
-        Rule,
+        Rule, Severity,
         enforce_variable_use::{EnforceVariableUse, config::EnforceVariableUseConfig},
         no_inconsistent_variable_definition::NoInconsistentVariableDefinition,
         no_undefined_variable_use::NoUndefinedVariableUse,
@@ -13,10 +13,10 @@ use super::file::RawRules;
 
 #[derive(Debug, Clone)]
 pub struct Rules {
-    pub no_undefined_variable_use: bool,
+    pub no_undefined_variable_use: Option<Severity>,
     pub enforce_variable_use: Option<EnforceVariableUseConfig>,
-    pub no_variable_type_mismatch: bool,
-    pub no_inconsistent_variable_definition: bool,
+    pub no_variable_type_mismatch: Option<Severity>,
+    pub no_inconsistent_variable_definition: Option<Severity>,
 }
 
 impl Rules {
@@ -29,10 +29,10 @@ impl Rules {
             .transpose()?;
 
         let rules = Self {
-            no_undefined_variable_use: raw.no_undefined_variable_use.is_on(),
+            no_undefined_variable_use: raw.no_undefined_variable_use.severity(),
             enforce_variable_use,
-            no_variable_type_mismatch: raw.no_variable_type_mismatch.is_on(),
-            no_inconsistent_variable_definition: raw.no_inconsistent_variable_definition.is_on(),
+            no_variable_type_mismatch: raw.no_variable_type_mismatch.severity(),
+            no_inconsistent_variable_definition: raw.no_inconsistent_variable_definition.severity(),
         };
 
         rules.validate_dependencies()?;
@@ -41,14 +41,14 @@ impl Rules {
     }
 
     fn validate_dependencies(&self) -> Result<(), ConfigError> {
-        if self.no_variable_type_mismatch {
-            if !self.no_undefined_variable_use {
+        if self.no_variable_type_mismatch.is_some() {
+            if self.no_undefined_variable_use.is_none() {
                 return Err(ConfigError::MissingRuleDependency {
                     rule: "no-variable-type-mismatch",
                     dependency: "no-undefined-variable-use",
                 });
             }
-            if !self.no_inconsistent_variable_definition {
+            if self.no_inconsistent_variable_definition.is_none() {
                 return Err(ConfigError::MissingRuleDependency {
                     rule: "no-variable-type-mismatch",
                     dependency: "no-inconsistent-variable-definition",
@@ -61,20 +61,20 @@ impl Rules {
     pub fn compile(&self) -> Vec<Box<dyn Rule>> {
         let mut rules: Vec<Box<dyn Rule>> = vec![];
 
-        if self.no_undefined_variable_use {
-            rules.push(Box::new(NoUndefinedVariableUse));
+        if let Some(severity) = self.no_undefined_variable_use {
+            rules.push(Box::new(NoUndefinedVariableUse { severity }));
         }
 
         if let Some(ref config) = self.enforce_variable_use {
             rules.push(Box::new(EnforceVariableUse::from_config(config)));
         }
 
-        if self.no_variable_type_mismatch {
-            rules.push(Box::new(NoVariableTypeMismatch));
+        if let Some(severity) = self.no_variable_type_mismatch {
+            rules.push(Box::new(NoVariableTypeMismatch { severity }));
         }
 
-        if self.no_inconsistent_variable_definition {
-            rules.push(Box::new(NoInconsistentVariableDefinition));
+        if let Some(severity) = self.no_inconsistent_variable_definition {
+            rules.push(Box::new(NoInconsistentVariableDefinition { severity }));
         }
 
         rules

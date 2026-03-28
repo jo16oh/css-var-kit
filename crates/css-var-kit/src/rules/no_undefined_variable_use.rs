@@ -7,7 +7,9 @@ use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
 
-pub struct NoUndefinedVariableUse;
+pub struct NoUndefinedVariableUse {
+    pub severity: Severity,
+}
 
 impl Rule for NoUndefinedVariableUse {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
@@ -19,13 +21,14 @@ impl Rule for NoUndefinedVariableUse {
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let usages = search_result.get_result_for(VariableUsages);
-        check_undefined(&def_map, &usages)
+        check_undefined(&def_map, &usages, self.severity)
     }
 }
 
 fn check_undefined<'src>(
     def_map: &PropMapFor<'src, '_, VariableDefinitions>,
     usages: &[&'src Property<'src>],
+    severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
     let mut diagnostics = Vec::new();
 
@@ -34,7 +37,7 @@ fn check_undefined<'src>(
             continue;
         }
         if let Some(token_list) = &prop.value.token_list {
-            collect_undefined(token_list, def_map, prop, &mut diagnostics);
+            collect_undefined(token_list, def_map, prop, severity, &mut diagnostics);
         }
     }
 
@@ -45,6 +48,7 @@ fn collect_undefined<'src>(
     token_list: &TokenList<'_>,
     definitions: &PropMapFor<'_, '_, VariableDefinitions>,
     prop: &'src Property<'src>,
+    severity: Severity,
     diagnostics: &mut Vec<Diagnostic<'src>>,
 ) {
     for token in &token_list.0 {
@@ -58,11 +62,11 @@ fn collect_undefined<'src>(
                         line: prop.value.line,
                         column: prop.value.column,
                         message: format!("undefined variable `{}`", name),
-                        severity: Severity::Warning,
+                        severity,
                     });
                 }
                 if let Some(fallback) = &var.fallback {
-                    collect_undefined(fallback, definitions, prop, diagnostics);
+                    collect_undefined(fallback, definitions, prop, severity, diagnostics);
                 }
             }
             TokenOrValue::DashedIdent(ident) => {
@@ -74,12 +78,12 @@ fn collect_undefined<'src>(
                         line: prop.value.line,
                         column: prop.value.column,
                         message: format!("undefined variable `{}`", name),
-                        severity: Severity::Warning,
+                        severity,
                     });
                 }
             }
             TokenOrValue::Function(func) => {
-                collect_undefined(&func.arguments, definitions, prop, diagnostics);
+                collect_undefined(&func.arguments, definitions, prop, severity, diagnostics);
             }
             _ => {}
         }
@@ -94,7 +98,9 @@ mod tests {
 
     fn assert_messages(css: &str, expected: &[&str]) {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
-        let rule = NoUndefinedVariableUse;
+        let rule = NoUndefinedVariableUse {
+            severity: Severity::Warning,
+        };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))
             .build();
