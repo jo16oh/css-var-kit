@@ -1,9 +1,8 @@
-use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::{Property, SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
 const RULE_NAME: &str = "no-variable-type-mismatch";
@@ -30,7 +29,7 @@ impl Rule for NoVariableTypeMismatch {
 
 fn check_type_mismatch<'src>(
     vars: &VarsMap<'src>,
-    usages: &[&'src Property<'src>],
+    usages: &[Property<'src>],
     severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
     usages

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
+use crate::searcher::Property;
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
@@ -68,7 +68,7 @@ impl EnforceVariableUse {
     fn check_tokens<'src>(
         &self,
         raw: &str,
-        prop: &'src Property<'src>,
+        prop: &Property<'src>,
         types: ValueKindSet,
     ) -> Vec<Diagnostic<'src>> {
         let mut input = ParserInput::new(raw);
@@ -79,7 +79,7 @@ impl EnforceVariableUse {
     fn check_tokens_inner<'src>(
         &self,
         parser: &mut Parser<'_, '_>,
-        prop: &'src Property<'src>,
+        prop: &Property<'src>,
         types: ValueKindSet,
     ) -> Vec<Diagnostic<'src>> {
         let mut diagnostics = Vec::new();
@@ -141,7 +141,7 @@ impl EnforceVariableUse {
         &self,
         token: &Token<'_>,
         token_raw: &str,
-        prop: &'src Property<'src>,
+        prop: &Property<'src>,
         types: ValueKindSet,
     ) -> Option<Diagnostic<'src>> {
         match token {
@@ -228,7 +228,7 @@ impl EnforceVariableUse {
 }
 
 fn make_diagnostic<'src>(
-    prop: &'src Property<'src>,
+    prop: &Property<'src>,
     token_raw: &str,
     severity: Severity,
     kind_name: &str,

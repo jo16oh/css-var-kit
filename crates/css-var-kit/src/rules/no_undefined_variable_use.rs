@@ -1,11 +1,10 @@
 use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
-use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
+use crate::searcher::{PropMapFor, Property, SearchResult, SearcherBuilder};
 
 const RULE_NAME: &str = "no-undefined-variable-use";
 
@@ -29,7 +28,7 @@ impl Rule for NoUndefinedVariableUse {
 
 fn check_undefined<'src>(
     def_map: &PropMapFor<'src, '_, VariableDefinitions>,
-    usages: &[&'src Property<'src>],
+    usages: &[Property<'src>],
     severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
     let mut diagnostics = Vec::new();
@@ -38,7 +37,7 @@ fn check_undefined<'src>(
         if is_ignored(&prop.ignore_comments, RULE_NAME) {
             continue;
         }
-        if let Some(token_list) = &prop.value.token_list {
+        if let Some(token_list) = prop.token_list() {
             collect_undefined(token_list, def_map, prop, severity, &mut diagnostics);
         }
     }
@@ -49,7 +48,7 @@ fn check_undefined<'src>(
 fn collect_undefined<'src>(
     token_list: &TokenList<'_>,
     definitions: &PropMapFor<'_, '_, VariableDefinitions>,
-    prop: &'src Property<'src>,
+    prop: &Property<'src>,
     severity: Severity,
     diagnostics: &mut Vec<Diagnostic<'src>>,
 ) {

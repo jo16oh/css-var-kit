@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lightningcss::properties::custom::TokenList;
 
-use crate::parser::css::Property;
+use crate::parser::css::Property as CssProperty;
 use crate::searcher::{PropMapFor, SearchCondition};
 
 pub type VarsMap<'src> = HashMap<&'src str, TokenList<'src>>;
@@ -10,7 +10,7 @@ pub type VarsMap<'src> = HashMap<&'src str, TokenList<'src>>;
 pub struct VariableDefinitions;
 
 impl SearchCondition for VariableDefinitions {
-    fn matches(&self, prop: &Property) -> bool {
+    fn matches(&self, prop: &CssProperty) -> bool {
         prop.name.raw.starts_with("--")
     }
 }
@@ -20,7 +20,7 @@ impl<'src> PropMapFor<'src, '_, VariableDefinitions> {
         self.values()
             .filter_map(|props| {
                 let prop = props.last()?;
-                let token_list = prop.value.token_list.as_ref()?.clone();
+                let token_list = prop.token_list()?.clone();
                 Some((prop.name.raw, token_list))
             })
             .collect()
@@ -56,7 +56,6 @@ mod tests {
             },
             value: PropertyValue {
                 raw: "",
-                token_list: None,
                 offset: 0,
                 line: 0,
                 column: 0,

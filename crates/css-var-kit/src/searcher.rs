@@ -1,17 +1,44 @@
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
 
 use lightningcss::properties::PropertyId;
+use lightningcss::properties::custom::TokenList;
+use lightningcss::stylesheet::ParserOptions;
+use lightningcss::traits::ParseWithOptions;
 
-use crate::parser::css::{ParseResult, Property};
+use crate::parser::css::{ParseResult, Property as CssProperty};
 
 pub mod conditions;
 
+pub struct Property<'src> {
+    inner: &'src CssProperty<'src>,
+    token_list: OnceCell<Option<TokenList<'src>>>,
+}
+
+impl<'src> Property<'src> {
+    pub fn token_list(&self) -> Option<&TokenList<'src>> {
+        self.token_list
+            .get_or_init(|| {
+                TokenList::parse_string_with_options(self.inner.value.raw, ParserOptions::default())
+                    .ok()
+            })
+            .as_ref()
+    }
+}
+
+impl<'src> Deref for Property<'src> {
+    type Target = CssProperty<'src>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner
+    }
+}
+
 pub trait SearchCondition: 'static {
-    fn matches(&self, prop: &Property) -> bool;
+    fn matches(&self, prop: &CssProperty) -> bool;
 }
 
 pub struct SearcherBuilder<'src> {
@@ -63,7 +90,10 @@ impl<'src> Searcher<'src> {
             for prop in parse_result.properties.iter() {
                 for (type_id, cond) in self.conditions.iter() {
                     if cond.matches(prop) {
-                        results.get_mut(type_id).unwrap().props.push(prop);
+                        results.get_mut(type_id).unwrap().props.push(Property {
+                            inner: prop,
+                            token_list: OnceCell::new(),
+                        });
                     }
                 }
             }
@@ -73,11 +103,11 @@ impl<'src> Searcher<'src> {
     }
 }
 
-pub type PropMap<'src> = HashMap<PropertyId<'src>, Vec<&'src Property<'src>>>;
+type PropMapIndices<'src> = HashMap<PropertyId<'src>, Vec<usize>>;
 
 struct SearchConditionResult<'src> {
-    props: Vec<&'src Property<'src>>,
-    prop_map: OnceCell<PropMap<'src>>,
+    props: Vec<Property<'src>>,
+    prop_map: OnceCell<PropMapIndices<'src>>,
 }
 
 pub struct SearchResult<'src> {
@@ -85,10 +115,10 @@ pub struct SearchResult<'src> {
 }
 
 impl<'src> SearchResult<'src> {
-    pub fn get_result_for<T: SearchCondition>(&self, cond: T) -> SearchResultFor<'src, '_, T> {
+    pub fn get_result_for<T: SearchCondition>(&self, _cond: T) -> SearchResultFor<'src, '_, T> {
         let entry = self
             .results
-            .get(&cond.type_id())
+            .get(&TypeId::of::<T>())
             .expect("condition not registered in SearcherBuilder");
         SearchResultFor(&entry.props, PhantomData::<T>)
     }
@@ -99,38 +129,68 @@ impl<'src> SearchResult<'src> {
             .get(&TypeId::of::<T>())
             .expect("condition not registered in SearcherBuilder");
         let map = entry.prop_map.get_or_init(|| {
-            let mut map = PropMap::new();
-            for prop in &entry.props {
-                map.entry(prop.name.property_id.clone())
+            let mut indices = PropMapIndices::new();
+            for (i, prop) in entry.props.iter().enumerate() {
+                indices
+                    .entry(prop.name.property_id.clone())
                     .or_default()
-                    .push(prop);
+                    .push(i);
             }
-            map
+            indices
         });
-        PropMapFor(map, PhantomData::<T>)
+        PropMapFor {
+            props: &entry.props,
+            map,
+            _marker: PhantomData::<T>,
+        }
     }
 }
 
 pub struct SearchResultFor<'src, 'result, T: SearchCondition>(
-    &'result [&'src Property<'src>],
+    &'result [Property<'src>],
     PhantomData<T>,
 );
 
 impl<'src, T: SearchCondition> Deref for SearchResultFor<'src, '_, T> {
-    type Target = [&'src Property<'src>];
+    type Target = [Property<'src>];
 
     fn deref(&self) -> &Self::Target {
         self.0
     }
 }
 
-pub struct PropMapFor<'src, 'result, T: SearchCondition>(&'result PropMap<'src>, PhantomData<T>);
+pub struct PropMapFor<'src, 'result, T: SearchCondition> {
+    props: &'result [Property<'src>],
+    map: &'result PropMapIndices<'src>,
+    _marker: PhantomData<T>,
+}
 
-impl<'src, T: SearchCondition> Deref for PropMapFor<'src, '_, T> {
-    type Target = PropMap<'src>;
+impl<'src, 'result, T: SearchCondition> PropMapFor<'src, 'result, T> {
+    pub fn contains_key(&self, key: &PropertyId) -> bool {
+        self.map.contains_key(key)
+    }
 
-    fn deref(&self) -> &Self::Target {
-        self.0
+    pub fn get(&self, key: &PropertyId) -> Option<Vec<&'result Property<'src>>> {
+        self.map
+            .get(key)
+            .map(|indices| indices.iter().map(|&i| &self.props[i]).collect())
+    }
+
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = (&'result PropertyId<'src>, Vec<&'result Property<'src>>)> {
+        self.map.iter().map(|(k, indices)| {
+            (
+                k,
+                indices.iter().map(|&i| &self.props[i]).collect::<Vec<_>>(),
+            )
+        })
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = Vec<&'result Property<'src>>> {
+        self.map
+            .values()
+            .map(|indices| indices.iter().map(|&i| &self.props[i]).collect::<Vec<_>>())
     }
 }
 
@@ -148,35 +208,35 @@ mod tests {
 
     struct All;
     impl SearchCondition for All {
-        fn matches(&self, _prop: &Property) -> bool {
+        fn matches(&self, _prop: &CssProperty) -> bool {
             true
         }
     }
 
     struct None;
     impl SearchCondition for None {
-        fn matches(&self, _prop: &Property) -> bool {
+        fn matches(&self, _prop: &CssProperty) -> bool {
             false
         }
     }
 
     struct NameEquals(&'static str);
     impl SearchCondition for NameEquals {
-        fn matches(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &CssProperty) -> bool {
             prop.name.raw == self.0
         }
     }
 
     struct ValueEquals(&'static str);
     impl SearchCondition for ValueEquals {
-        fn matches(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &CssProperty) -> bool {
             prop.value.raw == self.0
         }
     }
 
     struct IsVariable;
     impl SearchCondition for IsVariable {
-        fn matches(&self, prop: &Property) -> bool {
+        fn matches(&self, prop: &CssProperty) -> bool {
             prop.name.raw.starts_with("--")
         }
     }

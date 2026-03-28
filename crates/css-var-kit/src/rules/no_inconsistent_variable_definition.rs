@@ -1,8 +1,7 @@
-use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::{Property, SearchResult, SearcherBuilder};
 use crate::type_checker::value_kind::{ValueKind, kind_of};
 use crate::variable_resolver::resolve_variables;
 
@@ -30,14 +29,14 @@ impl Rule for NoInconsistentVariableDefinition {
 }
 
 fn check_variable_definitions<'src>(
-    props: &[&'src Property<'src>],
+    props: &[&Property<'src>],
     vars: &VarsMap<'src>,
     severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
         .filter_map(|&p| {
-            let token_list = p.value.token_list.as_ref()?;
+            let token_list = p.token_list()?;
             let kinds = match resolve_variables(token_list, vars) {
                 Ok(resolved) => kind_of(&resolved),
                 Err(_) => kind_of(p.value.raw),

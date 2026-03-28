@@ -1,32 +1,12 @@
-use lightningcss::properties::custom::{TokenList, TokenOrValue};
-
-use crate::parser::css::Property;
+use crate::parser::css::Property as CssProperty;
 use crate::searcher::SearchCondition;
 
 pub struct VariableUsages;
 
 impl SearchCondition for VariableUsages {
-    fn matches(&self, prop: &Property) -> bool {
-        match &prop.value.token_list {
-            Some(token_list) => has_var_reference(token_list),
-            None => false,
-        }
+    fn matches(&self, prop: &CssProperty) -> bool {
+        prop.value.raw.contains("var(") || prop.value.raw.contains("--")
     }
-}
-
-fn has_var_reference(token_list: &TokenList<'_>) -> bool {
-    for token in &token_list.0 {
-        match token {
-            TokenOrValue::Var(_) | TokenOrValue::DashedIdent(_) => return true,
-            TokenOrValue::Function(func) => {
-                if has_var_reference(&func.arguments) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
 }
 
 #[cfg(test)]
