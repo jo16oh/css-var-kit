@@ -34,8 +34,10 @@ fn check_variable_definitions<'src>(
         .iter()
         .filter_map(|&p| {
             let token_list = p.value.token_list.as_ref()?;
-            let resolved = resolve_variables(token_list, vars).ok()?;
-            let kinds = kind_of(&resolved);
+            let kinds = match resolve_variables(token_list, vars) {
+                Ok(resolved) => kind_of(&resolved),
+                Err(_) => kind_of(p.value.raw),
+            };
             let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
             Some((p, kinds, is_ignored))
         })
@@ -143,8 +145,13 @@ mod tests {
     }
 
     #[test]
-    fn var_unresolved_skipped() {
-        assert_messages(":root { --x: red; } .dark { --x: var(--undefined); }", &[]);
+    fn var_unresolved_is_inconsistent() {
+        assert_messages(
+            ":root { --x: red; } .dark { --x: var(--undefined); }",
+            &[
+                "inconsistent variable definition: `--x` has value `var(--undefined)` which conflicts with expected type <color>",
+            ],
+        );
     }
 
     #[test]
