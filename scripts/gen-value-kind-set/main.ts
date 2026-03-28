@@ -1,47 +1,8 @@
-import css from "@webref/css";
-import { buildKeywordToTypes, extractTerminalTypes } from "./keyword-kinds.ts";
-import { buildFunctionToKinds } from "./function-kinds.ts";
-import { buildDimensionUnitToKinds } from "./dimension-unit-kinds.ts";
-
-// lightningcss SyntaxComponentKind variants that share a bit with keyword kinds.
-// Names must match the keyword-kinds naming convention so that overlapping
-// kinds (e.g. "color") naturally deduplicate.
-const SYNTAX_COMPONENT_KINDS: { kind: string; variant: string }[] = [
-  { kind: "length", variant: "Length" },
-  { kind: "number", variant: "Number" },
-  { kind: "percentage", variant: "Percentage" },
-  { kind: "color", variant: "Color" },
-  { kind: "image", variant: "Image" },
-  { kind: "url", variant: "Url" },
-  { kind: "integer", variant: "Integer" },
-  { kind: "angle", variant: "Angle" },
-  { kind: "time", variant: "Time" },
-  { kind: "resolution", variant: "Resolution" },
-  { kind: "transform-function", variant: "TransformFunction" },
-  { kind: "transform-list", variant: "TransformList" },
-  { kind: "string", variant: "String" },
-  { kind: "custom-ident", variant: "CustomIdent" },
-];
+import { loadKindData, SYNTAX_COMPONENT_KINDS } from "./kind-data.ts";
+import { generateKindDoc } from "./gen-kind-doc.ts";
 
 function kindToConstName(kind: string): string {
   return kind.replaceAll("-", "_").replaceAll("+", "_plus_").toUpperCase();
-}
-
-function collectAllKinds(
-  ...maps: Record<string, string[]>[]
-): string[] {
-  const kinds = new Set<string>();
-
-  for (const map of maps) {
-    for (const values of Object.values(map)) {
-      for (const kind of values) kinds.add(kind);
-    }
-  }
-  for (const { kind } of SYNTAX_COMPONENT_KINDS) {
-    kinds.add(kind);
-  }
-
-  return [...kinds].sort();
 }
 
 function generateBitflags(allKinds: string[]): string {
@@ -178,18 +139,29 @@ function generateLookupFn(
 }
 
 async function main() {
+  const genDocIndex = Deno.args.indexOf("--gen-doc");
+  if (genDocIndex !== -1) {
+    const docPath = Deno.args[genDocIndex + 1];
+    if (!docPath) {
+      console.error("Usage: deno run main.ts --gen-doc <output-path>");
+      Deno.exit(1);
+    }
+    const data = await loadKindData();
+    const doc = generateKindDoc(data);
+    await Deno.writeTextFile(docPath, doc);
+    console.log(`Written value kind doc to ${docPath}`);
+    return;
+  }
+
   const outPath = Deno.args[0];
   if (!outPath) {
     console.error("Usage: deno run main.ts <output-path>");
+    console.error("       deno run main.ts --gen-doc <output-path>");
     Deno.exit(1);
   }
 
-  const data = await css.listAll();
-  const terminalTypes = extractTerminalTypes(data.types ?? []);
-  const keywordMap = buildKeywordToTypes(terminalTypes);
-  const functionMap = buildFunctionToKinds(data.functions ?? []);
-  const dimensionUnitMap = buildDimensionUnitToKinds();
-  const allKinds = collectAllKinds(keywordMap, functionMap, dimensionUnitMap);
+  const { allKinds, keywordMap, functionMap, dimensionUnitMap } =
+    await loadKindData();
 
   if (allKinds.length > 128) {
     console.error(
