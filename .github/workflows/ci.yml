@@ -41,3 +41,17 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt --all --check
+
+  deno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno fmt --check
+        working-directory: scripts/gen-value-kind-set
+      - run: deno check .
+        working-directory: scripts/gen-value-kind-set
+      - run: deno lint
+        working-directory: scripts/gen-value-kind-set
