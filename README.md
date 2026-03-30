@@ -10,22 +10,23 @@
 
 A simple, lightweight toolkit to help build design systems using CSS variables.
 
+## Installation
+
+
 ## Features
-
-### `cvk lsp`
-
-Language Server Protocol server for CSS variables.
-
-⚠️ WIP ⚠️
 
 ### `cvk lint`
 
-Lints CSS variables and their usage.
+Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
-⚠️ WIP ⚠️
+[Documentation](docs/linter.md)
+
+## Planned Features
+
+### `cvk lsp`
+
+A language server for CSS variables that offers type-aware variable completion and lint warnings.
 
 ### `cvk prune`
 
 Strips unused CSS variables from the final build output.
-
-⚠️ WIP ⚠️
