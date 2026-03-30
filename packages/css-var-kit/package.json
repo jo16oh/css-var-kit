@@ -1,0 +1,21 @@
+{
+  "name": "css-var-kit",
+  "version": "0.1.0",
+  "description": "A simple, lightweight toolkit to help build design systems using raw CSS.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jo16oh/css-var-kit"
+  },
+  "bin": {
+    "cvk": "bin/css-var-kit.js"
+  },
+  "files": ["bin/css-var-kit.js"],
+  "optionalDependencies": {
+    "@css-var-kit/cli-darwin-arm64": "0.1.0",
+    "@css-var-kit/cli-darwin-x64": "0.1.0",
+    "@css-var-kit/cli-linux-x64": "0.1.0",
+    "@css-var-kit/cli-linux-arm64": "0.1.0",
+    "@css-var-kit/cli-win32-x64": "0.1.0"
+  }
+}
