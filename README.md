@@ -8,7 +8,7 @@
 
 # css-var-kit
 
-A simple, lightweight toolkit to help build design systems using raw CSS.
+A simple, lightweight toolkit to help build design systems using CSS variables.
 
 ## Features
 
