@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "no-undefined-variable-use": "off",
+    "no-variable-type-mismatch": "off",
+    "no-inconsistent-variable-definition": "off",
+    "enforce-variable-use": {
+      "types": ["color"]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+[tools]
+rust = "1.94"
+deno = "2.7"
+prek = "latest"
+tombi = "latest"
+just = "latest"

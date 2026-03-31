@@ -1,0 +1,16 @@
+.a {
+    color: red;
+    background: var(--bg);
+    border: 1px solid blue;
+    color: inherit;
+    color: transparent;
+}
+
+.b {
+    /* cvk-ignore: enforce-variable-use */
+    color: green;
+}
+
+.c {
+    --custom: red;
+}

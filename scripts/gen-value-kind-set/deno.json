@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@webref/css": "npm:@webref/css@8.4.1",
+    "css-tree": "npm:css-tree@3.2.1"
+  }
+}

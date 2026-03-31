@@ -1,0 +1,9 @@
+:root {
+    --color: red;
+    --size: 16px;
+}
+
+.dark {
+    --color: blue;
+    --size: 300ms;
+}

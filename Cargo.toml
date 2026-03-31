@@ -1,11 +1,13 @@
-[package]
-name = "css-var-kit"
+[workspace]
+resolver = "3"
+members = [
+  "crates/css-var-kit",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-description = ""
 homepage = "https://github.com/jo16oh/css-var-kit"
 repository = "https://github.com/jo16oh/css-var-kit"
 license = "MIT"
-keywords = ["css", "css-variables", "language-server"]
-categories = ["development-tools", "web-programming"]
