@@ -74,6 +74,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure Git to use HTTPS
+        run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -96,13 +99,24 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in cli-darwin-arm64 cli-darwin-x64 cli-linux-x64 cli-linux-arm64 cli-win32-x64; do
-            npm publish packages/$pkg --access public
+            exit_code=0
+            output=$(npm publish ./packages/$pkg --access public 2>&1) || exit_code=$?
+            echo "$output"
+            if [ $exit_code -ne 0 ] && ! echo "$output" | grep -q "previously published"; then
+              exit $exit_code
+            fi
           done
 
       - name: Publish main package to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish packages/css-var-kit --access public
+        run: |
+          exit_code=0
+          output=$(npm publish ./packages/css-var-kit --access public 2>&1) || exit_code=$?
+          echo "$output"
+          if [ $exit_code -ne 0 ] && ! echo "$output" | grep -q "previously published"; then
+            exit $exit_code
+          fi
 
       - name: Publish to crates.io
         env:
