@@ -99,11 +99,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in cli-darwin-arm64 cli-darwin-x64 cli-linux-x64 cli-linux-arm64 cli-win32-x64; do
-            exit_code=0
-            output=$(npm publish ./packages/$pkg --access public 2>&1) || exit_code=$?
-            echo "$output"
-            if [ $exit_code -ne 0 ] && ! echo "$output" | grep -q "previously published"; then
-              exit $exit_code
+            name=$(node -p "require('./packages/$pkg/package.json').name")
+            version=$(node -p "require('./packages/$pkg/package.json').version")
+            if npm view "$name@$version" version &>/dev/null 2>&1; then
+              echo "Skipping $name@$version (already published)"
+            else
+              npm publish "./packages/$pkg" --access public
             fi
           done
 
@@ -111,17 +112,25 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          exit_code=0
-          output=$(npm publish ./packages/css-var-kit --access public 2>&1) || exit_code=$?
-          echo "$output"
-          if [ $exit_code -ne 0 ] && ! echo "$output" | grep -q "previously published"; then
-            exit $exit_code
+          name=$(node -p "require('./packages/css-var-kit/package.json').name")
+          version=$(node -p "require('./packages/css-var-kit/package.json').version")
+          if npm view "$name@$version" version &>/dev/null 2>&1; then
+            echo "Skipping $name@$version (already published)"
+          else
+            npm publish ./packages/css-var-kit --access public
           fi
 
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p css-var-kit
+        run: |
+          version=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name=="css-var-kit") | .version')
+          if curl -sf "https://crates.io/api/v1/crates/css-var-kit/$version" \
+            -H "User-Agent: css-var-kit-releaser" | jq -e '.version.num' &>/dev/null 2>&1; then
+            echo "Skipping css-var-kit@$version (already published)"
+          else
+            cargo publish -p css-var-kit
+          fi
 
   github-release:
     needs: build
