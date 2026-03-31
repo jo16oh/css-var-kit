@@ -12,6 +12,15 @@ A simple, lightweight toolkit to help build design systems using CSS variables.
 
 ## Installation
 
+```sh
+npm install -D css-var-kit
+```
+
+Or install via Cargo:
+
+```sh
+cargo install css-var-kit
+```
 
 ## Features
 
