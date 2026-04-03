@@ -1,6 +1,6 @@
 {
   "name": "@css-var-kit/cli-linux-x64",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "css-var-kit native binary for Linux x64",
   "license": "MIT",
   "repository": {
