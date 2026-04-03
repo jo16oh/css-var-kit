@@ -1,5 +1,5 @@
 pub(crate) mod file;
-pub(crate) mod rules;
+pub mod rules;
 
 use std::path::{Path, PathBuf};
 
@@ -83,7 +83,9 @@ impl LookupFilesMatcher {
 }
 
 impl Config {
-    pub fn load(cwd: &Path, args: &LintArgs) -> Result<Self, ConfigError> {
+    pub fn load(cwd: &Path, args: Option<LintArgs>) -> Result<Self, ConfigError> {
+        let args = args.unwrap_or_default();
+
         let (config_base, raw) = match &args.config {
             Some(path) => {
                 let abs = cwd.join(path);
@@ -123,7 +125,7 @@ impl Config {
 }
 
 impl RawRules {
-    fn override_raw_rules_by_args(mut self, args: &LintArgs) -> Result<RawRules, ConfigError> {
+    fn override_raw_rules_by_args(mut self, args: LintArgs) -> Result<RawRules, ConfigError> {
         for entry in &args.rule {
             let err = |reason: String| ConfigError::InvalidRuleOption {
                 raw: entry.clone(),
@@ -178,7 +180,7 @@ impl RawRules {
     }
 }
 
-fn find_project_root(cwd: &Path) -> PathBuf {
+pub(crate) fn find_project_root(cwd: &Path) -> PathBuf {
     let markers = ["cvk.json", "cvk.jsonc", "package.json", ".git"];
 
     for marker in markers {

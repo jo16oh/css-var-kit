@@ -14,11 +14,17 @@ fn main() {
 
     match cli.command {
         Command::Lint(args) => {
-            let config = Config::load(&cwd, &args).unwrap_or_else(|e| {
+            let config = Config::load(&cwd, Some(args)).unwrap_or_else(|e| {
                 eprintln!("error: {e}");
                 process::exit(1);
             });
             commands::lint::run(&config);
+        }
+        Command::Lsp => {
+            commands::lsp::run(&cwd).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                process::exit(1);
+            });
         }
     }
 }

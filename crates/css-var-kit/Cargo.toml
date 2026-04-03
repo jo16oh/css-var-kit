@@ -23,6 +23,8 @@ json-strip-comments = "3.1.0"
 lightningcss = { version = "1.0.0-alpha.70", default-features = false, features = [
   "substitute_variables"
 ] }
+lsp-server = "0.7"
+lsp-types = "0.97"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

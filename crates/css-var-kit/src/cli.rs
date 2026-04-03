@@ -16,9 +16,11 @@ pub struct Cli {
 pub enum Command {
     /// Lint CSS files for CSS variable issues
     Lint(LintArgs),
+    /// Start the Language Server Protocol server
+    Lsp,
 }
 
-#[derive(clap::Args)]
+#[derive(clap::Args, Default)]
 #[command(
     about = "Lint CSS files for CSS variable issues",
     long_about = LINT_LONG_ABOUT,
