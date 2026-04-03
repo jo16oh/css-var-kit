@@ -62,7 +62,7 @@ fn collect_undefined<'src>(
                         column: prop.value.column,
                         span_length: None,
                         rule_name: RULE_NAME,
-                        message: format!("undefined variable `{}`", name),
+                        message: format!("`{}` is undefined", name),
                         severity,
                     });
                 }
@@ -80,7 +80,7 @@ fn collect_undefined<'src>(
                         column: prop.value.column,
                         span_length: None,
                         rule_name: RULE_NAME,
-                        message: format!("undefined variable `{}`", name),
+                        message: format!("`{}` is undefined", name),
                         severity,
                     });
                 }
@@ -123,7 +123,7 @@ mod tests {
     fn reports_undefined_variable() {
         assert_messages(
             ".a { color: var(--undefined); }",
-            &["undefined variable `--undefined`"],
+            &["`--undefined` is undefined"],
         );
     }
 
@@ -131,7 +131,7 @@ mod tests {
     fn reports_multiple_undefined() {
         assert_messages(
             ".a { background: var(--a) var(--b); }",
-            &["undefined variable `--a`", "undefined variable `--b`"],
+            &["`--a` is undefined", "`--b` is undefined"],
         );
     }
 
@@ -139,7 +139,7 @@ mod tests {
     fn mix_defined_and_undefined() {
         assert_messages(
             ":root { --color: red; } .a { color: var(--color); margin: var(--spacing); }",
-            &["undefined variable `--spacing`"],
+            &["`--spacing` is undefined"],
         );
     }
 
@@ -147,7 +147,7 @@ mod tests {
     fn nested_var_with_fallback() {
         assert_messages(
             ":root { --fallback: blue; } .a { color: var(--primary, var(--fallback)); }",
-            &["undefined variable `--primary`"],
+            &["`--primary` is undefined"],
         );
     }
 
@@ -173,7 +173,7 @@ mod tests {
     fn cvk_ignore_only_suppresses_next_property() {
         assert_messages(
             ".a {\n    /* cvk-ignore */\n    color: var(--a);\n    margin: var(--b);\n}",
-            &["undefined variable `--b`"],
+            &["`--b` is undefined"],
         );
     }
 }
