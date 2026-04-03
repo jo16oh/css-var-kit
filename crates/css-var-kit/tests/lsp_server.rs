@@ -1,9 +1,8 @@
 mod common;
-mod lsp;
 
 use std::path::Path;
 
-use lsp::LspClient;
+use common::lsp_client::LspClient;
 
 #[test]
 fn publishes_diagnostics_on_open() {
