@@ -48,9 +48,6 @@ pub fn run(cwd: &Path) -> Result<(), Box<dyn Error>> {
 
     server.main_loop()?;
 
-    // ここでioスレッドを待機してハングしてしまう
-    // io_threads.join()?;
-
     Ok(())
 }
 
