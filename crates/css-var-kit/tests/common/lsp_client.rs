@@ -98,6 +98,37 @@ impl LspClient {
         );
     }
 
+    pub fn change_document(&mut self, uri: &str, version: i32, text: &str) {
+        self.send_notification(
+            "textDocument/didChange",
+            json!({
+                "textDocument": {
+                    "uri": uri,
+                    "version": version
+                },
+                "contentChanges": [{
+                    "text": text
+                }]
+            }),
+        );
+    }
+
+    pub fn notify_watched_files_changed(&mut self, uris: &[&str]) {
+        let changes: Vec<Value> = uris
+            .iter()
+            .map(|uri| {
+                json!({
+                    "uri": uri,
+                    "type": 2 // FileChangeType.Changed
+                })
+            })
+            .collect();
+        self.send_notification(
+            "workspace/didChangeWatchedFiles",
+            json!({ "changes": changes }),
+        );
+    }
+
     pub fn file_uri(&self, relative_path: &str) -> String {
         format!("{}/{relative_path}", self.root_uri)
     }

@@ -1,13 +1,16 @@
+mod file_watcher;
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
 use lsp_types::notification::{
-    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Notification as _,
-    PublishDiagnostics,
+    DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
+    Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
     DiagnosticSeverity, InitializeParams, NumberOrString, Position, PublishDiagnosticsParams,
@@ -40,10 +43,18 @@ pub fn run(cwd: &Path) -> Result<(), Box<dyn Error>> {
 
     let config = Config::load(&root_dir, None)?;
 
+    let watcher_rx = if file_watcher::client_supports_watch(&init_params) {
+        file_watcher::register_client_watcher(&connection)?;
+        None
+    } else {
+        Some(file_watcher::start_server_watcher(&config.root_dir)?)
+    };
+
     let mut server = Server {
         connection: &connection,
         config: &config,
         open_documents: HashMap::new(),
+        watcher_rx,
     };
 
     server.main_loop()?;
@@ -55,22 +66,33 @@ struct Server<'a> {
     connection: &'a Connection,
     config: &'a Config,
     open_documents: HashMap<Uri, String>,
+    watcher_rx: Option<Receiver<()>>,
 }
 
 impl Server<'_> {
     fn main_loop(&mut self) -> Result<(), Box<dyn Error>> {
-        for msg in &self.connection.receiver {
-            match msg {
-                Message::Request(req) => {
-                    if self.connection.handle_shutdown(&req)? {
-                        return Ok(());
+        let dummy_rx = crossbeam_channel::never();
+        let watcher_rx = self.watcher_rx.take();
+        let watcher_rx = watcher_rx.as_ref().unwrap_or(&dummy_rx);
+
+        loop {
+            crossbeam_channel::select! {
+                recv(self.connection.receiver) -> msg => {
+                    match msg? {
+                        Message::Request(req) => {
+                            if self.connection.handle_shutdown(&req)? {
+                                return Ok(());
+                            }
+                        }
+                        Message::Notification(notif) => self.handle_notification(notif)?,
+                        Message::Response(_) => {}
                     }
                 }
-                Message::Notification(notif) => self.handle_notification(notif)?,
-                Message::Response(_) => {}
+                recv(watcher_rx) -> _ => {
+                    self.publish_diagnostics()?;
+                }
             }
         }
-        Ok(())
     }
 
     fn handle_notification(&mut self, notif: Notification) -> Result<(), Box<dyn Error>> {
@@ -89,6 +111,9 @@ impl Server<'_> {
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
                 }
+                self.publish_diagnostics()?;
+            }
+            DidChangeWatchedFiles::METHOD => {
                 self.publish_diagnostics()?;
             }
             DidCloseTextDocument::METHOD => {
