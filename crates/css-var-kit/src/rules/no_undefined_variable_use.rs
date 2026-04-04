@@ -31,16 +31,11 @@ fn check_undefined<'src>(
     usages: &[Property<'src>],
     severity: Severity,
 ) -> Vec<Diagnostic<'src>> {
-    let mut diagnostics = Vec::new();
-
-    for prop in usages.iter() {
-        if is_ignored(&prop.ignore_comments, RULE_NAME) {
-            continue;
-        }
-        collect_undefined(prop.token_list(), def_map, prop, severity, &mut diagnostics);
-    }
-
-    diagnostics
+    usages
+        .iter()
+        .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))
+        .flat_map(|prop| collect_undefined(prop.token_list(), def_map, prop, severity))
+        .collect()
 }
 
 fn collect_undefined<'src>(
@@ -48,49 +43,143 @@ fn collect_undefined<'src>(
     definitions: &PropMapFor<'_, '_, VariableDefinitions>,
     prop: &Property<'src>,
     severity: Severity,
-    diagnostics: &mut Vec<Diagnostic<'src>>,
-) {
-    for token in &token_list.0 {
-        match token {
+) -> Vec<Diagnostic<'src>> {
+    collect_undefined_inner(token_list, definitions, prop, severity, 0).1
+}
+
+fn collect_undefined_inner<'src>(
+    token_list: &TokenList<'_>,
+    definitions: &PropMapFor<'_, '_, VariableDefinitions>,
+    prop: &Property<'src>,
+    severity: Severity,
+    search_from: usize,
+) -> (usize, Vec<Diagnostic<'src>>) {
+    token_list.0.iter().fold(
+        (search_from, Vec::new()),
+        |(search_from, mut diagnostics), token| match token {
             TokenOrValue::Var(var) => {
                 let name = &*var.name.ident.0;
+
+                let VarPos {
+                    line,
+                    column,
+                    span_length,
+                    next_search_from,
+                } = find_var_position(prop.source, prop.value.offset, search_from, name);
+
                 if !definitions.contains_key(&PropertyId::from(name)) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
-                        line: prop.value.line,
-                        column: prop.value.column,
-                        span_length: None,
+                        line,
+                        column,
+                        span_length,
                         rule_name: RULE_NAME,
                         message: format!("`{}` is undefined", name),
                         severity,
                     });
                 }
-                if let Some(fallback) = &var.fallback {
-                    collect_undefined(fallback, definitions, prop, severity, diagnostics);
-                }
+
+                let (next_sf, fallback_diags) = var
+                    .fallback
+                    .as_ref()
+                    .map(|fb| {
+                        collect_undefined_inner(fb, definitions, prop, severity, next_search_from)
+                    })
+                    .unwrap_or((next_search_from, Vec::new()));
+
+                diagnostics.extend(fallback_diags);
+                (next_sf, diagnostics)
             }
             TokenOrValue::DashedIdent(ident) => {
                 let name = &*ident.0;
+
+                let VarPos {
+                    line,
+                    column,
+                    span_length,
+                    next_search_from,
+                } = find_var_position(prop.source, prop.value.offset, search_from, name);
+
                 if !definitions.contains_key(&PropertyId::from(name)) {
                     diagnostics.push(Diagnostic {
                         file_path: prop.file_path,
                         source: prop.source,
-                        line: prop.value.line,
-                        column: prop.value.column,
-                        span_length: None,
+                        line,
+                        column,
+                        span_length,
                         rule_name: RULE_NAME,
                         message: format!("`{}` is undefined", name),
                         severity,
                     });
                 }
+
+                (next_search_from, diagnostics)
             }
             TokenOrValue::Function(func) => {
-                collect_undefined(&func.arguments, definitions, prop, severity, diagnostics);
+                let (next_search_from, inner_diagnostics) = collect_undefined_inner(
+                    &func.arguments,
+                    definitions,
+                    prop,
+                    severity,
+                    search_from,
+                );
+                diagnostics.extend(inner_diagnostics);
+                (next_search_from, diagnostics)
             }
-            _ => {}
-        }
-    }
+            _ => (search_from, diagnostics),
+        },
+    )
+}
+
+struct VarPos {
+    line: u32,
+    column: u32,
+    span_length: Option<u32>,
+    next_search_from: usize,
+}
+
+fn find_var_position(
+    source: &str,
+    value_offset: usize,
+    search_from: usize,
+    var_name: &str,
+) -> VarPos {
+    let search_start = value_offset + search_from;
+    source
+        .get(search_start..)
+        .and_then(|haystack| haystack.find(var_name))
+        .map(|pos| {
+            let abs_offset = search_start + pos;
+            let (line, column) = offset_to_position(source, abs_offset);
+            VarPos {
+                line,
+                column,
+                span_length: Some(var_name.len() as u32),
+                next_search_from: search_from + pos + var_name.len(),
+            }
+        })
+        .unwrap_or_else(|| {
+            let (line, column) = offset_to_position(source, value_offset);
+            VarPos {
+                line,
+                column,
+                span_length: None,
+                next_search_from: search_from,
+            }
+        })
+}
+
+fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
+    source[..offset]
+        .bytes()
+        .fold((0u32, 0u32), |(line, col), byte| {
+            if byte == b'\n' {
+                (line + 1, 0)
+            } else {
+                (line, col + 1)
+            }
+        })
 }
 
 #[cfg(test)]

@@ -1,0 +1,2 @@
+:root { --fb: blue; }
+.a { color: var(--primary, var(--fb)); }
