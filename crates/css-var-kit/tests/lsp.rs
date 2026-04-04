@@ -63,15 +63,10 @@ fn updates_diagnostics_on_background_file_change_via_did_change() {
         "expected --spacing-md diagnostic before file change, got: {messages:?}"
     );
 
-    // Simulate background file change: add --spacing-md to variables.css on disk
-    fs::write(
-        tmp.path().join("variables.css"),
-        ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n",
-    )
-    .unwrap();
-
-    // Trigger re-analysis via didChange (editor re-sending the same content)
-    client.change_document(&button_uri, 2, &button_text);
+    // Simulate editing variables.css: add --spacing-md via didChange
+    let variables_uri = client.file_uri("variables.css");
+    let new_variables_text = ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n";
+    client.change_document(&variables_uri, 2, new_variables_text);
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");

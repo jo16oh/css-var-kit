@@ -69,10 +69,13 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         Some(file_watcher::start_server_watcher(&config.root_dir)?)
     };
 
+    let source_cache = load_all_sources(&config);
+
     let mut server = Server {
         connection: &connection,
         config: &config,
         open_documents: HashMap::new(),
+        source_cache,
         watcher_rx,
         logger: logger.as_ref(),
     };
@@ -93,7 +96,8 @@ struct Server<'a> {
     connection: &'a Connection,
     config: &'a Config,
     open_documents: HashMap<Uri, String>,
-    watcher_rx: Option<Receiver<()>>,
+    source_cache: HashMap<PathBuf, String>,
+    watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
 
@@ -116,9 +120,15 @@ impl Server<'_> {
                         Message::Response(_) => {}
                     }
                 }
-                recv(watcher_rx) -> _ => {
-                    self.log("server watcher: file change detected");
-                    self.publish_diagnostics()?;
+                recv(watcher_rx) -> paths => {
+                    if let Ok(paths) = paths {
+                        self.log(&format!(
+                            "server watcher: file change detected ({} files)",
+                            paths.len()
+                        ));
+                        self.update_source_cache_from_disk(&paths);
+                        self.publish_diagnostics()?;
+                    }
                 }
             }
         }
@@ -133,6 +143,10 @@ impl Server<'_> {
                     "textDocument/didOpen: {}",
                     params.text_document.uri.as_str()
                 ));
+                if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
+                    self.source_cache
+                        .insert(rel_path, params.text_document.text.clone());
+                }
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
                 self.publish_diagnostics()?;
@@ -146,13 +160,27 @@ impl Server<'_> {
                     params.text_document.version
                 ));
                 if let Some(change) = params.content_changes.into_iter().last() {
+                    if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
+                        self.source_cache.insert(rel_path, change.text.clone());
+                    }
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
                 }
                 self.publish_diagnostics()?;
             }
             DidChangeWatchedFiles::METHOD => {
-                self.log("workspace/didChangeWatchedFiles");
+                let params: lsp_types::DidChangeWatchedFilesParams =
+                    serde_json::from_value(notif.params)?;
+                let changed_paths: Vec<PathBuf> = params
+                    .changes
+                    .iter()
+                    .filter_map(|change| uri_to_path(&change.uri))
+                    .collect();
+                self.log(&format!(
+                    "workspace/didChangeWatchedFiles: {} files",
+                    changed_paths.len()
+                ));
+                self.update_source_cache_from_disk(&changed_paths);
                 self.publish_diagnostics()?;
             }
             DidCloseTextDocument::METHOD => {
@@ -163,6 +191,16 @@ impl Server<'_> {
                     params.text_document.uri.as_str()
                 ));
                 self.open_documents.remove(&params.text_document.uri);
+                if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
+                    match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
+                        Ok(content) => {
+                            self.source_cache.insert(rel_path, content);
+                        }
+                        Err(_) => {
+                            self.source_cache.remove(&rel_path);
+                        }
+                    }
+                }
                 self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
                     uri: params.text_document.uri,
                     diagnostics: vec![],
@@ -175,11 +213,15 @@ impl Server<'_> {
     }
 
     fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        let sources = self.collect_sources();
+        let sources: Vec<(&Path, &str)> = self
+            .source_cache
+            .iter()
+            .map(|(path, content)| (path.as_path(), content.as_str()))
+            .collect();
 
         let parse_results: Vec<_> = sources
             .iter()
-            .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
+            .map(|(path, content)| parser::css::parse(content, path))
             .collect();
 
         let diagnostics = lint::check(&parse_results, &self.config.rules);
@@ -199,7 +241,7 @@ impl Server<'_> {
         }
 
         for (path, _) in &sources {
-            let lsp_diagnostics = by_file.remove(path.as_path()).unwrap_or_default();
+            let lsp_diagnostics = by_file.remove(*path).unwrap_or_default();
             let abs_path = self.config.root_dir.join(path);
             let uri = path_to_uri(&abs_path);
             self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
@@ -212,31 +254,39 @@ impl Server<'_> {
         Ok(())
     }
 
-    fn collect_sources(&self) -> Vec<(PathBuf, String)> {
-        let mut sources: HashMap<PathBuf, String> = HashMap::new();
+    fn update_source_cache_from_disk(&mut self, abs_paths: &[PathBuf]) {
+        for abs_path in abs_paths {
+            let is_open = self
+                .open_documents
+                .keys()
+                .any(|uri| uri_to_path(uri).as_deref() == Some(abs_path.as_path()));
+            if is_open {
+                continue;
+            }
 
-        let css_files = lint::collect_css_files(self.config.root_dir.as_path());
-        for path in css_files {
-            if let Ok(content) = fs::read_to_string(&path) {
-                let rel_path = path
-                    .strip_prefix(&self.config.root_dir)
-                    .unwrap_or(&path)
-                    .to_path_buf();
-                sources.insert(rel_path, content);
+            let rel_path = abs_path
+                .strip_prefix(&self.config.root_dir)
+                .unwrap_or(abs_path)
+                .to_path_buf();
+
+            match fs::read_to_string(abs_path) {
+                Ok(content) => {
+                    self.source_cache.insert(rel_path, content);
+                }
+                Err(_) => {
+                    self.source_cache.remove(&rel_path);
+                }
             }
         }
+    }
 
-        for (uri, content) in &self.open_documents {
-            if let Some(file_path) = uri_to_path(uri) {
-                let rel_path = file_path
-                    .strip_prefix(&self.config.root_dir)
-                    .unwrap_or(&file_path)
-                    .to_path_buf();
-                sources.insert(rel_path, content.clone());
-            }
-        }
-
-        sources.into_iter().collect()
+    fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {
+        uri_to_path(uri).map(|abs_path| {
+            abs_path
+                .strip_prefix(&self.config.root_dir)
+                .unwrap_or(&abs_path)
+                .to_path_buf()
+        })
     }
 
     fn log(&self, msg: &str) {
@@ -257,6 +307,20 @@ impl Server<'_> {
             )))?;
         Ok(())
     }
+}
+
+fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
+    lint::collect_css_files(config.root_dir.as_path())
+        .into_iter()
+        .filter_map(|path| {
+            let content = fs::read_to_string(&path).ok()?;
+            let rel_path = path
+                .strip_prefix(&config.root_dir)
+                .unwrap_or(&path)
+                .to_path_buf();
+            Some((rel_path, content))
+        })
+        .collect()
 }
 
 fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {

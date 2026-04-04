@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Request};
@@ -46,17 +46,18 @@ pub fn register_client_watcher(connection: &Connection) -> Result<(), Box<dyn Er
     Ok(())
 }
 
-pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<()>, Box<dyn Error>> {
+pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, Box<dyn Error>> {
     let (tx, rx) = crossbeam_channel::bounded(1);
 
     let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
         if let Ok(event) = event {
-            let is_css = event
+            let css_paths: Vec<PathBuf> = event
                 .paths
-                .iter()
-                .any(|p| p.extension().is_some_and(|ext| ext == "css"));
-            if is_css {
-                let _ = tx.try_send(());
+                .into_iter()
+                .filter(|p| p.extension().is_some_and(|ext| ext == "css"))
+                .collect();
+            if !css_paths.is_empty() {
+                let _ = tx.try_send(css_paths);
             }
         }
     })?;
