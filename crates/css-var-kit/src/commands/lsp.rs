@@ -31,7 +31,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         completion_provider: Some(CompletionOptions {
-            trigger_characters: Some(vec!["-".to_owned()]),
+            trigger_characters: Some(vec!["-".to_owned(), "(".to_owned()]),
             ..Default::default()
         }),
         ..Default::default()

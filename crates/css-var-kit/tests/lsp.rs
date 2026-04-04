@@ -205,7 +205,7 @@ fn writes_log_file_when_configured() {
 }
 
 #[test]
-fn completes_variables_in_property_value() {
+fn completes_color_variables_for_color_property() {
     let fixture_dir = Path::new(common::FIXTURES).join("default");
     let mut client = LspClient::spawn(&fixture_dir);
     client.initialize();
@@ -215,7 +215,7 @@ fn completes_variables_in_property_value() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // Request completion at line 1 (color: var(--primary-color);), inside the value
+    // line 1: "    color: var(--primary-color);" — cursor inside the value
     let response = client.request_completion(&uri, 1, 12);
     client.shutdown();
 
@@ -227,20 +227,20 @@ fn completes_variables_in_property_value() {
 
     assert!(
         labels.contains(&"--primary-color"),
-        "expected --primary-color in completions, got: {labels:?}"
+        "color variable should be suggested for color property, got: {labels:?}"
     );
     assert!(
         labels.contains(&"--secondary-color"),
-        "expected --secondary-color in completions, got: {labels:?}"
+        "color variable should be suggested for color property, got: {labels:?}"
     );
     assert!(
-        labels.contains(&"--font-size-base"),
-        "expected --font-size-base in completions, got: {labels:?}"
+        !labels.contains(&"--font-size-base"),
+        "length variable should NOT be suggested for color property, got: {labels:?}"
     );
 }
 
 #[test]
-fn completion_returns_var_wrap_as_insert_text() {
+fn completes_length_variables_for_font_size_property() {
     let fixture_dir = Path::new(common::FIXTURES).join("default");
     let mut client = LspClient::spawn(&fixture_dir);
     client.initialize();
@@ -250,7 +250,40 @@ fn completion_returns_var_wrap_as_insert_text() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    let response = client.request_completion(&uri, 1, 12);
+    // line 3: "    font-size: var(--font-size-base);" — cursor inside the value
+    let response = client.request_completion(&uri, 3, 16);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--font-size-base"),
+        "length variable should be suggested for font-size, got: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"--primary-color"),
+        "color variable should NOT be suggested for font-size, got: {labels:?}"
+    );
+}
+
+#[test]
+fn completion_text_edit_replaces_typed_prefix() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    // "    color: --" — user typed "--" outside var()
+    let text = ".test {\n    color: --\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor after "--" (col 13)
+    let response = client.request_completion(&uri, 1, 13);
     client.shutdown();
 
     let items = response["result"]
@@ -262,16 +295,161 @@ fn completion_returns_var_wrap_as_insert_text() {
         .find(|i| i["label"].as_str() == Some("--primary-color"))
         .expect("--primary-color not found in completions");
 
+    let text_edit = &primary["textEdit"];
     assert_eq!(
-        primary["insertText"].as_str(),
+        text_edit["newText"].as_str(),
         Some("var(--primary-color)"),
-        "insertText should wrap variable in var()"
+        "newText should wrap variable in var()"
     );
+    // replace range should cover the typed "--" (col 11..13)
+    assert_eq!(text_edit["range"]["start"]["character"], 11);
+    assert_eq!(text_edit["range"]["end"]["character"], 13);
     assert_eq!(
         primary["detail"].as_str(),
         Some("#3490dc"),
         "detail should show the variable value"
     );
+}
+
+#[test]
+fn completion_filters_by_compound_value_prefix() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    // border already has width (1px) and style (solid), only color slot remains
+    let text = ".test {\n    border: 1px solid -\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor after "-" on "    border: 1px solid -"
+    let response = client.request_completion(&uri, 1, 23);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--primary-color"),
+        "color variable should be suggested for border color slot, got: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"--font-size-base"),
+        "length variable should NOT be suggested when border already has width, got: {labels:?}"
+    );
+}
+
+#[test]
+fn completion_considers_value_after_cursor() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    // "border: 1px -- red;" — width and color already present, cursor at "--"
+    let text = ".test {\n    border: 1px -- red;\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor after "--" on "    border: 1px --"
+    //     b o r d e r :   1 p x   - -
+    // 0   4             9  11      13
+    let response = client.request_completion(&uri, 1, 18);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    // "1px" fills width, "red" fills color — only style-compatible vars should remain
+    assert!(
+        !labels.contains(&"--primary-color"),
+        "color variable should NOT be suggested when color is already present, got: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"--font-size-base"),
+        "length variable should NOT be suggested when width is already present, got: {labels:?}"
+    );
+}
+
+#[test]
+fn completion_filters_inside_function_argument() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    // translate() accepts lengths, not colors
+    let text = ".test {\n    transform: translate(-\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor after "-" on "    transform: translate(-"
+    let response = client.request_completion(&uri, 1, 26);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--font-size-base"),
+        "length variable should be suggested inside translate(), got: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"--primary-color"),
+        "color variable should NOT be suggested inside translate(), got: {labels:?}"
+    );
+}
+
+#[test]
+fn completion_inside_var_inserts_variable_name_only() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = ".test {\n    color: var(-\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor after "-" on "    color: var(-"
+    let response = client.request_completion(&uri, 1, 16);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--primary-color"),
+        "color variable should be suggested inside var(), got: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"--font-size-base"),
+        "length variable should NOT be suggested for color inside var(), got: {labels:?}"
+    );
+
+    let primary = items
+        .iter()
+        .find(|i| i["label"].as_str() == Some("--primary-color"))
+        .unwrap();
+    let text_edit = &primary["textEdit"];
+    assert_eq!(
+        text_edit["newText"].as_str(),
+        Some("--primary-color"),
+        "newText inside var() should be variable name only, not wrapped in var()"
+    );
+    // "    color: var(-" → var( ends at col 15, "-" at col 15, cursor at col 16
+    // replace range should cover the typed "-" (col 15..16)
+    assert_eq!(text_edit["range"]["start"]["character"], 15);
+    assert_eq!(text_edit["range"]["end"]["character"], 16);
 }
 
 #[test]
