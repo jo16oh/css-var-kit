@@ -278,6 +278,7 @@ pub fn parse<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
     parse_impl(css, file_path, 0)
 }
 
+#[allow(dead_code)]
 pub fn parse_style_attr<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
     parse_impl(css, file_path, 1)
 }

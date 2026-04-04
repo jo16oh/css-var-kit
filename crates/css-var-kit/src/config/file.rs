@@ -18,13 +18,13 @@ pub(super) struct RawConfig {
     #[serde(default)]
     pub(super) rules: RawRules,
     #[serde(default)]
-    pub(crate) lsp: RawLspConfig,
+    pub(super) lsp: RawLspConfig,
 }
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct RawLspConfig {
-    pub(crate) log_file: Option<String>,
+pub struct RawLspConfig {
+    pub log_file: Option<String>,
 }
 
 impl Default for RawConfig {
@@ -39,7 +39,7 @@ impl Default for RawConfig {
 }
 
 impl RawConfig {
-    pub(super) fn load(project_root: &Path) -> Result<Self, ConfigError> {
+    pub fn load(project_root: &Path) -> Result<Self, ConfigError> {
         let candidates = ["cvk.json", "cvk.jsonc"];
 
         for name in candidates {

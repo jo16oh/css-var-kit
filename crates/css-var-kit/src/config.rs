@@ -1,4 +1,4 @@
-pub(crate) mod file;
+pub mod file;
 pub mod rules;
 
 use std::path::{Path, PathBuf};
@@ -38,6 +38,7 @@ pub enum ConfigError {
     },
 }
 
+#[allow(dead_code)]
 pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
@@ -45,15 +46,18 @@ pub struct Config {
     pub lsp_log_file: Option<PathBuf>,
 }
 
+#[allow(dead_code)]
 pub struct LookupFilesMatcher {
     patterns: Vec<LookupPattern>,
 }
 
+#[allow(dead_code)]
 struct LookupPattern {
     negated: bool,
     matcher: GlobMatcher,
 }
 
+#[allow(dead_code)]
 impl LookupFilesMatcher {
     fn compile(raw_patterns: &[String]) -> Result<Self, globset::Error> {
         raw_patterns
@@ -184,7 +188,7 @@ impl RawRules {
     }
 }
 
-pub(crate) fn find_project_root(cwd: &Path) -> PathBuf {
+pub fn find_project_root(cwd: &Path) -> PathBuf {
     let markers = ["cvk.json", "cvk.jsonc", "package.json", ".git"];
 
     for marker in markers {

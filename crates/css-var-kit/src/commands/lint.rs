@@ -73,7 +73,7 @@ pub fn check<'src>(
     diagnostics
 }
 
-pub(crate) fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
+pub fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     collect_css_files_recursive(dir, &mut files);
     files.sort();
