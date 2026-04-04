@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "enforce-variable-use": {
+      "types": ["length", "color"]
+    }
+  }
+}
+
+

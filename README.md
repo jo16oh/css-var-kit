@@ -28,7 +28,7 @@ cargo install css-var-kit
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
-[Documentation](docs/linter.md)
+[More Documentation](docs/linter.md)
 
 ### `cvk lsp`
 
@@ -40,7 +40,11 @@ A language server for CSS variables that offers type-aware variable completion a
 - Rename variable
 - Go to defintition
 
-#### Editor Integration ⚙️
+#### Demo
+
+https://github.com/user-attachments/assets/7bc49732-ba6c-4204-a23c-02b230bff0a1
+
+#### Editor Integration
 
 Helix:
 ```helix
