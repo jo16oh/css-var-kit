@@ -3,6 +3,7 @@ mod definition;
 mod diagnostics;
 mod file_watcher;
 mod logger;
+mod position;
 mod uri;
 
 use std::collections::HashMap;

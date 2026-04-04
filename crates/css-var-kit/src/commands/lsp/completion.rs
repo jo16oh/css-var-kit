@@ -9,6 +9,7 @@ use lsp_types::{
 };
 
 use super::Server;
+use super::position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::parser;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -162,7 +163,7 @@ fn extract_property_context(source: &str, pos: &Position) -> Option<PropertyCont
     };
 
     let token_start_byte = value_start_byte + token_start_in_prefix;
-    let replace_start = byte_to_utf16(line_str, token_start_byte);
+    let replace_start = byte_offset_to_utf16(line_str, token_start_byte);
 
     Some(PropertyContext {
         property_name: property_name.to_owned(),
@@ -194,22 +195,4 @@ fn build_test_value(ctx: &PropertyContext, var_name: &str) -> String {
         let context = &ctx.value_prefix[..token_start];
         format!("{context}var({var_name}){suffix}")
     }
-}
-
-fn utf16_to_byte_offset(line: &str, utf16_col: u32) -> usize {
-    let mut utf16_count = 0u32;
-    for (byte_idx, ch) in line.char_indices() {
-        if utf16_count >= utf16_col {
-            return byte_idx;
-        }
-        utf16_count += ch.len_utf16() as u32;
-    }
-    line.len()
-}
-
-fn byte_to_utf16(line: &str, byte_offset: usize) -> u32 {
-    line[..byte_offset.min(line.len())]
-        .chars()
-        .map(|c| c.len_utf16() as u32)
-        .sum()
 }

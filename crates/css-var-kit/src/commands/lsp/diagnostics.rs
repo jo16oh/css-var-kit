@@ -6,6 +6,7 @@ use lsp_types::notification::PublishDiagnostics;
 use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnosticsParams, Range};
 
 use super::Server;
+use super::position::byte_col_to_utf16_in_source;
 use super::uri::path_to_uri;
 use crate::commands::lint;
 use crate::parser;
@@ -58,13 +59,13 @@ impl Server<'_> {
 fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
     let start = Position {
         line: d.line,
-        character: byte_offset_to_utf16(d.source, d.line, d.column),
+        character: byte_col_to_utf16_in_source(d.source, d.line, d.column),
     };
 
     let end = match d.span_length {
         Some(len) => Position {
             line: d.line,
-            character: byte_offset_to_utf16(d.source, d.line, d.column + len),
+            character: byte_col_to_utf16_in_source(d.source, d.line, d.column + len),
         },
         None => {
             let line_end_col = d
@@ -75,7 +76,7 @@ fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
                 .unwrap_or(d.column + 1);
             Position {
                 line: d.line,
-                character: byte_offset_to_utf16(d.source, d.line, line_end_col),
+                character: byte_col_to_utf16_in_source(d.source, d.line, line_end_col),
             }
         }
     };
@@ -91,18 +92,4 @@ fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
         message: d.message.clone(),
         ..Default::default()
     }
-}
-
-fn byte_offset_to_utf16(source: &str, line: u32, byte_col: u32) -> u32 {
-    source
-        .lines()
-        .nth(line as usize)
-        .map(|line_str| {
-            let byte_col = (byte_col as usize).min(line_str.len());
-            line_str[..byte_col]
-                .chars()
-                .map(|c| c.len_utf16() as u32)
-                .sum()
-        })
-        .unwrap_or(0)
 }

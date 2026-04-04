@@ -5,6 +5,7 @@ use lsp_server::{Message, Request, Response};
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position, Range};
 
 use super::Server;
+use super::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use super::uri::path_to_uri;
 use crate::parser;
 use crate::searcher::SearcherBuilder;
@@ -61,11 +62,15 @@ impl Server<'_> {
                 let abs_path = self.config.root_dir.join(prop.file_path);
                 let start = Position {
                     line: prop.name.line,
-                    character: byte_col_to_utf16(prop.source, prop.name.line, prop.name.column),
+                    character: byte_col_to_utf16_in_source(
+                        prop.source,
+                        prop.name.line,
+                        prop.name.column,
+                    ),
                 };
                 let end = Position {
                     line: prop.name.line,
-                    character: byte_col_to_utf16(
+                    character: byte_col_to_utf16_in_source(
                         prop.source,
                         prop.name.line,
                         prop.name.column + prop.name.raw.len() as u32,
@@ -124,29 +129,4 @@ fn find_dashed_ident_end(bytes: &[u8], start: usize) -> usize {
 
 fn is_ident_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'-' || b == b'_'
-}
-
-fn utf16_to_byte_offset(line: &str, utf16_col: u32) -> usize {
-    let mut utf16_count = 0u32;
-    for (byte_idx, ch) in line.char_indices() {
-        if utf16_count >= utf16_col {
-            return byte_idx;
-        }
-        utf16_count += ch.len_utf16() as u32;
-    }
-    line.len()
-}
-
-fn byte_col_to_utf16(source: &str, line: u32, byte_col: u32) -> u32 {
-    source
-        .lines()
-        .nth(line as usize)
-        .map(|line_str| {
-            let byte_col = (byte_col as usize).min(line_str.len());
-            line_str[..byte_col]
-                .chars()
-                .map(|c| c.len_utf16() as u32)
-                .sum()
-        })
-        .unwrap_or(0)
 }
