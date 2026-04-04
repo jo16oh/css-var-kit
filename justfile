@@ -7,4 +7,4 @@ gen-value-kind-set:
 gen-value-kind-doc:
     @deno run --allow-read --allow-write \
         scripts/gen-value-kind-set/main.ts \
-        --gen-doc VALUE_KINDS.md
+        --gen-doc docs/VALUE_KINDS.md

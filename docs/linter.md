@@ -155,7 +155,7 @@ Common types for the `types` and `allowedKinds` fields:
 
 `color`, `length`, `length-percentage`, `percentage`, `number`, `integer`, `angle`, `time`, `resolution`, `string`, `url`, `image`, `display`, `position`, `line-style`, `easing-function`, `filter`, `transform-function`, `font-weight-absolute`, `generic-family`, `flex`, `frequency`
 
-See [VALUE_KINDS.md](../VALUE_KINDS.md) for the full list of supported types.
+See [VALUE_KINDS.md](VALUE_KINDS.md) for the full list of supported types.
 
 ## Suppressing diagnostics
 
