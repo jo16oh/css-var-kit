@@ -17,6 +17,14 @@ pub(super) struct RawConfig {
     pub(super) lookup_files: Vec<String>,
     #[serde(default)]
     pub(super) rules: RawRules,
+    #[serde(default)]
+    pub(crate) lsp: RawLspConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RawLspConfig {
+    pub(crate) log_file: Option<String>,
 }
 
 impl Default for RawConfig {
@@ -25,6 +33,7 @@ impl Default for RawConfig {
             root_dir: default_root_dir(),
             lookup_files: default_lookup_files(),
             rules: RawRules::default(),
+            lsp: RawLspConfig::default(),
         }
     }
 }

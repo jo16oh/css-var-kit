@@ -168,6 +168,47 @@ fn updates_diagnostics_on_background_file_change_via_server_watcher() {
     client.shutdown();
 }
 
+#[test]
+fn writes_log_file_when_configured() {
+    let tmp = copy_fixture_to_tempdir("default");
+    let log_file = tmp.path().join("cvk-lsp.log");
+
+    // Add logFile to cvk.json
+    fs::write(
+        tmp.path().join("cvk.json"),
+        format!(r#"{{ "lsp": {{ "logFile": "{}" }} }}"#, log_file.display()),
+    )
+    .unwrap();
+
+    let mut client = LspClient::spawn_with_args(tmp.path(), &["--log"]);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let _ = client.collect_diagnostics();
+    client.shutdown();
+
+    let log_content = fs::read_to_string(&log_file).expect("log file should exist");
+    assert!(
+        log_content.contains("initialized:"),
+        "log should contain initialized message, got: {log_content}"
+    );
+    assert!(
+        log_content.contains("textDocument/didOpen"),
+        "log should contain didOpen message, got: {log_content}"
+    );
+    assert!(
+        log_content.contains("publishDiagnostics:"),
+        "log should contain publishDiagnostics message, got: {log_content}"
+    );
+    assert!(
+        log_content.contains("shutdown"),
+        "log should contain shutdown message, got: {log_content}"
+    );
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,

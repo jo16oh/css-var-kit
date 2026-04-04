@@ -20,8 +20,8 @@ fn main() {
             });
             commands::lint::run(&config);
         }
-        Command::Lsp => {
-            commands::lsp::run(&cwd).unwrap_or_else(|e| {
+        Command::Lsp(args) => {
+            commands::lsp::run(&cwd, args.log).unwrap_or_else(|e| {
                 eprintln!("error: {e}");
                 process::exit(1);
             });

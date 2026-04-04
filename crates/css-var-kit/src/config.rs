@@ -42,6 +42,7 @@ pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
     pub rules: Rules,
+    pub lsp_log_file: Option<PathBuf>,
 }
 
 pub struct LookupFilesMatcher {
@@ -116,10 +117,13 @@ impl Config {
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
 
+        let lsp_log_file = raw.lsp.log_file.map(|p| config_base.join(p));
+
         Ok(Self {
             root_dir,
             lookup_files,
             rules,
+            lsp_log_file,
         })
     }
 }

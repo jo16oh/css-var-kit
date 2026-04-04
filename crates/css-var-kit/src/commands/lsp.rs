@@ -1,4 +1,5 @@
 mod file_watcher;
+mod logger;
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -17,12 +18,13 @@ use lsp_types::{
     Range, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
+use self::logger::Logger;
 use crate::commands::lint;
 use crate::config::Config;
 use crate::parser;
 use crate::rules::{Diagnostic, Severity};
 
-pub fn run(cwd: &Path) -> Result<(), Box<dyn Error>> {
+pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let (connection, _io_threads) = Connection::stdio();
 
     let capabilities = ServerCapabilities {
@@ -43,10 +45,27 @@ pub fn run(cwd: &Path) -> Result<(), Box<dyn Error>> {
 
     let config = Config::load(&root_dir, None)?;
 
+    let logger = if log {
+        let l = Logger::new(config.lsp_log_file.as_deref());
+        l.log(&format!(
+            "initialized: root_dir={}",
+            config.root_dir.display()
+        ));
+        Some(l)
+    } else {
+        None
+    };
+
     let watcher_rx = if file_watcher::client_supports_watch(&init_params) {
         file_watcher::register_client_watcher(&connection)?;
+        if let Some(l) = &logger {
+            l.log("watcher: using client-side (workspace/didChangeWatchedFiles)");
+        }
         None
     } else {
+        if let Some(l) = &logger {
+            l.log("watcher: using server-side (notify crate)");
+        }
         Some(file_watcher::start_server_watcher(&config.root_dir)?)
     };
 
@@ -55,11 +74,19 @@ pub fn run(cwd: &Path) -> Result<(), Box<dyn Error>> {
         config: &config,
         open_documents: HashMap::new(),
         watcher_rx,
+        logger: logger.as_ref(),
     };
 
-    server.main_loop()?;
+    let result = server.main_loop();
 
-    Ok(())
+    if let Some(l) = &logger {
+        match &result {
+            Ok(()) => l.log("shutdown"),
+            Err(e) => l.log(&format!("error: {e}")),
+        }
+    }
+
+    result
 }
 
 struct Server<'a> {
@@ -67,6 +94,7 @@ struct Server<'a> {
     config: &'a Config,
     open_documents: HashMap<Uri, String>,
     watcher_rx: Option<Receiver<()>>,
+    logger: Option<&'a Logger>,
 }
 
 impl Server<'_> {
@@ -89,6 +117,7 @@ impl Server<'_> {
                     }
                 }
                 recv(watcher_rx) -> _ => {
+                    self.log("server watcher: file change detected");
                     self.publish_diagnostics()?;
                 }
             }
@@ -100,6 +129,10 @@ impl Server<'_> {
             DidOpenTextDocument::METHOD => {
                 let params: lsp_types::DidOpenTextDocumentParams =
                     serde_json::from_value(notif.params)?;
+                self.log(&format!(
+                    "textDocument/didOpen: {}",
+                    params.text_document.uri.as_str()
+                ));
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
                 self.publish_diagnostics()?;
@@ -107,6 +140,11 @@ impl Server<'_> {
             DidChangeTextDocument::METHOD => {
                 let params: lsp_types::DidChangeTextDocumentParams =
                     serde_json::from_value(notif.params)?;
+                self.log(&format!(
+                    "textDocument/didChange: {} (version {})",
+                    params.text_document.uri.as_str(),
+                    params.text_document.version
+                ));
                 if let Some(change) = params.content_changes.into_iter().last() {
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
@@ -114,11 +152,16 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidChangeWatchedFiles::METHOD => {
+                self.log("workspace/didChangeWatchedFiles");
                 self.publish_diagnostics()?;
             }
             DidCloseTextDocument::METHOD => {
                 let params: lsp_types::DidCloseTextDocumentParams =
                     serde_json::from_value(notif.params)?;
+                self.log(&format!(
+                    "textDocument/didClose: {}",
+                    params.text_document.uri.as_str()
+                ));
                 self.open_documents.remove(&params.text_document.uri);
                 self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
                     uri: params.text_document.uri,
@@ -140,6 +183,12 @@ impl Server<'_> {
             .collect();
 
         let diagnostics = lint::check(&parse_results, &self.config.rules);
+
+        self.log(&format!(
+            "publishDiagnostics: {} files, {} diagnostics total",
+            sources.len(),
+            diagnostics.len()
+        ));
 
         let mut by_file: HashMap<&Path, Vec<lsp_types::Diagnostic>> = HashMap::new();
         for d in &diagnostics {
@@ -188,6 +237,12 @@ impl Server<'_> {
         }
 
         sources.into_iter().collect()
+    }
+
+    fn log(&self, msg: &str) {
+        if let Some(logger) = self.logger {
+            logger.log(msg);
+        }
     }
 
     fn send_notification<N: lsp_types::notification::Notification>(

@@ -27,14 +27,18 @@ pub struct DiagnosticInfo {
 
 impl LspClient {
     pub fn spawn(workspace: &Path) -> Self {
-        let mut process = Command::new(assert_cmd::cargo::cargo_bin!("cvk"))
-            .arg("lsp")
+        Self::spawn_with_args(workspace, &[])
+    }
+
+    pub fn spawn_with_args(workspace: &Path, extra_args: &[&str]) -> Self {
+        let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("cvk"));
+        cmd.arg("lsp")
+            .args(extra_args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
-            .current_dir(workspace)
-            .spawn()
-            .expect("failed to spawn cvk lsp");
+            .current_dir(workspace);
+        let mut process = cmd.spawn().expect("failed to spawn cvk lsp");
 
         let stdin = process.stdin.take().unwrap();
         let stdout = process.stdout.take().unwrap();
