@@ -1,6 +1,7 @@
 use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
+use crate::position::offset_to_position;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
@@ -166,18 +167,6 @@ fn find_var_position(
                 column,
                 span_length: None,
                 next_search_from: search_from,
-            }
-        })
-}
-
-fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
-    source[..offset]
-        .bytes()
-        .fold((0u32, 0u32), |(line, col), byte| {
-            if byte == b'\n' {
-                (line + 1, 0)
-            } else {
-                (line, col + 1)
             }
         })
 }

@@ -9,9 +9,10 @@ use lsp_types::{
 
 use super::Server;
 use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cursor};
-use super::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 use super::uri::path_to_uri;
 use crate::parser;
+use crate::position::offset_to_position;
+use crate::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
@@ -248,18 +249,6 @@ fn find_var_in_source(
             )
         })
     })
-}
-
-fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
-    source[..offset]
-        .bytes()
-        .fold((0u32, 0u32), |(line, col), byte| {
-            if byte == b'\n' {
-                (line + 1, 0)
-            } else {
-                (line, col + 1)
-            }
-        })
 }
 
 fn make_text_edit(

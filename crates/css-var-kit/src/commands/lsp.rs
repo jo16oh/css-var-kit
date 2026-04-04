@@ -3,7 +3,6 @@ mod definition;
 mod diagnostics;
 mod file_watcher;
 mod logger;
-mod position;
 mod rename;
 mod uri;
 

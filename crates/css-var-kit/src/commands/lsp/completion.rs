@@ -9,8 +9,8 @@ use lsp_types::{
 };
 
 use super::Server;
-use super::position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::parser;
+use crate::position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::type_checker::{TypeCheckError, check_property_type};

@@ -5,9 +5,9 @@ use lsp_server::{Message, Request, Response};
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position, Range};
 
 use super::Server;
-use super::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use super::uri::path_to_uri;
 use crate::parser;
+use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 

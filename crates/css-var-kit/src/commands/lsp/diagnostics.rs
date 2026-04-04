@@ -6,10 +6,10 @@ use lsp_types::notification::PublishDiagnostics;
 use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnosticsParams, Range};
 
 use super::Server;
-use super::position::byte_col_to_utf16_in_source;
-use super::uri::path_to_uri;
 use crate::commands::lint;
+use crate::commands::lsp::uri::path_to_uri;
 use crate::parser;
+use crate::position::byte_col_to_utf16_in_source;
 use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {

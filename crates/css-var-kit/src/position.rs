@@ -23,3 +23,15 @@ pub fn byte_col_to_utf16_in_source(source: &str, line: u32, byte_col: u32) -> u3
         .map(|line_str| byte_offset_to_utf16(line_str, byte_col as usize))
         .unwrap_or(0)
 }
+
+pub fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
+    source[..offset]
+        .bytes()
+        .fold((0u32, 0u32), |(line, col), byte| {
+            if byte == b'\n' {
+                (line + 1, 0)
+            } else {
+                (line, col + 1)
+            }
+        })
+}

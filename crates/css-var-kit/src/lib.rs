@@ -3,6 +3,7 @@ pub mod commands;
 pub mod config;
 pub mod diagnostic_renderer;
 pub mod parser;
+pub mod position;
 pub mod rules;
 pub mod searcher;
 pub mod type_checker;
