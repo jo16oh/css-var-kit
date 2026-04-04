@@ -1,4 +1,5 @@
 {
+  "lookupFiles": ["variables.css", "v.css"],
   "rules": {
     "enforce-variable-use": {
       "types": ["length", "color"]

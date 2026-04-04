@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use crate::config::Config;
-use crate::config::rules::Rules;
 use crate::parser;
 use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
@@ -34,7 +33,7 @@ pub fn run(config: &Config) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let diagnostics = check(&parse_results, &config.rules);
+    let diagnostics = check(&parse_results, config);
 
     if diagnostics.is_empty() {
         return;
@@ -54,9 +53,9 @@ pub fn run(config: &Config) {
 
 pub fn check<'src>(
     parse_results: &'src [parser::css::ParseResult<'src>],
-    rules: &Rules,
+    config: &Config,
 ) -> Vec<Diagnostic<'src>> {
-    let compiled_rules = rules.compile();
+    let compiled_rules = config.rules.compile(config);
 
     let mut searcher = SearcherBuilder::new(parse_results);
     for rule in &compiled_rules {

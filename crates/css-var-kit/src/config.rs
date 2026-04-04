@@ -38,7 +38,6 @@ pub enum ConfigError {
     },
 }
 
-#[allow(dead_code)]
 pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
@@ -46,18 +45,23 @@ pub struct Config {
     pub lsp_log_file: Option<PathBuf>,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct LookupFilesMatcher {
     patterns: Vec<LookupPattern>,
 }
 
-#[allow(dead_code)]
+impl Default for LookupFilesMatcher {
+    fn default() -> Self {
+        Self::compile(&["**/*.css".to_string()]).unwrap()
+    }
+}
+
+#[derive(Clone)]
 struct LookupPattern {
     negated: bool,
     matcher: GlobMatcher,
 }
 
-#[allow(dead_code)]
 impl LookupFilesMatcher {
     fn compile(raw_patterns: &[String]) -> Result<Self, globset::Error> {
         raw_patterns

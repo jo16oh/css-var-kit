@@ -25,7 +25,7 @@ impl Server<'_> {
             .map(|(path, content)| parser::css::parse(content, path))
             .collect();
 
-        let diagnostics = lint::check(&parse_results, &self.config.rules);
+        let diagnostics = lint::check(&parse_results, self.config);
 
         self.log(&format!(
             "publishDiagnostics: {} files, {} diagnostics total",

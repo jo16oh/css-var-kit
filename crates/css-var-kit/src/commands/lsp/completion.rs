@@ -61,7 +61,7 @@ impl Server<'_> {
             .collect();
 
         let search_result = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::new(self.config.lookup_files.clone()))
             .build()
             .search();
 

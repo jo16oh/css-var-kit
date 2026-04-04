@@ -2,16 +2,26 @@ use std::collections::HashMap;
 
 use lightningcss::properties::custom::TokenList;
 
+use crate::config::LookupFilesMatcher;
 use crate::parser::css::Property as CssProperty;
 use crate::searcher::{PropMapFor, SearchCondition};
 
 pub type VarsMap<'src> = HashMap<&'src str, TokenList<'src>>;
 
-pub struct VariableDefinitions;
+#[derive(Default)]
+pub struct VariableDefinitions {
+    lookup_files: LookupFilesMatcher,
+}
+
+impl VariableDefinitions {
+    pub fn new(lookup_files: LookupFilesMatcher) -> Self {
+        Self { lookup_files }
+    }
+}
 
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.name.raw.starts_with("--")
+        prop.name.raw.starts_with("--") && self.lookup_files.matches(prop.file_path)
     }
 }
 
@@ -69,7 +79,7 @@ mod tests {
 
     #[test]
     fn matches_css_variable() {
-        let cond = VariableDefinitions;
+        let cond = VariableDefinitions::default();
         assert!(cond.matches(&prop("--color")));
         assert!(cond.matches(&prop("--main-color")));
         assert!(cond.matches(&prop("--")));
@@ -77,7 +87,7 @@ mod tests {
 
     #[test]
     fn rejects_regular_property() {
-        let cond = VariableDefinitions;
+        let cond = VariableDefinitions::default();
         assert!(!cond.matches(&prop("color")));
         assert!(!cond.matches(&prop("font-size")));
         assert!(!cond.matches(&prop("background-color")));
@@ -85,7 +95,7 @@ mod tests {
 
     #[test]
     fn rejects_single_hyphen() {
-        let cond = VariableDefinitions;
+        let cond = VariableDefinitions::default();
         assert!(!cond.matches(&prop("-webkit-transform")));
         assert!(!cond.matches(&prop("-moz-appearance")));
     }
@@ -95,7 +105,7 @@ mod tests {
         let css = ":root { --color: red; --size: 16px; }";
         let parse_results = [test_parse(css)];
         let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
@@ -114,7 +124,7 @@ mod tests {
         let css = ":root { --color: red; }";
         let parse_results = [test_parse(css)];
         let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
@@ -127,7 +137,7 @@ mod tests {
         let css = ":root { --color: red; }";
         let parse_results = [test_parse(css)];
         let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
@@ -141,7 +151,7 @@ mod tests {
         let css = ":root { --color: red; } .dark { --color: blue; }";
         let parse_results = [test_parse(css)];
         let searcher = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
