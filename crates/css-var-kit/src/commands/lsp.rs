@@ -1,11 +1,13 @@
+mod completion;
+mod diagnostics;
 mod file_watcher;
 mod logger;
+mod uri;
 
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
@@ -14,21 +16,24 @@ use lsp_types::notification::{
     Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
-    DiagnosticSeverity, InitializeParams, NumberOrString, Position, PublishDiagnosticsParams,
-    Range, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    CompletionOptions, InitializeParams, PublishDiagnosticsParams, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
-use self::logger::Logger;
 use crate::commands::lint;
 use crate::config::Config;
-use crate::parser;
-use crate::rules::{Diagnostic, Severity};
+use logger::Logger;
+use uri::uri_to_path;
 
 pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let (connection, _io_threads) = Connection::stdio();
 
     let capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        completion_provider: Some(CompletionOptions {
+            trigger_characters: Some(vec!["-".to_owned()]),
+            ..Default::default()
+        }),
         ..Default::default()
     };
 
@@ -115,6 +120,7 @@ impl Server<'_> {
                             if self.connection.handle_shutdown(&req)? {
                                 return Ok(());
                             }
+                            self.handle_request(req)?;
                         }
                         Message::Notification(notif) => self.handle_notification(notif)?,
                         Message::Response(_) => {}
@@ -212,48 +218,6 @@ impl Server<'_> {
         Ok(())
     }
 
-    fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        let sources: Vec<(&Path, &str)> = self
-            .source_cache
-            .iter()
-            .map(|(path, content)| (path.as_path(), content.as_str()))
-            .collect();
-
-        let parse_results: Vec<_> = sources
-            .iter()
-            .map(|(path, content)| parser::css::parse(content, path))
-            .collect();
-
-        let diagnostics = lint::check(&parse_results, &self.config.rules);
-
-        self.log(&format!(
-            "publishDiagnostics: {} files, {} diagnostics total",
-            sources.len(),
-            diagnostics.len()
-        ));
-
-        let mut by_file: HashMap<&Path, Vec<lsp_types::Diagnostic>> = HashMap::new();
-        for d in &diagnostics {
-            by_file
-                .entry(d.file_path)
-                .or_default()
-                .push(to_lsp_diagnostic(d));
-        }
-
-        for (path, _) in &sources {
-            let lsp_diagnostics = by_file.remove(*path).unwrap_or_default();
-            let abs_path = self.config.root_dir.join(path);
-            let uri = path_to_uri(&abs_path);
-            self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
-                uri,
-                diagnostics: lsp_diagnostics,
-                version: None,
-            })?;
-        }
-
-        Ok(())
-    }
-
     fn update_source_cache_from_disk(&mut self, abs_paths: &[PathBuf]) {
         for abs_path in abs_paths {
             let is_open = self
@@ -321,103 +285,4 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
             Some((rel_path, content))
         })
         .collect()
-}
-
-fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
-    let start = Position {
-        line: d.line,
-        character: byte_offset_to_utf16(d.source, d.line, d.column),
-    };
-
-    let end = match d.span_length {
-        Some(len) => Position {
-            line: d.line,
-            character: byte_offset_to_utf16(d.source, d.line, d.column + len),
-        },
-        None => {
-            let line_end_col = d
-                .source
-                .lines()
-                .nth(d.line as usize)
-                .map(|line| line.len() as u32)
-                .unwrap_or(d.column + 1);
-            Position {
-                line: d.line,
-                character: byte_offset_to_utf16(d.source, d.line, line_end_col),
-            }
-        }
-    };
-
-    lsp_types::Diagnostic {
-        range: Range { start, end },
-        severity: Some(match d.severity {
-            Severity::Error => DiagnosticSeverity::ERROR,
-            Severity::Warning => DiagnosticSeverity::WARNING,
-        }),
-        code: Some(NumberOrString::String(d.rule_name.to_owned())),
-        source: Some("cvk".to_owned()),
-        message: d.message.clone(),
-        ..Default::default()
-    }
-}
-
-fn byte_offset_to_utf16(source: &str, line: u32, byte_col: u32) -> u32 {
-    source
-        .lines()
-        .nth(line as usize)
-        .map(|line_str| {
-            let byte_col = (byte_col as usize).min(line_str.len());
-            line_str[..byte_col]
-                .chars()
-                .map(|c| c.len_utf16() as u32)
-                .sum()
-        })
-        .unwrap_or(0)
-}
-
-fn uri_to_path(uri: &Uri) -> Option<PathBuf> {
-    let s = uri.as_str();
-    if !s.starts_with("file://") {
-        return None;
-    }
-    let path_str = &s["file://".len()..];
-    let decoded = percent_decode(path_str);
-    Some(PathBuf::from(decoded))
-}
-
-fn path_to_uri(path: &Path) -> Uri {
-    let abs = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        std::env::current_dir().unwrap_or_default().join(path)
-    };
-    let uri_str = format!("file://{}", abs.display());
-    Uri::from_str(&uri_str).unwrap_or_else(|_| Uri::from_str("file:///").unwrap())
-}
-
-fn percent_decode(s: &str) -> String {
-    let bytes = s.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let (Some(hi), Some(lo)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
-                out.push(hi << 4 | lo);
-                i += 3;
-                continue;
-            }
-        }
-        out.push(bytes[i]);
-        i += 1;
-    }
-    String::from_utf8(out).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned())
-}
-
-fn hex_val(b: u8) -> Option<u8> {
-    match b {
-        b'0'..=b'9' => Some(b - b'0'),
-        b'a'..=b'f' => Some(b - b'a' + 10),
-        b'A'..=b'F' => Some(b - b'A' + 10),
-        _ => None,
-    }
 }

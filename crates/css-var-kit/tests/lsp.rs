@@ -204,6 +204,98 @@ fn writes_log_file_when_configured() {
     );
 }
 
+#[test]
+fn completes_variables_in_property_value() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // Request completion at line 1 (color: var(--primary-color);), inside the value
+    let response = client.request_completion(&uri, 1, 12);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--primary-color"),
+        "expected --primary-color in completions, got: {labels:?}"
+    );
+    assert!(
+        labels.contains(&"--secondary-color"),
+        "expected --secondary-color in completions, got: {labels:?}"
+    );
+    assert!(
+        labels.contains(&"--font-size-base"),
+        "expected --font-size-base in completions, got: {labels:?}"
+    );
+}
+
+#[test]
+fn completion_returns_var_wrap_as_insert_text() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    let response = client.request_completion(&uri, 1, 12);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+
+    let primary = items
+        .iter()
+        .find(|i| i["label"].as_str() == Some("--primary-color"))
+        .expect("--primary-color not found in completions");
+
+    assert_eq!(
+        primary["insertText"].as_str(),
+        Some("var(--primary-color)"),
+        "insertText should wrap variable in var()"
+    );
+    assert_eq!(
+        primary["detail"].as_str(),
+        Some("#3490dc"),
+        "detail should show the variable value"
+    );
+}
+
+#[test]
+fn completion_not_triggered_outside_property_value() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // Request completion at line 0 (.button {), which is a selector, not a value
+    let response = client.request_completion(&uri, 0, 5);
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        result.is_null(),
+        "expected null result outside property value, got: {result}"
+    );
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,
