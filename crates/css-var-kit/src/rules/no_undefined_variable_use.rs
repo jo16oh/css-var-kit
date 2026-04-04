@@ -259,6 +259,11 @@ mod tests {
     }
 
     #[test]
+    fn bare_double_dash_is_not_variable_usage() {
+        assert_messages(".a { border: --; }", &[]);
+    }
+
+    #[test]
     fn cvk_ignore_only_suppresses_next_property() {
         assert_messages(
             ".a {\n    /* cvk-ignore */\n    color: var(--a);\n    margin: var(--b);\n}",

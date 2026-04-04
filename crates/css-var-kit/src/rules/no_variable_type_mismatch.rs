@@ -137,6 +137,16 @@ mod tests {
     }
 
     #[test]
+    fn bare_double_dash_is_not_type_checked() {
+        assert_messages(".a { border: --; }", &[]);
+    }
+
+    #[test]
+    fn undefined_bare_dashed_ident_is_not_type_mismatch() {
+        assert_messages(".a { border: --v; }", &[]);
+    }
+
+    #[test]
     fn custom_property_definition_skipped() {
         // Custom property definitions should not be type-checked
         assert_messages(":root { --my-var: not-a-color; }", &[]);

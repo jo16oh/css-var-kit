@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use lightningcss::properties::Property as CssProperty;
 use lightningcss::properties::PropertyId;
-use lightningcss::properties::custom::TokenList;
+use lightningcss::properties::custom::{Function, TokenList, TokenOrValue};
 use lightningcss::stylesheet::ParserOptions;
 use thiserror::Error;
 
@@ -35,7 +35,10 @@ pub fn check_property_type(
 
     match property {
         CssProperty::Unparsed(unparsed) => match unparsed.substitute_variables(vars) {
-            Ok(CssProperty::Unparsed(result)) if contains_var(&result.value) => {
+            Ok(CssProperty::Unparsed(result))
+                if contains_var(&result.value)
+                    || contains_undefined_dashed_ident(&result.value, vars) =>
+            {
                 Err(TypeCheckError::VariableNotFound(value.to_string()))
             }
             Ok(CssProperty::Unparsed(_)) => Err(TypeCheckError::TypeMismatch(
@@ -50,6 +53,16 @@ pub fn check_property_type(
         },
         _ => Ok(()),
     }
+}
+
+fn contains_undefined_dashed_ident(tokens: &TokenList, vars: &HashMap<&str, TokenList>) -> bool {
+    tokens.0.iter().any(|t| match t {
+        TokenOrValue::DashedIdent(ident) => !vars.contains_key(&*ident.0),
+        TokenOrValue::Function(Function { arguments, .. }) => {
+            contains_undefined_dashed_ident(arguments, vars)
+        }
+        _ => false,
+    })
 }
 
 #[cfg(test)]
