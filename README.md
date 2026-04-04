@@ -10,7 +10,7 @@
 
 A simple, lightweight toolkit to help build design systems using CSS variables.
 
-## Installation
+## Installation ⬇️
 
 ```sh
 npm install -D css-var-kit
@@ -22,7 +22,7 @@ Or install via Cargo:
 cargo install css-var-kit
 ```
 
-## Features
+## Commands 🧰
 
 ### `cvk lint`
 
@@ -30,12 +30,37 @@ Lints CSS variables and their usage. Detects undefined variables, type mismatche
 
 [Documentation](docs/linter.md)
 
-## Planned Features
-
 ### `cvk lsp`
 
 A language server for CSS variables that offers type-aware variable completion and lint warnings.
 
-### `cvk prune`
+#### Supported Features✨
+- Show diagnostics from `cvk lint`
+- Type-aware variable completion
+- Rename variable
+- Go to defintition
 
-Strips unused CSS variables from the final build output.
+#### Editor Integration ⚙️
+
+Helix:
+```helix
+[language-server.css-var-kit]
+command = "cvk"
+args = ["lsp"]
+
+[[language]]
+name = "css"
+language-servers = ["css-var-kit"]
+```
+
+Neovim:
+```
+⚠️WIP (contributions are welcome😉)⚠️
+```
+
+## Planned Features 📝
+
+- `cvk prune` command
+  - Strips unused CSS variables from the final build output.
+- Editor extensions
+  - VsCode, Zed...
