@@ -1,5 +1,5 @@
-pub(crate) mod file;
-pub(crate) mod rules;
+pub mod file;
+pub mod rules;
 
 use std::path::{Path, PathBuf};
 
@@ -42,12 +42,21 @@ pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
     pub rules: Rules,
+    pub lsp_log_file: Option<PathBuf>,
 }
 
+#[derive(Clone)]
 pub struct LookupFilesMatcher {
     patterns: Vec<LookupPattern>,
 }
 
+impl Default for LookupFilesMatcher {
+    fn default() -> Self {
+        Self::compile(&["**/*.css".to_string()]).unwrap()
+    }
+}
+
+#[derive(Clone)]
 struct LookupPattern {
     negated: bool,
     matcher: GlobMatcher,
@@ -83,7 +92,9 @@ impl LookupFilesMatcher {
 }
 
 impl Config {
-    pub fn load(cwd: &Path, args: &LintArgs) -> Result<Self, ConfigError> {
+    pub fn load(cwd: &Path, args: Option<LintArgs>) -> Result<Self, ConfigError> {
+        let args = args.unwrap_or_default();
+
         let (config_base, raw) = match &args.config {
             Some(path) => {
                 let abs = cwd.join(path);
@@ -114,16 +125,19 @@ impl Config {
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
 
+        let lsp_log_file = raw.lsp.log_file.map(|p| config_base.join(p));
+
         Ok(Self {
             root_dir,
             lookup_files,
             rules,
+            lsp_log_file,
         })
     }
 }
 
 impl RawRules {
-    fn override_raw_rules_by_args(mut self, args: &LintArgs) -> Result<RawRules, ConfigError> {
+    fn override_raw_rules_by_args(mut self, args: LintArgs) -> Result<RawRules, ConfigError> {
         for entry in &args.rule {
             let err = |reason: String| ConfigError::InvalidRuleOption {
                 raw: entry.clone(),
@@ -178,7 +192,7 @@ impl RawRules {
     }
 }
 
-fn find_project_root(cwd: &Path) -> PathBuf {
+pub fn find_project_root(cwd: &Path) -> PathBuf {
     let markers = ["cvk.json", "cvk.jsonc", "package.json", ".git"];
 
     for marker in markers {

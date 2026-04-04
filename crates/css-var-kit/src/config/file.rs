@@ -17,6 +17,14 @@ pub(super) struct RawConfig {
     pub(super) lookup_files: Vec<String>,
     #[serde(default)]
     pub(super) rules: RawRules,
+    #[serde(default)]
+    pub(super) lsp: RawLspConfig,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RawLspConfig {
+    pub log_file: Option<String>,
 }
 
 impl Default for RawConfig {
@@ -25,12 +33,13 @@ impl Default for RawConfig {
             root_dir: default_root_dir(),
             lookup_files: default_lookup_files(),
             rules: RawRules::default(),
+            lsp: RawLspConfig::default(),
         }
     }
 }
 
 impl RawConfig {
-    pub(super) fn load(project_root: &Path) -> Result<Self, ConfigError> {
+    pub fn load(project_root: &Path) -> Result<Self, ConfigError> {
         let candidates = ["cvk.json", "cvk.jsonc"];
 
         for name in candidates {

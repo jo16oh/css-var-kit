@@ -1,5 +1,5 @@
 use crate::{
-    config::ConfigError,
+    config::{Config, ConfigError},
     rules::{
         Rule, Severity,
         enforce_variable_use::{EnforceVariableUse, config::EnforceVariableUseConfig},
@@ -58,11 +58,16 @@ impl Rules {
         Ok(())
     }
 
-    pub fn compile(&self) -> Vec<Box<dyn Rule>> {
+    pub fn compile(&self, config: &Config) -> Vec<Box<dyn Rule>> {
         let mut rules: Vec<Box<dyn Rule>> = vec![];
 
+        let lookup_files = &config.lookup_files;
+
         if let Some(severity) = self.no_undefined_variable_use {
-            rules.push(Box::new(NoUndefinedVariableUse { severity }));
+            rules.push(Box::new(NoUndefinedVariableUse {
+                severity,
+                lookup_files: lookup_files.clone(),
+            }));
         }
 
         if let Some(ref config) = self.enforce_variable_use {
@@ -70,11 +75,17 @@ impl Rules {
         }
 
         if let Some(severity) = self.no_variable_type_mismatch {
-            rules.push(Box::new(NoVariableTypeMismatch { severity }));
+            rules.push(Box::new(NoVariableTypeMismatch {
+                severity,
+                lookup_files: lookup_files.clone(),
+            }));
         }
 
         if let Some(severity) = self.no_inconsistent_variable_definition {
-            rules.push(Box::new(NoInconsistentVariableDefinition { severity }));
+            rules.push(Box::new(NoInconsistentVariableDefinition {
+                severity,
+                lookup_files: lookup_files.clone(),
+            }));
         }
 
         rules

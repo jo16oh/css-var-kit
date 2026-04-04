@@ -130,7 +130,7 @@ pub struct EnforceVariableUseConfig {
 }
 
 impl EnforceVariableUseConfig {
-    pub(crate) fn from_raw(raw: RawEnforceVariableUseConfig) -> Result<Self, ConfigError> {
+    pub fn from_raw(raw: RawEnforceVariableUseConfig) -> Result<Self, ConfigError> {
         let types = raw
             .types
             .iter()

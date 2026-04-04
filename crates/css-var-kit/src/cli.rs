@@ -16,9 +16,11 @@ pub struct Cli {
 pub enum Command {
     /// Lint CSS files for CSS variable issues
     Lint(LintArgs),
+    /// Start the Language Server Protocol server
+    Lsp(LspArgs),
 }
 
-#[derive(clap::Args)]
+#[derive(clap::Args, Default)]
 #[command(
     about = "Lint CSS files for CSS variable issues",
     long_about = LINT_LONG_ABOUT,
@@ -39,6 +41,13 @@ pub struct LintArgs {
 
     /// Files to lint (overrides lookupFiles in config)
     pub files: Vec<String>,
+}
+
+#[derive(clap::Args, Default)]
+pub struct LspArgs {
+    /// Enable debug logging to stderr
+    #[arg(long)]
+    pub log: bool,
 }
 
 static CLI_HELP_TEMPLATE: &str = "\

@@ -3,3 +3,7 @@
     --secondary-color: #ffed4a;
     --font-size-base: 16px;
 }
+
+.dark {
+    --primary-color: blue;
+}

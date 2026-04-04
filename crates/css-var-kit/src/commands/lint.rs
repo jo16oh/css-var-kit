@@ -33,19 +33,7 @@ pub fn run(config: &Config) {
         .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
         .collect();
 
-    let rules = config.rules.compile();
-
-    let mut searcher = SearcherBuilder::new(&parse_results);
-    for rule in &rules {
-        searcher = rule.register_conditions(searcher);
-    }
-
-    let search_result = searcher.build().search();
-
-    let mut diagnostics: Vec<Diagnostic> = Vec::new();
-    for rule in &rules {
-        diagnostics.extend(rule.check(&search_result));
-    }
+    let diagnostics = check(&parse_results, config);
 
     if diagnostics.is_empty() {
         return;
@@ -63,7 +51,28 @@ pub fn run(config: &Config) {
     }
 }
 
-fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
+pub fn check<'src>(
+    parse_results: &'src [parser::css::ParseResult<'src>],
+    config: &Config,
+) -> Vec<Diagnostic<'src>> {
+    let compiled_rules = config.rules.compile(config);
+
+    let mut searcher = SearcherBuilder::new(parse_results);
+    for rule in &compiled_rules {
+        searcher = rule.register_conditions(searcher);
+    }
+
+    let search_result = searcher.build().search();
+
+    let mut diagnostics: Vec<Diagnostic> = Vec::new();
+    for rule in &compiled_rules {
+        diagnostics.extend(rule.check(&search_result));
+    }
+
+    diagnostics
+}
+
+pub fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     collect_css_files_recursive(dir, &mut files);
     files.sort();

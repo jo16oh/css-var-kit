@@ -1,3 +1,4 @@
+use crate::config::LookupFilesMatcher;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
@@ -9,12 +10,13 @@ const RULE_NAME: &str = "no-variable-type-mismatch";
 
 pub struct NoVariableTypeMismatch {
     pub severity: Severity,
+    pub lookup_files: LookupFilesMatcher,
 }
 
 impl Rule for NoVariableTypeMismatch {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
         searcher
-            .add_condition(VariableDefinitions)
+            .add_condition(VariableDefinitions::new(self.lookup_files.clone()))
             .add_condition(VariableUsages)
     }
 
@@ -67,6 +69,7 @@ mod tests {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
         let rule = NoVariableTypeMismatch {
             severity: Severity::Warning,
+            lookup_files: LookupFilesMatcher::default(),
         };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))
@@ -134,6 +137,16 @@ mod tests {
             ":root { --color: red; } .a { border: 1px solid var(--color); }",
             &[],
         );
+    }
+
+    #[test]
+    fn bare_double_dash_is_not_type_checked() {
+        assert_messages(".a { border: --; }", &[]);
+    }
+
+    #[test]
+    fn undefined_bare_dashed_ident_is_not_type_mismatch() {
+        assert_messages(".a { border: --v; }", &[]);
     }
 
     #[test]

@@ -278,10 +278,6 @@ pub fn parse<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
     parse_impl(css, file_path, 0)
 }
 
-pub fn parse_style_attr<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
-    parse_impl(css, file_path, 1)
-}
-
 fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -> ParseResult<'a> {
     let mut s = Scanner::new(css);
     let mut properties = Vec::new();
@@ -504,10 +500,6 @@ mod tests {
         parse(css, Path::new(TEST_PATH))
     }
 
-    fn test_parse_style_attr(css: &str) -> ParseResult<'_> {
-        parse_style_attr(css, Path::new(TEST_PATH))
-    }
-
     #[test]
     fn basic_var_def() {
         let css = ":root {\n    --main-color: red;\n}";
@@ -726,56 +718,6 @@ mod tests {
         assert_eq!(result.properties[0].value.offset, 21);
         assert_eq!(result.properties[0].value.line, 1);
         assert_eq!(result.properties[0].value.column, 13);
-    }
-
-    // parse_style_attr tests
-
-    #[test]
-    fn inline_single_property() {
-        let result = test_parse_style_attr("color: red;");
-        assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].name.raw, "color");
-        assert_eq!(result.properties[0].value.raw, "red");
-    }
-
-    #[test]
-    fn inline_multiple_properties() {
-        let result = test_parse_style_attr("color: red; font-size: 16px;");
-        assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].name.raw, "color");
-        assert_eq!(result.properties[0].value.raw, "red");
-        assert_eq!(result.properties[1].name.raw, "font-size");
-        assert_eq!(result.properties[1].value.raw, "16px");
-    }
-
-    #[test]
-    fn inline_no_trailing_semicolon() {
-        let result = test_parse_style_attr("color: red");
-        assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw, "red");
-    }
-
-    #[test]
-    fn inline_var_usage() {
-        let result = test_parse_style_attr("color: var(--main-color);");
-        assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw, "var(--main-color)");
-    }
-
-    #[test]
-    fn inline_var_def() {
-        let result = test_parse_style_attr("--color: red; --size: 16px;");
-        assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].name.raw, "--color");
-        assert_eq!(result.properties[0].value.raw, "red");
-        assert_eq!(result.properties[1].name.raw, "--size");
-        assert_eq!(result.properties[1].value.raw, "16px");
-    }
-
-    #[test]
-    fn inline_empty() {
-        let result = test_parse_style_attr("");
-        assert_eq!(result.properties.len(), 0);
     }
 
     #[test]

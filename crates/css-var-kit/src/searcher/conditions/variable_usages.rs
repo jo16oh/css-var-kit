@@ -5,8 +5,19 @@ pub struct VariableUsages;
 
 impl SearchCondition for VariableUsages {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.value.raw.contains("var(") || prop.value.raw.contains("--")
+        prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw)
     }
+}
+
+fn has_dashed_ident(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    (0..bytes.len().saturating_sub(2)).any(|i| {
+        bytes[i] == b'-'
+            && bytes[i + 1] == b'-'
+            && (bytes[i + 2].is_ascii_alphanumeric()
+                || bytes[i + 2] == b'_'
+                || bytes[i + 2] == b'-')
+    })
 }
 
 #[cfg(test)]
@@ -43,5 +54,10 @@ mod tests {
     fn rejects_no_var() {
         assert!(!matches_value("red"));
         assert!(!matches_value("16px"));
+    }
+
+    #[test]
+    fn rejects_bare_double_dash() {
+        assert!(!matches_value("--"));
     }
 }

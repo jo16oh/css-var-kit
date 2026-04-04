@@ -1,3 +1,4 @@
+use crate::config::LookupFilesMatcher;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
@@ -9,11 +10,12 @@ const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
 pub struct NoInconsistentVariableDefinition {
     pub severity: Severity,
+    pub lookup_files: LookupFilesMatcher,
 }
 
 impl Rule for NoInconsistentVariableDefinition {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
-        searcher.add_condition(VariableDefinitions)
+        searcher.add_condition(VariableDefinitions::new(self.lookup_files.clone()))
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
@@ -94,6 +96,7 @@ mod tests {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,
+            lookup_files: LookupFilesMatcher::default(),
         };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))
