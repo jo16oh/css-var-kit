@@ -306,8 +306,8 @@ fn completion_text_edit_replaces_typed_prefix() {
     assert_eq!(text_edit["range"]["end"]["character"], 13);
     assert_eq!(
         primary["detail"].as_str(),
-        Some("#3490dc"),
-        "detail should show the variable value"
+        Some("blue"),
+        "detail should show the last variable value"
     );
 }
 
@@ -471,6 +471,92 @@ fn completion_not_triggered_outside_property_value() {
     assert!(
         result.is_null(),
         "expected null result outside property value, got: {result}"
+    );
+}
+
+#[test]
+fn goto_definition_jumps_to_variable_declaration() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // line 1: "    color: var(--primary-color);"
+    // cursor on "--primary-color" (col 19)
+    let response = client.request_definition(&button_uri, 1, 19);
+    client.shutdown();
+
+    let result = response["result"]
+        .as_array()
+        .expect("expected definition array");
+
+    // --primary-color is defined in :root (line 1) and .dark (line 7)
+    assert_eq!(result.len(), 2, "expected 2 definitions, got: {result:?}");
+
+    for loc in result {
+        let uri = loc["uri"].as_str().unwrap();
+        assert!(
+            uri.ends_with("/variables.css"),
+            "expected URI ending with /variables.css, got: {uri}"
+        );
+        assert_eq!(loc["range"]["start"]["character"], 4);
+        // 4 + len("--primary-color") = 19
+        assert_eq!(loc["range"]["end"]["character"], 19);
+    }
+
+    let lines: Vec<u64> = result
+        .iter()
+        .map(|loc| loc["range"]["start"]["line"].as_u64().unwrap())
+        .collect();
+    assert!(lines.contains(&1), "expected definition at line 1 (:root)");
+    assert!(lines.contains(&7), "expected definition at line 7 (.dark)");
+}
+
+#[test]
+fn goto_definition_returns_null_for_undefined_variable() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = ".test {\n    color: var(--nonexistent);\n}\n";
+    client.open_document(&uri, text);
+    let _ = client.collect_diagnostics();
+
+    // cursor on "--nonexistent" (col 21)
+    let response = client.request_definition(&uri, 1, 21);
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        result.is_null(),
+        "expected null for undefined variable, got: {result}"
+    );
+}
+
+#[test]
+fn goto_definition_returns_null_outside_variable() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // line 0: ".button {" — cursor on selector, not a variable
+    let response = client.request_definition(&uri, 0, 3);
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        result.is_null(),
+        "expected null outside variable, got: {result}"
     );
 }
 

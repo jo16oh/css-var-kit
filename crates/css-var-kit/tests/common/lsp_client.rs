@@ -147,6 +147,16 @@ impl LspClient {
         )
     }
 
+    pub fn request_definition(&mut self, uri: &str, line: u32, character: u32) -> Value {
+        self.send_request(
+            "textDocument/definition",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }),
+        )
+    }
+
     pub fn collect_diagnostics(&mut self) -> Vec<PublishedDiagnostics> {
         let mut result = Vec::new();
         let deadline = std::time::Instant::now() + Duration::from_secs(5);

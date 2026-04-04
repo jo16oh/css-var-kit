@@ -1,4 +1,5 @@
 mod completion;
+mod definition;
 mod diagnostics;
 mod file_watcher;
 mod logger;
@@ -16,7 +17,7 @@ use lsp_types::notification::{
     Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
-    CompletionOptions, InitializeParams, PublishDiagnosticsParams, ServerCapabilities,
+    CompletionOptions, InitializeParams, OneOf, PublishDiagnosticsParams, ServerCapabilities,
     TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
@@ -34,6 +35,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
             trigger_characters: Some(vec!["-".to_owned(), "(".to_owned()]),
             ..Default::default()
         }),
+        definition_provider: Some(OneOf::Left(true)),
         ..Default::default()
     };
 

@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::Path;
 
 use lsp_server::{Message, Request, Response};
-use lsp_types::request::Completion;
+use lsp_types::request::{Completion, GotoDefinition};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
     Position, Range, TextEdit,
@@ -16,15 +16,21 @@ use crate::type_checker::{TypeCheckError, check_property_type};
 
 impl Server<'_> {
     pub fn handle_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
-        if let <Completion as lsp_types::request::Request>::METHOD = req.method.as_str() {
-            let params: CompletionParams = serde_json::from_value(req.params)?;
-            self.log(&format!(
-                "textDocument/completion: {}",
-                params.text_document_position.text_document.uri.as_str()
-            ));
-            let result = self.handle_completion(&params);
-            let response = Response::new_ok(req.id, result);
-            self.connection.sender.send(Message::Response(response))?;
+        match req.method.as_str() {
+            <Completion as lsp_types::request::Request>::METHOD => {
+                let params: CompletionParams = serde_json::from_value(req.params)?;
+                self.log(&format!(
+                    "textDocument/completion: {}",
+                    params.text_document_position.text_document.uri.as_str()
+                ));
+                let result = self.handle_completion(&params);
+                let response = Response::new_ok(req.id, result);
+                self.connection.sender.send(Message::Response(response))?;
+            }
+            <GotoDefinition as lsp_types::request::Request>::METHOD => {
+                self.handle_definition_request(req)?;
+            }
+            _ => {}
         }
         Ok(())
     }
