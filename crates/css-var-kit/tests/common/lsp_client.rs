@@ -147,6 +147,33 @@ impl LspClient {
         )
     }
 
+    pub fn request_rename(
+        &mut self,
+        uri: &str,
+        line: u32,
+        character: u32,
+        new_name: &str,
+    ) -> Value {
+        self.send_request(
+            "textDocument/rename",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character },
+                "newName": new_name
+            }),
+        )
+    }
+
+    pub fn request_prepare_rename(&mut self, uri: &str, line: u32, character: u32) -> Value {
+        self.send_request(
+            "textDocument/prepareRename",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }),
+        )
+    }
+
     pub fn request_definition(&mut self, uri: &str, line: u32, character: u32) -> Value {
         self.send_request(
             "textDocument/definition",

@@ -4,6 +4,7 @@ mod diagnostics;
 mod file_watcher;
 mod logger;
 mod position;
+mod rename;
 mod uri;
 
 use std::collections::HashMap;
@@ -18,8 +19,8 @@ use lsp_types::notification::{
     Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
-    CompletionOptions, InitializeParams, OneOf, PublishDiagnosticsParams, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    CompletionOptions, InitializeParams, OneOf, PublishDiagnosticsParams, RenameOptions,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
 use crate::commands::lint;
@@ -37,6 +38,10 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
             ..Default::default()
         }),
         definition_provider: Some(OneOf::Left(true)),
+        rename_provider: Some(OneOf::Right(RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: Default::default(),
+        })),
         ..Default::default()
     };
 

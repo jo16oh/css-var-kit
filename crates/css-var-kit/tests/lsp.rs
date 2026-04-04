@@ -560,6 +560,166 @@ fn goto_definition_returns_null_outside_variable() {
     );
 }
 
+#[test]
+fn rename_symbol_renames_definitions_and_usages() {
+    let tmp = copy_fixture_to_tempdir("default");
+    let workspace = tmp.path();
+    let mut client = LspClient::spawn(workspace);
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(workspace.join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let vars_uri = client.file_uri("variables.css");
+    let vars_text = fs::read_to_string(workspace.join("variables.css")).unwrap();
+    client.open_document(&vars_uri, &vars_text);
+    let _ = client.collect_diagnostics();
+
+    // cursor on "--primary-color" in button.css line 1: "    color: var(--primary-color);"
+    let response = client.request_rename(&button_uri, 1, 19, "--brand-color");
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(!result.is_null(), "expected workspace edit, got null");
+
+    let changes = result["changes"].as_object().expect("expected changes map");
+
+    // definitions in variables.css (lines 1 and 7)
+    let vars_edits: Vec<&serde_json::Value> = changes
+        .iter()
+        .filter(|(uri, _)| uri.ends_with("/variables.css"))
+        .flat_map(|(_, edits)| edits.as_array().unwrap())
+        .collect();
+    assert_eq!(
+        vars_edits.len(),
+        2,
+        "expected 2 definition edits: {vars_edits:?}"
+    );
+
+    // usage in button.css (line 1)
+    let button_edits: Vec<&serde_json::Value> = changes
+        .iter()
+        .filter(|(uri, _)| uri.ends_with("/button.css"))
+        .flat_map(|(_, edits)| edits.as_array().unwrap())
+        .collect();
+    assert_eq!(
+        button_edits.len(),
+        1,
+        "expected 1 usage edit: {button_edits:?}"
+    );
+
+    for edit in vars_edits.iter().chain(button_edits.iter()) {
+        assert_eq!(edit["newText"].as_str().unwrap(), "--brand-color");
+    }
+}
+
+#[test]
+fn rename_symbol_auto_prepends_dashes() {
+    let tmp = copy_fixture_to_tempdir("default");
+    let workspace = tmp.path();
+    let mut client = LspClient::spawn(workspace);
+    client.initialize();
+
+    let vars_uri = client.file_uri("variables.css");
+    let vars_text = fs::read_to_string(workspace.join("variables.css")).unwrap();
+    client.open_document(&vars_uri, &vars_text);
+    let _ = client.collect_diagnostics();
+
+    // cursor on "--secondary-color" definition at line 2
+    let response = client.request_rename(&vars_uri, 2, 6, "accent-color");
+    client.shutdown();
+
+    let result = &response["result"];
+    let changes = result["changes"].as_object().expect("expected changes map");
+    let edits: Vec<&serde_json::Value> = changes
+        .values()
+        .flat_map(|edits| edits.as_array().unwrap())
+        .collect();
+
+    for edit in &edits {
+        assert_eq!(
+            edit["newText"].as_str().unwrap(),
+            "--accent-color",
+            "should auto-prepend -- when user omits it"
+        );
+    }
+}
+
+#[test]
+fn rename_returns_null_outside_variable() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // cursor on ".button" selector, not a variable
+    let response = client.request_rename(&uri, 0, 3, "--new-name");
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        result.is_null(),
+        "expected null outside variable, got: {result}"
+    );
+}
+
+#[test]
+fn prepare_rename_succeeds_on_variable() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // line 1: "    color: var(--primary-color);"
+    // cursor on "--primary-color" in var() (col 19)
+    let response = client.request_prepare_rename(&uri, 1, 19);
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        !result.is_null(),
+        "expected prepare rename result, got null"
+    );
+
+    // range should cover exactly "--primary-color" (cols 15..30)
+    assert_eq!(result["range"]["start"]["line"], 1);
+    assert_eq!(result["range"]["start"]["character"], 15);
+    assert_eq!(result["range"]["end"]["line"], 1);
+    assert_eq!(result["range"]["end"]["character"], 30);
+    assert_eq!(result["placeholder"], "primary-color");
+}
+
+#[test]
+fn prepare_rename_returns_null_outside_variable() {
+    let fixture_dir = Path::new(common::FIXTURES).join("default");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    // cursor on selector
+    let response = client.request_prepare_rename(&uri, 0, 3);
+    client.shutdown();
+
+    let result = &response["result"];
+    assert!(
+        result.is_null(),
+        "expected null outside variable, got: {result}"
+    );
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,

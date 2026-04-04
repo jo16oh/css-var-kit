@@ -91,7 +91,13 @@ impl Server<'_> {
     }
 }
 
-fn extract_variable_name_at_cursor(source: &str, pos: &Position) -> Option<String> {
+pub struct VariableAtCursor {
+    pub name: String,
+    pub byte_start: usize,
+    pub byte_end: usize,
+}
+
+pub fn extract_variable_at_cursor(source: &str, pos: &Position) -> Option<VariableAtCursor> {
     let line_str = source.lines().nth(pos.line as usize)?;
     let byte_col = utf16_to_byte_offset(line_str, pos.character);
     let bytes = line_str.as_bytes();
@@ -101,10 +107,18 @@ fn extract_variable_name_at_cursor(source: &str, pos: &Position) -> Option<Strin
 
     let name = &line_str[start..end];
     if name.len() >= 3 && name.starts_with("--") {
-        Some(name.to_owned())
+        Some(VariableAtCursor {
+            name: name.to_owned(),
+            byte_start: start,
+            byte_end: end,
+        })
     } else {
         None
     }
+}
+
+pub fn extract_variable_name_at_cursor(source: &str, pos: &Position) -> Option<String> {
+    extract_variable_at_cursor(source, pos).map(|v| v.name)
 }
 
 fn find_dashed_ident_start(bytes: &[u8], byte_col: usize) -> Option<usize> {
