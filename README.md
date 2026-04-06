@@ -10,6 +10,10 @@
 
 A simple, lightweight toolkit to help build design systems using CSS variables.
 
+## Demo
+
+<img alt="demo" src="assets/demo.webp">
+
 ## Installation ⬇️
 
 ```sh
@@ -39,10 +43,6 @@ A language server for CSS variables that offers type-aware variable completion a
 - Type-aware variable completion
 - Rename variable
 - Go to defintition
-
-#### Demo
-
-https://github.com/user-attachments/assets/7bc49732-ba6c-4204-a23c-02b230bff0a1
 
 #### Editor Integration
 
