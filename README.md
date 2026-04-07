@@ -10,6 +10,9 @@
 
 A simple, lightweight toolkit to help build design systems using CSS variables.
 
+[![npm version](https://img.shields.io/npm/v/css-var-kit.svg)](https://www.npmjs.com/package/css-var-kit)
+[![Crates.io](https://img.shields.io/crates/v/css-var-kit.svg)](https://crates.io/crates/css-var-kit)
+
 ## Demo
 
 <img alt="demo" src="assets/demo.webp">
