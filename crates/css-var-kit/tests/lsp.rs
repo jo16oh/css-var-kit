@@ -85,7 +85,7 @@ fn updates_diagnostics_on_background_file_change_via_did_change() {
 #[test]
 fn updates_diagnostics_on_background_file_change_via_watched_files() {
     let tmp = copy_fixture_to_tempdir("default");
-    let mut client = LspClient::spawn(tmp.path());
+    let mut client = LspClient::spawn_with_args(tmp.path(), &["--log"]);
     client.initialize();
 
     let button_uri = client.file_uri("components/button.css");
