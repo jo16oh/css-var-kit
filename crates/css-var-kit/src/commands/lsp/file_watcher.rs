@@ -55,7 +55,6 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
         Duration::from_millis(1000),
         None,
         move |events: Result<Vec<DebouncedEvent>, _>| {
-            eprintln!("--- Debouncer fired! ---"); // デバッグ用
             if let Ok(events) = events {
                 let css_paths: Vec<PathBuf> = events
                     .iter()
