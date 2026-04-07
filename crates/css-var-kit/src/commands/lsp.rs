@@ -165,6 +165,7 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidChangeTextDocument::METHOD => {
+                eprintln!("didChange");
                 let params: lsp_types::DidChangeTextDocumentParams =
                     serde_json::from_value(notif.params)?;
                 self.log(&format!(
@@ -182,6 +183,7 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidChangeWatchedFiles::METHOD => {
+                eprintln!("didChangeWatchedFiles");
                 let params: lsp_types::DidChangeWatchedFilesParams =
                     serde_json::from_value(notif.params)?;
                 let changed_paths: Vec<PathBuf> = params
