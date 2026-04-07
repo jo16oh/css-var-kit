@@ -41,6 +41,8 @@ impl Server<'_> {
                 .push(to_lsp_diagnostic(d));
         }
 
+        dbg!(sources.len());
+
         for (path, _) in &sources {
             let lsp_diagnostics = by_file.remove(*path).unwrap_or_default();
             let abs_path = self.config.root_dir.join(path);
