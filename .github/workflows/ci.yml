@@ -21,7 +21,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --test lsp updates_diagnostics_on_background_file_change
+      - run: cargo test --test lsp updates_diagnostics_on_background_file_change -- --test-threads=1
 
   clippy:
     runs-on: ubuntu-latest
