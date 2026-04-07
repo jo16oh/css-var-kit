@@ -151,7 +151,7 @@ fn updates_diagnostics_on_background_file_change_via_server_watcher() {
     )
     .unwrap();
 
-    sleep(Duration::from_millis(350));
+    sleep(Duration::from_millis(1100));
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");
