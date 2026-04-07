@@ -14,7 +14,8 @@ use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {
     pub fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        dbg!(&self.source_cache);
+        eprintln!("publish_diagnostics");
+
         let sources: Vec<(&Path, &str)> = self
             .source_cache
             .iter()

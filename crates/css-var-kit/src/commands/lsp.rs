@@ -134,6 +134,7 @@ impl Server<'_> {
                     }
                 }
                 recv(watcher_rx) -> paths => {
+                    eprintln!("file change detected");
                     if let Ok(paths) = paths {
                         self.log(&format!(
                             "server watcher: file change detected ({} files)",
@@ -150,6 +151,7 @@ impl Server<'_> {
     fn handle_notification(&mut self, notif: Notification) -> Result<(), Box<dyn Error>> {
         match notif.method.as_str() {
             DidOpenTextDocument::METHOD => {
+                eprintln!("DidOpenTextDocument");
                 let params: lsp_types::DidOpenTextDocumentParams =
                     serde_json::from_value(notif.params)?;
                 self.log(&format!(
@@ -165,7 +167,7 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidChangeTextDocument::METHOD => {
-                eprintln!("didChange");
+                eprintln!("DidChangeTextDocument");
                 let params: lsp_types::DidChangeTextDocumentParams =
                     serde_json::from_value(notif.params)?;
                 self.log(&format!(
@@ -183,7 +185,7 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidChangeWatchedFiles::METHOD => {
-                eprintln!("didChangeWatchedFiles");
+                eprintln!("DidChangeWatchedFiles");
                 let params: lsp_types::DidChangeWatchedFilesParams =
                     serde_json::from_value(notif.params)?;
                 let changed_paths: Vec<PathBuf> = params
@@ -199,6 +201,7 @@ impl Server<'_> {
                 self.publish_diagnostics()?;
             }
             DidCloseTextDocument::METHOD => {
+                eprintln!("DidCloseTextDocument");
                 let params: lsp_types::DidCloseTextDocumentParams =
                     serde_json::from_value(notif.params)?;
                 self.log(&format!(
