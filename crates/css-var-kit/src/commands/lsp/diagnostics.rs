@@ -14,6 +14,7 @@ use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {
     pub fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
+        dbg!(&self.source_cache);
         let sources: Vec<(&Path, &str)> = self
             .source_cache
             .iter()
@@ -45,7 +46,6 @@ impl Server<'_> {
             let lsp_diagnostics = by_file.remove(*path).unwrap_or_default();
             let abs_path = self.config.root_dir.join(path);
             let uri = path_to_uri(&abs_path);
-            eprintln!("{}", *uri);
             self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
                 uri,
                 diagnostics: lsp_diagnostics,
