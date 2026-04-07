@@ -135,14 +135,6 @@ impl Server<'_> {
                 }
                 recv(watcher_rx) -> paths => {
                     if let Ok(paths) = paths {
-                        let paths_string = paths
-                            .iter()
-                            .map(|p| p.to_str().unwrap().to_string())
-                            .collect::<Vec<String>>()
-                            .join(", ");
-
-                        eprintln!("file change detected: {}", paths_string);
-
                         self.log(&format!(
                             "server watcher: file change detected ({} files)",
                             paths.len()
