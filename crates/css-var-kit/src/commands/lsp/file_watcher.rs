@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Request};
@@ -10,7 +11,8 @@ use lsp_types::{
     DidChangeWatchedFilesRegistrationOptions, FileSystemWatcher, GlobPattern, InitializeParams,
     Registration,
 };
-use notify::{RecursiveMode, Watcher};
+use notify::RecursiveMode;
+use notify_debouncer_full::{DebouncedEvent, new_debouncer};
 
 pub fn client_supports_watch(init_params: &InitializeParams) -> bool {
     init_params
@@ -49,23 +51,32 @@ pub fn register_client_watcher(connection: &Connection) -> Result<(), Box<dyn Er
 pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, Box<dyn Error>> {
     let (tx, rx) = crossbeam_channel::bounded(1);
 
-    let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
-        if let Ok(event) = event {
-            let css_paths: Vec<PathBuf> = event
-                .paths
-                .into_iter()
-                .filter(|p| p.extension().is_some_and(|ext| ext == "css"))
-                .collect();
-            if !css_paths.is_empty() {
-                let _ = tx.try_send(css_paths);
-            }
-        }
-    })?;
+    let mut debouncer = new_debouncer(
+        Duration::from_millis(300),
+        None,
+        move |events: Result<Vec<DebouncedEvent>, _>| {
+            if let Ok(events) = events {
+                let mut css_paths: Vec<PathBuf> = events
+                    .iter()
+                    .flat_map(|e| &e.paths)
+                    .filter(|p| p.extension().is_some_and(|ext| ext == "css"))
+                    .cloned()
+                    .collect();
 
-    watcher.watch(root_dir, RecursiveMode::Recursive)?;
+                css_paths.sort();
+                css_paths.dedup();
+
+                if !css_paths.is_empty() {
+                    let _ = tx.try_send(css_paths);
+                }
+            }
+        },
+    )?;
+
+    let root_dir = root_dir.to_owned();
 
     std::thread::spawn(move || {
-        let _watcher = watcher;
+        debouncer.watch(root_dir, RecursiveMode::Recursive).unwrap();
         std::thread::park();
     });
 
