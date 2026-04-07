@@ -56,12 +56,15 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
         None,
         move |events: Result<Vec<DebouncedEvent>, _>| {
             if let Ok(events) = events {
-                let css_paths: Vec<PathBuf> = events
+                let mut css_paths: Vec<PathBuf> = events
                     .iter()
                     .flat_map(|e| &e.paths)
                     .filter(|p| p.extension().is_some_and(|ext| ext == "css"))
                     .cloned()
                     .collect();
+
+                css_paths.sort();
+                css_paths.dedup();
 
                 if !css_paths.is_empty() {
                     let _ = tx.try_send(css_paths);
