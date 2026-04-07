@@ -16,7 +16,7 @@ pub fn cvk() -> Command {
 
 pub fn copy_fixture_to_tempdir(fixture_name: &str) -> tempfile::TempDir {
     let fixture_dir = Path::new(FIXTURES).join(fixture_name);
-    let tmp = tempfile::tempdir().unwrap();
+    let tmp = tempfile::tempdir_in("/dev/shm").unwrap();
     copy_dir_recursive(&fixture_dir, tmp.path());
     tmp
 }
