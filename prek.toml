@@ -18,18 +18,18 @@ types = ["rust"]
 pass_filenames = false
 
 [[repos.hooks]]
-id = "deno-fmt"
-name = "deno fmt"
+id = "oxfmt"
+name = "oxfmt"
 language = "system"
-entry = "deno fmt --check"
+entry = "pnpm oxfmt --check"
 types = ["ts"]
 pass_filenames = true
 
 [[repos.hooks]]
-id = "deno-check"
-name = "deno check"
+id = "oxlint"
+name = "oxlint"
 language = "system"
-entry = "deno check --config scripts/gen-value-kind-set/deno.json"
+entry = "pnpm oxlint --type-aware --type-check"
 types = ["ts"]
 pass_filenames = true
 

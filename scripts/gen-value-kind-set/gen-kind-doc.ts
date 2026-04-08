@@ -1,4 +1,4 @@
-import type { KindData } from "./kind-data.ts";
+import type { KindData } from "./kind-data.js";
 
 function invertMap(map: Record<string, string[]>): Record<string, string[]> {
   const result: Record<string, string[]> = {};
@@ -10,9 +10,12 @@ function invertMap(map: Record<string, string[]>): Record<string, string[]> {
   return result;
 }
 
-export function generateKindDoc(
-  { allKinds, keywordMap, functionMap, dimensionUnitMap }: KindData,
-): string {
+export function generateKindDoc({
+  allKinds,
+  keywordMap,
+  functionMap,
+  dimensionUnitMap,
+}: KindData): string {
   const keywordsByKind = invertMap(keywordMap);
   const functionsByKind = invertMap(functionMap);
   const unitsByKind = invertMap(dimensionUnitMap);
@@ -58,9 +61,7 @@ export function generateKindDoc(
     "frequency",
   ];
   const prioritizedSet = new Set(prioritized);
-  const rest = [...allKinds, "length-percentage"].filter((k) =>
-    !prioritizedSet.has(k)
-  );
+  const rest = [...allKinds, "length-percentage"].filter((k) => !prioritizedSet.has(k));
   const orderedKinds = [...prioritized, ...rest];
   const restLines: string[] = [];
 
@@ -73,29 +74,21 @@ export function generateKindDoc(
     // Deprioritize generic keywords that appear across many kinds.
     // Workaround: exclude keywords containing ")" — the spec data includes
     // malformed entries like "unsafe-url)" (referrer-policy-modifier).
-    const generic = new Set([
-      "auto",
-      "none",
-      "normal",
-      "inherit",
-      "initial",
-      "unset",
-    ]);
+    const generic = new Set(["auto", "none", "normal", "inherit", "initial", "unset"]);
     const shortKeywords = keywords
-      .filter((k) =>
-        k === k.toLowerCase() && /^[a-z]/.test(k) && !k.includes(")")
-      )
-      .sort((a, b) =>
-        (generic.has(a) ? 1 : 0) - (generic.has(b) ? 1 : 0) ||
-        a.length - b.length ||
-        a.localeCompare(b)
+      .filter((k) => k === k.toLowerCase() && /^[a-z]/.test(k) && !k.includes(")"))
+      .sort(
+        (a, b) =>
+          (generic.has(a) ? 1 : 0) - (generic.has(b) ? 1 : 0) ||
+          a.length - b.length ||
+          a.localeCompare(b),
       );
-    const sortedFunctions = functions
-      .sort((a, b) =>
+    const sortedFunctions = functions.sort(
+      (a, b) =>
         (a.startsWith("-") ? 1 : 0) - (b.startsWith("-") ? 1 : 0) ||
         a.length - b.length ||
-        a.localeCompare(b)
-      );
+        a.localeCompare(b),
+    );
     const examples: string[] = [
       ...units.slice(0, 3).map((u) => `<${u}>`),
       ...shortKeywords.slice(0, 3),
@@ -105,10 +98,10 @@ export function generateKindDoc(
     if (examples.length === 0 && !prioritizedSet.has(kind)) continue;
 
     const MANUAL_EXAMPLES: Record<string, string[]> = {
-      "percentage": ["50%"],
+      percentage: ["50%"],
       "length-percentage": ["50%", "<px>", "<em>"],
-      "number": ["0", "1.5", "progress()"],
-      "integer": ["0", "1", "sibling-count()"],
+      number: ["0", "1.5", "progress()"],
+      integer: ["0", "1", "sibling-count()"],
     };
     const manualExamples = MANUAL_EXAMPLES[kind];
     if (manualExamples) {
@@ -116,31 +109,28 @@ export function generateKindDoc(
     }
 
     const EXAMPLE_PROPERTIES: Record<string, string[]> = {
-      "color": ["color", "background-color", "border-color"],
-      "length": ["width", "margin", "padding", "font-size"],
+      color: ["color", "background-color", "border-color"],
+      length: ["width", "margin", "padding", "font-size"],
       "length-percentage": ["width", "margin", "padding"],
-      "percentage": ["opacity", "width"],
-      "number": ["opacity", "flex-grow", "line-height"],
-      "integer": ["z-index", "order", "column-count"],
-      "angle": ["transform", "rotate"],
-      "time": ["transition-duration", "animation-duration"],
-      "resolution": ["resolution"],
-      "string": ["content"],
-      "url": ["background-image"],
-      "image": ["background-image", "list-style-image"],
-      "display": ["display"],
-      "position": ["background-position", "object-position"],
+      percentage: ["opacity", "width"],
+      number: ["opacity", "flex-grow", "line-height"],
+      integer: ["z-index", "order", "column-count"],
+      angle: ["transform", "rotate"],
+      time: ["transition-duration", "animation-duration"],
+      resolution: ["resolution"],
+      string: ["content"],
+      url: ["background-image"],
+      image: ["background-image", "list-style-image"],
+      display: ["display"],
+      position: ["background-position", "object-position"],
       "line-style": ["border-style", "outline-style"],
-      "easing-function": [
-        "transition-timing-function",
-        "animation-timing-function",
-      ],
-      "filter": ["filter", "backdrop-filter"],
+      "easing-function": ["transition-timing-function", "animation-timing-function"],
+      filter: ["filter", "backdrop-filter"],
       "transform-function": ["transform"],
       "font-weight-absolute": ["font-weight"],
       "generic-family": ["font-family"],
-      "flex": ["grid-template-columns"],
-      "frequency": ["voice-pitch"],
+      flex: ["grid-template-columns"],
+      frequency: ["voice-pitch"],
     };
     const props = EXAMPLE_PROPERTIES[kind];
     const propsFormatted = props ? props.map((p) => `\`${p}\``).join(", ") : "";
