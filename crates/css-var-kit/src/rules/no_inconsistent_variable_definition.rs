@@ -1,3 +1,5 @@
+use lightningcss::properties::custom::{Token, TokenOrValue};
+
 use crate::config::LookupFilesMatcher;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -37,14 +39,25 @@ fn check_variable_definitions<'src>(
 ) -> Vec<Diagnostic<'src>> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
-        .map(|&p| {
+        .filter_map(|&p| {
             let token_list = p.token_list();
-            let kinds = match resolve_variables(token_list, vars) {
-                Ok(resolved) => kind_of(&resolved),
-                Err(_) => kind_of(p.value.raw),
-            };
-            let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
-            (p, kinds, is_ignored)
+
+            // Skip check if the value is white-space only
+            if token_list
+                .0
+                .iter()
+                .any(|t| !matches!(t, TokenOrValue::Token(Token::WhiteSpace(_))))
+            {
+                let kinds = match resolve_variables(token_list, vars) {
+                    Ok(resolved) => kind_of(&resolved),
+                    Err(_) => kind_of(p.value.raw),
+                };
+                let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
+
+                Some((p, kinds, is_ignored))
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -134,6 +147,11 @@ mod tests {
     #[test]
     fn single_definition_skipped() {
         assert_messages(":root { --color: red; }", &[]);
+    }
+
+    #[test]
+    fn skip_if_the_value_is_empty() {
+        assert_messages(":root { --size: 4px;  --size:  ; }", &[]);
     }
 
     #[test]
