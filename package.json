@@ -1,4 +1,6 @@
 {
   "private": true,
-  "workspaces": ["packages/*"]
+  "devDependencies": {
+    "bumpp": "^11.0.1"
+  }
 }
