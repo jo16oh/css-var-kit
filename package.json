@@ -1,6 +1,11 @@
 {
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "oxlint --type-aware --type-check",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
   "devDependencies": {
     "@types/node": "^25.5.2",
     "bumpp": "^11.0.1",
