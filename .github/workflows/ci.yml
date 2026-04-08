@@ -42,7 +42,7 @@ jobs:
         with:
           components: rustfmt
       - run: cargo fmt --all --check
-      
+
   oxfmt:
     runs-on: ubuntu-latest
     steps:
@@ -54,7 +54,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run format:check
-        
+
   oxlint:
     runs-on: ubuntu-latest
     steps:
