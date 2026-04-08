@@ -1,8 +1,9 @@
 // @ts-expect-error: no definetely typed
 import css from "@webref/css";
-import { buildKeywordToTypes, extractTerminalTypes } from "./keyword-kinds.js";
-import { buildFunctionToKinds } from "./function-kinds.js";
+
 import { buildDimensionUnitToKinds } from "./dimension-unit-kinds.js";
+import { buildFunctionToKinds } from "./function-kinds.js";
+import { buildKeywordToTypes, extractTerminalTypes } from "./keyword-kinds.js";
 
 // lightningcss SyntaxComponentKind variants that share a bit with keyword kinds.
 // Names must match the keyword-kinds naming convention so that overlapping
