@@ -5,3 +5,10 @@ prek = "latest"
 tombi = "latest"
 just = "latest"
 "cargo:cargo-edit" = "latest"
+
+[hooks]
+postinstall = "mise lock"
+
+[settings]
+lockfile = true
+experimental = true
