@@ -34,7 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace -- -D warnings
 
-  fmt:
+  rustfmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,16 +43,26 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all --check
 
-  deno:
+  oxfmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v2
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
         with:
-          deno-version: v2.x
-      - run: deno fmt --check
-        working-directory: scripts/gen-value-kind-set
-      - run: deno check .
-        working-directory: scripts/gen-value-kind-set
-      - run: deno lint
-        working-directory: scripts/gen-value-kind-set
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run format:check
+
+  oxlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint

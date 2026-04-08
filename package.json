@@ -1,6 +1,19 @@
 {
   "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --type-aware --type-check",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
   "devDependencies": {
-    "bumpp": "^11.0.1"
-  }
+    "@types/node": "^25.5.2",
+    "bumpp": "^11.0.1",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.59.0",
+    "oxlint-tsgolint": "^0.20.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  },
+  "packageManager": "pnpm@10.33.0"
 }

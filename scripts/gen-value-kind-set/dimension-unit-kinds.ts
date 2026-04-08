@@ -1,3 +1,4 @@
+// @ts-expect-error: no @types
 import { lexer } from "css-tree";
 
 // lexer.units is typed as Record<string, string[]> at runtime:
@@ -6,8 +7,6 @@ import { lexer } from "css-tree";
 export function buildDimensionUnitToKinds(): Record<string, string[]> {
   const units = lexer.units as Record<string, string[]>;
   return Object.fromEntries(
-    Object.entries(units).flatMap(([kind, unitList]) =>
-      unitList.map((unit) => [unit, [kind]])
-    ),
+    Object.entries(units).flatMap(([kind, unitList]) => unitList.map((unit) => [unit, [kind]])),
   );
 }

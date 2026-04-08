@@ -1,2 +1,3 @@
 packages:
   - packages/*
+  - scripts/gen-value-kind-set

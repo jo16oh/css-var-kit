@@ -20,7 +20,7 @@ const AGGREGATION_MAP: Record<string, string> = {
   "named-color": "color",
   "system-color": "color",
   "deprecated-color": "color",
-  "color": "color",
+  color: "color",
   "color-base": "color",
 
   // All color space identifiers appear at the same <color-space> position:
@@ -54,7 +54,7 @@ const AGGREGATION_MAP: Record<string, string> = {
   "geometry-box": "box",
 
   // <repetition> is a child of <repeat-style>, both for background-repeat
-  "repetition": "repeat-style",
+  repetition: "repeat-style",
 
   // All display subtypes are valid as the sole value of `display`:
   // display-outside (block, inline), display-inside (flex, grid),
@@ -108,7 +108,7 @@ const AGGREGATION_MAP: Record<string, string> = {
 
   // scroller (scroll(), view()) and pointer-source (pointer()) share
   // identical keywords: root, nearest, self
-  "scroller": "source",
+  scroller: "source",
   "pointer-source": "source",
 
   // axis and pointer-axis share identical keywords: block, inline, x, y
@@ -130,22 +130,21 @@ export function extractKeywords(syntax: string): string[] {
     .split("|")
     .map((s) => s.trim())
     .map((s) => s.replace(/^\[|\]$/g, "").trim())
-    .filter((s) =>
-      s.length > 0 &&
-      !s.startsWith("<") &&
-      !s.includes("(") &&
-      !s.includes(" ") &&
-      !s.includes("*") &&
-      !s.includes("+") &&
-      !s.includes("?") &&
-      !s.includes("#") &&
-      !s.includes("&")
+    .filter(
+      (s) =>
+        s.length > 0 &&
+        !s.startsWith("<") &&
+        !s.includes("(") &&
+        !s.includes(" ") &&
+        !s.includes("*") &&
+        !s.includes("+") &&
+        !s.includes("?") &&
+        !s.includes("#") &&
+        !s.includes("&"),
     );
 }
 
-export function extractTerminalTypes(
-  types: TypeEntry[],
-): Map<string, string[]> {
+export function extractTerminalTypes(types: TypeEntry[]): Map<string, string[]> {
   const result = new Map<string, string[]>();
 
   for (const type of types) {
@@ -197,14 +196,10 @@ export function buildKeywordToTypes(
     if (kept.length > 0) result[kw] = kept;
   }
 
-  return Object.fromEntries(
-    Object.entries(result).sort(([a], [b]) => a.localeCompare(b)),
-  );
+  return Object.fromEntries(Object.entries(result).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-function findSingletonKinds(
-  keywordMap: Record<string, string[]>,
-): Set<string> {
+function findSingletonKinds(keywordMap: Record<string, string[]>): Set<string> {
   const kindToKeywords = new Map<string, string[]>();
   for (const [kw, kinds] of Object.entries(keywordMap)) {
     for (const kind of kinds) {
@@ -213,8 +208,6 @@ function findSingletonKinds(
     }
   }
   return new Set(
-    [...kindToKeywords.entries()]
-      .filter(([_, kws]) => kws.length === 1)
-      .map(([kind]) => kind),
+    [...kindToKeywords.entries()].filter(([_, kws]) => kws.length === 1).map(([kind]) => kind),
   );
 }

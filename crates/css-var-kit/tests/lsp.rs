@@ -507,9 +507,9 @@ fn goto_definition_jumps_to_variable_declaration() {
             uri.ends_with("/variables.css"),
             "expected URI ending with /variables.css, got: {uri}"
         );
-        assert_eq!(loc["range"]["start"]["character"], 4);
+        assert_eq!(loc["range"]["start"]["character"], 2);
         // 4 + len("--primary-color") = 19
-        assert_eq!(loc["range"]["end"]["character"], 19);
+        assert_eq!(loc["range"]["end"]["character"], 17);
     }
 
     let lines: Vec<u64> = result
@@ -696,9 +696,9 @@ fn prepare_rename_succeeds_on_variable() {
 
     // range should cover exactly "--primary-color" (cols 15..30)
     assert_eq!(result["range"]["start"]["line"], 1);
-    assert_eq!(result["range"]["start"]["character"], 15);
+    assert_eq!(result["range"]["start"]["character"], 13);
     assert_eq!(result["range"]["end"]["line"], 1);
-    assert_eq!(result["range"]["end"]["character"], 30);
+    assert_eq!(result["range"]["end"]["character"], 28);
     assert_eq!(result["placeholder"], "primary-color");
 }
 

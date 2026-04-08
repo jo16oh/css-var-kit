@@ -1,13 +1,13 @@
 // Groups auto-classified from the `for` field
 export const FOR_FIELD_MAPPING: Record<string, string> = {
-  "transform": "transform-function",
-  "filter": "filter",
+  transform: "transform-function",
+  filter: "filter",
   "<basic-shape>": "basic-shape",
 };
 
 // Groups that require manual classification
 export const MANUAL_GROUPS: Record<string, string[]> = {
-  "color": [
+  color: [
     "rgb",
     "rgba",
     "hsl",
@@ -32,7 +32,7 @@ export const MANUAL_GROUPS: Record<string, string[]> = {
     "alpha",
     "palette-mix",
   ],
-  "image": [
+  image: [
     "linear-gradient",
     "radial-gradient",
     "conic-gradient",
@@ -61,25 +61,14 @@ export const MANUAL_GROUPS: Record<string, string[]> = {
     "translate3d",
     "translateZ",
   ],
-  "transform-list": [
-    "transform-interpolate",
-    "transform-mix",
-  ],
-  "easing-function": [
-    "cubic-bezier",
-    "steps",
-    "linear",
-  ],
-  "animation-timeline": [
-    "scroll",
-    "view",
-    "pointer",
-  ],
-  "url": ["url", "url-pattern"],
-  "length": ["anchor", "anchor-size", "fit-content"],
-  "number": ["progress"],
-  "integer": ["sibling-index", "sibling-count"],
-  "string": [
+  "transform-list": ["transform-interpolate", "transform-mix"],
+  "easing-function": ["cubic-bezier", "steps", "linear"],
+  "animation-timeline": ["scroll", "view", "pointer"],
+  url: ["url", "url-pattern"],
+  length: ["anchor", "anchor-size", "fit-content"],
+  number: ["progress"],
+  integer: ["sibling-index", "sibling-count"],
+  string: [
     "counter",
     "counters",
     "string",
@@ -91,12 +80,12 @@ export const MANUAL_GROUPS: Record<string, string[]> = {
   ],
   "custom-ident": ["ident", "running"],
   "corner-shape": ["superellipse"],
-  "snap": ["snap-block", "snap-inline"],
+  snap: ["snap-block", "snap-inline"],
   "grid-track": ["minmax", "repeat"],
   "request-modifier": ["cross-origin", "integrity", "referrer-policy"],
 
   // Too niche or return type not statically determinable
-  "ignored": [
+  ignored: [
     "symbols", // @counter-style descriptor
     "ray", // offset-path ray()
     "wcag2", // contrast algorithm
@@ -186,9 +175,7 @@ export function buildFunctionToKinds(
     .map((fn) => stripParens(fn.name))
     .filter((name) => !mapped.has(name));
   if (unmapped.length > 0) {
-    throw new Error(
-      `${unmapped.length} unmapped functions: ${unmapped.join(", ")}`,
-    );
+    throw new Error(`${unmapped.length} unmapped functions: ${unmapped.join(", ")}`);
   }
 
   // Filter out entries whose ALL kinds are ignored
@@ -198,7 +185,5 @@ export function buildFunctionToKinds(
     if (kept.length > 0) filtered[name] = kept;
   }
 
-  return Object.fromEntries(
-    Object.entries(filtered).sort(([a], [b]) => a.localeCompare(b)),
-  );
+  return Object.fromEntries(Object.entries(filtered).sort(([a], [b]) => a.localeCompare(b)));
 }

@@ -15,11 +15,11 @@ fn diagnostic_points_to_variable_name() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "single.css:1:17 no-undefined-variable-use",
+            "single.css:2:14 no-undefined-variable-use",
         ))
         .stderr(predicates::str::contains(concat!(
-            "  > 1 │ .a { color: var(--undefined); }\n",
-            "      │                 ^^^^^^^^^^^",
+            "  > 2 │   color: var(--undefined);\n",
+            "      │              ^^^^^^^^^^^",
         )));
 }
 
@@ -30,18 +30,18 @@ fn diagnostic_points_to_each_variable_in_multiple() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "multiple.css:1:22 no-undefined-variable-use",
+            "multiple.css:2:19 no-undefined-variable-use",
         ))
         .stderr(predicates::str::contains(concat!(
-            "  > 1 │ .a { background: var(--a) var(--b); }\n",
-            "      │                      ^^^",
+            "  > 2 │   background: var(--a) var(--b);\n",
+            "      │                   ^^^",
         )))
         .stderr(predicates::str::contains(
-            "multiple.css:1:31 no-undefined-variable-use",
+            "multiple.css:2:28 no-undefined-variable-use",
         ))
         .stderr(predicates::str::contains(concat!(
-            "  > 1 │ .a { background: var(--a) var(--b); }\n",
-            "      │                               ^^^",
+            "  > 2 │   background: var(--a) var(--b);\n",
+            "      │                            ^^^",
         )));
 }
 
@@ -52,10 +52,10 @@ fn diagnostic_points_to_nested_var() {
         .assert()
         .failure()
         .stderr(predicates::str::contains(
-            "nested.css:2:17 no-undefined-variable-use",
+            "nested.css:5:14 no-undefined-variable-use",
         ))
         .stderr(predicates::str::contains(concat!(
-            "  > 2 │ .a { color: var(--primary, var(--fb)); }\n",
-            "      │                 ^^^^^^^^^",
+            "  > 5 │   color: var(--primary, var(--fb));\n",
+            "      │              ^^^^^^^^^",
         )));
 }

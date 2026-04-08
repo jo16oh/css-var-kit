@@ -42,6 +42,7 @@ Lints CSS variables and their usage. Detects undefined variables, type mismatche
 A language server for CSS variables that offers type-aware variable completion and lint warnings.
 
 #### Supported Features✨
+
 - Show diagnostics from `cvk lint`
 - Type-aware variable completion
 - Rename variable
@@ -50,6 +51,7 @@ A language server for CSS variables that offers type-aware variable completion a
 #### Editor Integration
 
 Helix:
+
 ```helix
 [language-server.css-var-kit]
 command = "cvk"
@@ -61,6 +63,7 @@ language-servers = ["css-var-kit"]
 ```
 
 Neovim:
+
 ```
 ⚠️WIP (contributions are welcome😉)⚠️
 ```

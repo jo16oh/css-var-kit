@@ -15,17 +15,12 @@ const platformKey = `${process.platform}-${process.arch}`;
 const pkg = PLATFORMS[platformKey];
 
 if (!pkg) {
-  console.error(
-    `css-var-kit: unsupported platform ${process.platform}-${process.arch}`
-  );
+  console.error(`css-var-kit: unsupported platform ${process.platform}-${process.arch}`);
   process.exit(1);
 }
 
 const ext = process.platform === "win32" ? ".exe" : "";
-const binPath = path.join(
-  path.dirname(require.resolve(`${pkg}/package.json`)),
-  `cvk${ext}`
-);
+const binPath = path.join(path.dirname(require.resolve(`${pkg}/package.json`)), `cvk${ext}`);
 
 try {
   execFileSync(binPath, process.argv.slice(2), { stdio: "inherit" });

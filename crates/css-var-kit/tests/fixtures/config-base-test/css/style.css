@@ -1,7 +1,7 @@
 :root {
-    --my-color: red;
+  --my-color: red;
 }
 
 .test {
-    color: var(--my-color);
+  color: var(--my-color);
 }

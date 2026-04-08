@@ -1,14 +1,14 @@
 .valid {
-    color: var(--color);
-    font-size: var(--size);
+  color: var(--color);
+  font-size: var(--size);
 }
 
 .mismatch {
-    color: var(--size);
-    width: var(--color);
+  color: var(--size);
+  width: var(--color);
 }
 
 .nested {
-    color: var(--alias-color);
-    color: var(--alias-size);
+  color: var(--alias-color);
+  color: var(--alias-size);
 }

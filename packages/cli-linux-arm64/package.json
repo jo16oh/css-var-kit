@@ -7,7 +7,13 @@
     "type": "git",
     "url": "https://github.com/jo16oh/css-var-kit"
   },
-  "os": ["linux"],
-  "cpu": ["arm64"],
-  "files": ["cvk"]
+  "files": [
+    "cvk"
+  ],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ]
 }

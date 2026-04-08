@@ -1,7 +1,15 @@
 [tools]
 rust = "1.94"
+node = "24"
 deno = "2.7"
 prek = "latest"
 tombi = "latest"
 just = "latest"
 "cargo:cargo-edit" = "latest"
+
+[hooks]
+postinstall = "mise lock"
+
+[settings]
+lockfile = true
+experimental = true
