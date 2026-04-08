@@ -1,0 +1,108 @@
+{
+  "name": "@css-var-kit/vscode",
+  "displayName": "css-var-kit",
+  "version": "0.2.1",
+  "description": "CSS variable toolkit — completion, diagnostics, and more via cvk LSP",
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jo16oh/css-var-kit",
+    "directory": "packages/vscode"
+  },
+  "publisher": "jo16oh",
+  "type": "module",
+  "main": "./dist/extension.js",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "~1.100.0",
+    "vite": "^8.0.7"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "css-var-kit",
+      "properties": {
+        "cvk.path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "markdownDescription": "Explicit path to the `cvk` binary. If unset, the extension resolves it automatically."
+        },
+        "cvk.rootDir": {
+          "type": "string",
+          "default": ".",
+          "description": "Root directory for CSS variable analysis (relative to workspace root)."
+        },
+        "cvk.lookupFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.css"
+          ],
+          "description": "Glob patterns for CSS files to include."
+        },
+        "cvk.rules.noUndefinedVariableUse": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warn",
+            "off"
+          ],
+          "default": "error",
+          "description": "Severity for undefined CSS variable usage."
+        },
+        "cvk.rules.noVariableTypeMismatch": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warn",
+            "off"
+          ],
+          "default": "error",
+          "description": "Severity for CSS variable type mismatch."
+        },
+        "cvk.rules.noInconsistentVariableDefinition": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warn",
+            "off"
+          ],
+          "default": "error",
+          "description": "Severity for inconsistent CSS variable definitions."
+        },
+        "cvk.rules.enforceVariableUse": {
+          "type": [
+            "object",
+            "string"
+          ],
+          "default": "off",
+          "markdownDescription": "Enforce CSS variable usage. Set to `\"error\"`, `\"warn\"`, `\"off\"`, or an object with detailed config."
+        },
+        "cvk.lsp.logFile": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "markdownDescription": "Path to the LSP log file. If unset, no log file is written."
+        }
+      }
+    }
+  },
+  "activationEvents": [
+    "onLanguage:css"
+  ],
+  "engines": {
+    "vscode": "^1.100.0"
+  }
+}
