@@ -1,9 +1,9 @@
 :root {
-    --color: red;
-    --size: 16px;
+  --color: red;
+  --size: 16px;
 }
 
 .dark {
-    --color: blue;
-    --size: 300ms;
+  --color: blue;
+  --size: 300ms;
 }
