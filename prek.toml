@@ -21,7 +21,7 @@ pass_filenames = false
 id = "oxfmt"
 name = "oxfmt"
 language = "system"
-entry = "pnpm oxfmt --check"
+entry = "pnpm oxfmt"
 types = ["ts"]
 pass_filenames = true
 
