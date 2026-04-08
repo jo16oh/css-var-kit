@@ -1,6 +1,6 @@
 import { defineConfig } from "oxfmt";
 
 export default defineConfig({
-  ignorePatterns: ["target", "**/*.md", "**/*.toml"],
+  ignorePatterns: ["target", "**/*.toml"],
   sortImports: true,
 });

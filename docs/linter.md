@@ -10,7 +10,6 @@ By default, `cvk lint` looks for `cvk.json` (or `cvk.jsonc`) in the current proj
 
 Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
-
 ```jsonc
 // Default configuration (all fields are optional).
 {
@@ -26,10 +25,18 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
       "severity": "error",
       "types": [],
       "allowedFunctions": ["calc", "min", "max", "clamp", "env"],
-      "allowedValues": ["inherit", "initial", "unset", "revert", "revert-layer", "currentColor", "transparent"],
-      "allowedProperties": []
-    }
-  }
+      "allowedValues": [
+        "inherit",
+        "initial",
+        "unset",
+        "revert",
+        "revert-layer",
+        "currentColor",
+        "transparent",
+      ],
+      "allowedProperties": [],
+    },
+  },
 }
 ```
 
@@ -37,11 +44,11 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
 Each rule can be set to one of the following severity levels:
 
-| Value | Description |
-| ----- | ----------- |
+| Value               | Description                                    |
+| ------------------- | ---------------------------------------------- |
 | `"error"` or `"on"` | Report as an error (causes non-zero exit code) |
-| `"warn"` | Report as a warning |
-| `"off"` | Disable the rule |
+| `"warn"`            | Report as a warning                            |
+| `"off"`             | Disable the rule                               |
 
 ## Rules
 

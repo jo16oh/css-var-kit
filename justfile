@@ -17,3 +17,4 @@ gen-value-kind-set:
 
 gen-value-kind-doc:
     @pnpm tsx scripts/gen-value-kind-set/main.ts --gen-doc docs/VALUE_KINDS.md
+    @pnpm oxfmt docs/VALUE_KINDS.md
