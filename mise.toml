@@ -1,5 +1,6 @@
 [tools]
 rust = "1.94"
+node = "24"
 deno = "2.7"
 prek = "latest"
 tombi = "latest"
