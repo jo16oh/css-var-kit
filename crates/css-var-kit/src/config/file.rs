@@ -10,18 +10,18 @@ use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct RawConfig {
+pub struct RawConfig {
     #[serde(default = "default_root_dir")]
-    pub(super) root_dir: String,
+    pub root_dir: String,
     #[serde(default = "default_lookup_files")]
-    pub(super) lookup_files: Vec<String>,
+    pub lookup_files: Vec<String>,
     #[serde(default)]
-    pub(super) rules: RawRules,
+    pub rules: RawRules,
     #[serde(default)]
-    pub(super) lsp: RawLspConfig,
+    pub lsp: RawLspConfig,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RawLspConfig {
     pub log_file: Option<String>,
@@ -39,7 +39,9 @@ impl Default for RawConfig {
 }
 
 impl RawConfig {
-    pub fn load(project_root: &Path) -> Result<Self, ConfigError> {
+    /// Searches for `cvk.json` or `cvk.jsonc` in `project_root`.
+    /// Returns `Ok(Some(config))` if found, `Ok(None)` if no config file exists.
+    pub fn load(project_root: &Path) -> Result<Option<Self>, ConfigError> {
         let candidates = ["cvk.json", "cvk.jsonc"];
 
         for name in candidates {
@@ -47,11 +49,12 @@ impl RawConfig {
             if let Ok(raw) = fs::read_to_string(&path) {
                 let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
                 return serde_json::from_reader(stripped)
+                    .map(Some)
                     .map_err(|e| ConfigError::Parse { path, source: e });
             }
         }
 
-        Ok(Self::default())
+        Ok(None)
     }
 
     pub(super) fn load_from(path: &Path) -> Result<Self, ConfigError> {
@@ -69,15 +72,15 @@ impl RawConfig {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub(super) struct RawRules {
+pub struct RawRules {
     #[serde(default = "default_error")]
-    pub(super) no_undefined_variable_use: SeverityToggle,
+    pub no_undefined_variable_use: SeverityToggle,
     #[serde(default = "default_error")]
-    pub(super) no_variable_type_mismatch: SeverityToggle,
+    pub no_variable_type_mismatch: SeverityToggle,
     #[serde(default = "default_error")]
-    pub(super) no_inconsistent_variable_definition: SeverityToggle,
+    pub no_inconsistent_variable_definition: SeverityToggle,
     #[serde(default)]
-    pub(super) enforce_variable_use: RawEnforceVariableUse,
+    pub enforce_variable_use: RawEnforceVariableUse,
 }
 
 impl Default for RawRules {
