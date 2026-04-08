@@ -11,8 +11,6 @@
 
     // Style Options
     "noImplicitOverride": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
 
