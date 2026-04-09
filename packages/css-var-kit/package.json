@@ -1,6 +1,6 @@
 {
   "name": "css-var-kit",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A simple, lightweight toolkit to help build design systems using CSS variables.",
   "license": "MIT",
   "repository": {

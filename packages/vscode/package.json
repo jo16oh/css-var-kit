@@ -1,7 +1,7 @@
 {
   "name": "css-var-kit-vscode",
   "displayName": "css-var-kit for VS Code",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "CSS variable toolkit — completion, diagnostics, and more via cvk LSP",
   "categories": [
     "Linters",
