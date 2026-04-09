@@ -1,7 +1,7 @@
 {
   "name": "css-var-kit",
   "displayName": "css-var-kit",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "CSS variable toolkit — completion, diagnostics, and more via cvk LSP",
   "categories": [
     "Linters",
