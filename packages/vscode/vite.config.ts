@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  ssr: {
+    noExternal: true,
+  },
   build: {
     ssr: "src/extension.ts",
     rollupOptions: {
