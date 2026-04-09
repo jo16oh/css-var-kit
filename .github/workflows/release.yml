@@ -132,8 +132,73 @@ jobs:
             cargo publish -p css-var-kit
           fi
 
-  github-release:
+  publish-vscode:
     needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - npm-pkg: cli-darwin-arm64
+            vsce-target: darwin-arm64
+            binary: cvk
+          - npm-pkg: cli-darwin-x64
+            vsce-target: darwin-x64
+            binary: cvk
+          - npm-pkg: cli-linux-arm64
+            vsce-target: linux-arm64
+            binary: cvk
+          - npm-pkg: cli-linux-x64
+            vsce-target: linux-x64
+            binary: cvk
+          - npm-pkg: cli-win32-x64
+            vsce-target: win32-x64
+            binary: cvk.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Copy LICENSE
+        run: cp LICENSE packages/vscode/LICENSE
+
+      - name: Build extension
+        working-directory: packages/vscode
+        run: pnpm run build
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.npm-pkg }}
+          path: packages/vscode/bin
+
+      - name: Make binary executable
+        run: chmod +x packages/vscode/bin/${{ matrix.binary }}
+
+      - name: Package VSIX
+        working-directory: packages/vscode
+        run: npx @vscode/vsce package --no-dependencies --target ${{ matrix.vsce-target }}
+
+      - name: Publish to Marketplace
+        working-directory: packages/vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --no-dependencies --target ${{ matrix.vsce-target }} --packagePath *.vsix
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.vsce-target }}
+          path: packages/vscode/*.vsix
+
+  github-release:
+    needs: [build, publish-vscode]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -150,6 +215,7 @@ jobs:
             pkg=$(basename "$dir")
             tar -czf "dist/css-var-kit-${pkg#cli-}.tar.gz" -C "$dir" .
           done
+          cp artifacts/vsix-*/*.vsix dist/ 2>/dev/null || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

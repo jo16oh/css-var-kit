@@ -1,6 +1,8 @@
 pub mod file;
 pub mod rules;
 
+pub use file::RawConfig;
+
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobMatcher};
@@ -103,7 +105,7 @@ impl Config {
             }
             None => {
                 let base = find_project_root(cwd);
-                let raw = file::RawConfig::load(&base)?;
+                let raw = file::RawConfig::load(&base)?.unwrap_or_default();
                 (base, raw)
             }
         };
@@ -129,6 +131,36 @@ impl Config {
 
         Ok(Self {
             root_dir,
+            lookup_files,
+            rules,
+            lsp_log_file,
+        })
+    }
+
+    /// Loads config for LSP, merging initializationOptions as fallback.
+    /// If cvk.json exists, it takes full precedence.
+    /// If cvk.json does not exist, `init_options` is used instead.
+    pub fn load_for_lsp(
+        root_dir: &Path,
+        init_options: Option<file::RawConfig>,
+    ) -> Result<Self, ConfigError> {
+        let project_root = find_project_root(root_dir);
+
+        let raw = file::RawConfig::load(&project_root)?
+            .or(init_options)
+            .unwrap_or_default();
+
+        let resolved_root_dir = project_root.join(&raw.root_dir);
+
+        let lookup_files = LookupFilesMatcher::compile(&raw.lookup_files)
+            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+
+        let rules = Rules::from_raw(raw.rules)?;
+
+        let lsp_log_file = raw.lsp.log_file.map(|p| project_root.join(p));
+
+        Ok(Self {
+            root_dir: resolved_root_dir,
             lookup_files,
             rules,
             lsp_log_file,

@@ -1,0 +1,7 @@
+**
+!dist/extension.cjs
+!bin/
+!package.json
+!LICENSE
+!README.md
+!icon.png
