@@ -187,9 +187,7 @@ jobs:
 
       - name: Publish to Marketplace
         working-directory: packages/vscode
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx @vscode/vsce publish --no-dependencies --packagePath *.vsix
+        run: npx @vscode/vsce publish --no-dependencies --packagePath *.vsix -p ${{ secrets.VSCE_PAT }}
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
