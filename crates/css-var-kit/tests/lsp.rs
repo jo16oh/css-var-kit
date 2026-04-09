@@ -724,6 +724,60 @@ fn prepare_rename_returns_null_outside_variable() {
     );
 }
 
+#[test]
+fn initialization_options_applied_when_no_config_file() {
+    let fixture_dir = Path::new(common::FIXTURES).join("no-config");
+    let mut client = LspClient::spawn(&fixture_dir);
+
+    // Disable rules via initializationOptions
+    client.initialize_with_options(Some(serde_json::json!({
+        "rules": {
+            "no-undefined-variable-use": "off",
+            "no-variable-type-mismatch": "off"
+        }
+    })));
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    client.shutdown();
+
+    assert!(
+        !messages.iter().any(|m| m.contains("--undefined-var")),
+        "no-undefined-variable-use should be disabled via initializationOptions, got: {messages:?}"
+    );
+}
+
+#[test]
+fn initialization_options_ignored_when_config_file_exists() {
+    let tmp = copy_fixture_to_tempdir("default");
+
+    let mut client = LspClient::spawn(tmp.path());
+
+    // Try to disable no-undefined-variable-use, but cvk.json exists so this should be ignored
+    client.initialize_with_options(Some(serde_json::json!({
+        "rules": {
+            "no-undefined-variable-use": "off"
+        }
+    })));
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    client.shutdown();
+
+    assert!(
+        messages.iter().any(|m| m.contains("--spacing-md")),
+        "cvk.json should take precedence over initializationOptions, got: {messages:?}"
+    );
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,

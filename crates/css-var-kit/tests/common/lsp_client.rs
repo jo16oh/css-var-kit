@@ -72,13 +72,20 @@ impl LspClient {
     }
 
     pub fn initialize(&mut self) {
-        let params = json!({
+        self.initialize_with_options(None);
+    }
+
+    pub fn initialize_with_options(&mut self, init_options: Option<Value>) {
+        let mut params = json!({
             "capabilities": {},
             "workspaceFolders": [{
                 "uri": self.root_uri,
                 "name": "test"
             }]
         });
+        if let Some(opts) = init_options {
+            params["initializationOptions"] = opts;
+        }
         let response = self.send_request("initialize", params);
         assert!(
             response.get("result").is_some(),
