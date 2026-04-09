@@ -30,7 +30,7 @@ async function startClient(): Promise<void> {
     initializationOptions: buildInitializationOptions(),
   };
 
-  client = new LanguageClient("cvk", "CSS Var Kit", serverOptions, clientOptions);
+  client = new LanguageClient("cvk", "css-var-kit", serverOptions, clientOptions);
   await client.start();
 }
 

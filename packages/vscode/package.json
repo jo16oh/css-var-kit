@@ -1,5 +1,5 @@
 {
-  "name": "@css-var-kit/vscode",
+  "name": "css-var-kit",
   "displayName": "css-var-kit",
   "version": "0.2.1",
   "description": "CSS variable toolkit — completion, diagnostics, and more via cvk LSP",
@@ -16,6 +16,11 @@
   "publisher": "jo16oh",
   "type": "module",
   "main": "./dist/extension.cjs",
+  "scripts": {
+    "build": "vite build",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "package:target": "npx @vscode/vsce package --no-dependencies --target"
+  },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },
