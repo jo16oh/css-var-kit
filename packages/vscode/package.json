@@ -15,7 +15,7 @@
   },
   "publisher": "jo16oh",
   "type": "module",
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },

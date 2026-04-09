@@ -59,6 +59,16 @@ function fromBundle(): string | undefined {
   return undefined;
 }
 
+function fromDevBuild(): string | undefined {
+  let dir = __dirname;
+  for (let i = 0; i < 5; i++) {
+    dir = dirname(dir);
+    const candidate = join(dir, "target", "debug", BIN_NAME);
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
 export function resolveBinary(): string | undefined {
-  return fromConfig() ?? fromNodeModules() ?? fromPath() ?? fromBundle();
+  return fromConfig() ?? fromNodeModules() ?? fromPath() ?? fromBundle() ?? fromDevBuild();
 }
