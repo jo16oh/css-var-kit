@@ -1,6 +1,6 @@
 {
   "name": "@css-var-kit/cli-darwin-x64",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "css-var-kit native binary for macOS x64",
   "license": "MIT",
   "repository": {

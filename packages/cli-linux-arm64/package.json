@@ -1,6 +1,6 @@
 {
   "name": "@css-var-kit/cli-linux-arm64",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "css-var-kit native binary for Linux ARM64",
   "license": "MIT",
   "repository": {

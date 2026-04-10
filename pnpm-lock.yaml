@@ -30,23 +30,7 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
 
-  packages/css-var-kit:
-    optionalDependencies:
-      '@css-var-kit/cli-darwin-arm64':
-        specifier: 0.1.3
-        version: 0.1.3
-      '@css-var-kit/cli-darwin-x64':
-        specifier: 0.1.3
-        version: 0.1.3
-      '@css-var-kit/cli-linux-arm64':
-        specifier: 0.1.3
-        version: 0.1.3
-      '@css-var-kit/cli-linux-x64':
-        specifier: 0.1.3
-        version: 0.1.3
-      '@css-var-kit/cli-win32-x64':
-        specifier: 0.1.3
-        version: 0.1.3
+  packages/css-var-kit: {}
 
   packages/vscode:
     dependencies:
@@ -71,31 +55,6 @@ importers:
         version: 3.2.1
 
 packages:
-
-  '@css-var-kit/cli-darwin-arm64@0.1.3':
-    resolution: {integrity: sha512-1SkAxZaC1ghaNapqageEnaTtWHUnIbg/5rtzQeWwqgAQ/Hh6b3TOMHvV/6Kn2ScXYoJ4HexnpWA3qkIlA2TGtA==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@css-var-kit/cli-darwin-x64@0.1.3':
-    resolution: {integrity: sha512-DwfDCOq2lnY64rU7S/wDwadGJTtnArqTveNpjrdWljd0LOwRvkPlChQfOpTF3mHt27wH23hJKc6Kj8QEh/echQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@css-var-kit/cli-linux-arm64@0.1.3':
-    resolution: {integrity: sha512-K1RyqiXLm4i6nnUGqr5vvRwmD460d2ZHbRRqhUK0xDpsezA//NkxSf4EYyXytCmn0+8koXshDyCxg9wIAWeDhg==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@css-var-kit/cli-linux-x64@0.1.3':
-    resolution: {integrity: sha512-xpBQKIBP0Qutgm5ZoetftlGmD4VSo0vuR6Gb8x9GSI2y2iFtTxQfnVCzCWoEpgnsw+OJZbPp1TDBHjsVzUG+LA==}
-    cpu: [x64]
-    os: [linux]
-
-  '@css-var-kit/cli-win32-x64@0.1.3':
-    resolution: {integrity: sha512-Hhf2RmiaNud5zinisswaw+n+xfFjY74lG6vl6LX9FWNuDHqzN/E0fEveNEhlFPGpXk/z3AzMQuBlzVE1ZmllNQ==}
-    cpu: [x64]
-    os: [win32]
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -954,21 +913,6 @@ packages:
     hasBin: true
 
 snapshots:
-
-  '@css-var-kit/cli-darwin-arm64@0.1.3':
-    optional: true
-
-  '@css-var-kit/cli-darwin-x64@0.1.3':
-    optional: true
-
-  '@css-var-kit/cli-linux-arm64@0.1.3':
-    optional: true
-
-  '@css-var-kit/cli-linux-x64@0.1.3':
-    optional: true
-
-  '@css-var-kit/cli-win32-x64@0.1.3':
-    optional: true
 
   '@emnapi/core@1.9.1':
     dependencies:
