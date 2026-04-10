@@ -30,16 +30,6 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
 
-  packages/cli-darwin-arm64: {}
-
-  packages/cli-darwin-x64: {}
-
-  packages/cli-linux-arm64: {}
-
-  packages/cli-linux-x64: {}
-
-  packages/cli-win32-x64: {}
-
   packages/css-var-kit:
     optionalDependencies:
       '@css-var-kit/cli-darwin-arm64':
