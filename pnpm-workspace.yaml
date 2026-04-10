@@ -1,3 +1,4 @@
 packages:
-  - packages/*
+  - packages/css-var-kit
+  - packages/vscode
   - scripts/gen-value-kind-set
