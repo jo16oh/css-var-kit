@@ -10,8 +10,9 @@ bump-version level:
     version=$(node -p "require('./packages/css-var-kit/package.json').version")
 
     just sync-optional-deps
+    pnpm install --lockfile-only
 
-    git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml
+    git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
     git commit -m "chore: bump version to $version"
     git tag "v$version"
 
