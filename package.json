@@ -15,5 +15,6 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "minimumReleaseAge": "3420"
 }
