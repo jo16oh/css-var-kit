@@ -8,7 +8,7 @@
 
 # css-var-kit
 
-A simple, lightweight toolkit to help build design systems using CSS variables.
+A simple, lightweight toolkit for building design systems with CSS variables, offering **type-aware** completion and linting.
 
 [![npm version](https://img.shields.io/npm/v/css-var-kit.svg)](https://www.npmjs.com/package/css-var-kit)
 [![Crates.io](https://img.shields.io/crates/v/css-var-kit.svg)](https://crates.io/crates/css-var-kit)
@@ -35,24 +35,29 @@ cargo install css-var-kit
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
-[More Documentation](docs/linter.md)
+👉 [More Documentation](docs/linter.md)
 
 ### `cvk lsp`
 
 A language server for CSS variables that offers type-aware variable completion and lint warnings.
 
-#### Supported Features✨
+Supported Features
 
-- Show diagnostics from `cvk lint`
-- Type-aware variable completion
-- Rename variable
-- Go to defintition
+- **Show diagnostics** from `cvk lint`
+- **Type-aware variable completion**
+- **Rename variable**
+- **Go to defintition**
 
-#### Editor Integration
+## Editor Integration
 
-Helix:
+### VSCode
 
-```helix
+👉 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=jo16oh.css-var-kit-vscode)
+
+### Helix
+
+```toml
+# languages.toml
 [language-server.css-var-kit]
 command = "cvk"
 args = ["lsp"]
@@ -62,15 +67,8 @@ name = "css"
 language-servers = ["css-var-kit"]
 ```
 
-Neovim:
-
-```
-⚠️WIP (contributions are welcome😉)⚠️
-```
-
 ## Planned Features 📝
 
-- `cvk prune` command
+- [ ] `cvk prune` command
   - Strips unused CSS variables from the final build output.
-- Editor extensions
-  - VsCode, Zed...
+- [ ] Zed Extension
