@@ -1,16 +1,24 @@
+pkgs := "packages/css-var-kit \
+         packages/vscode \
+         packages/cli-darwin-arm64 \
+         packages/cli-darwin-x64 \
+         packages/cli-linux-arm64 \
+         packages/cli-linux-x64 \
+         packages/cli-win32-x64"
+
 bump-version level:
     #!/usr/bin/env sh
-    for dir in packages/css-var-kit packages/vscode packages/cli-darwin-arm64 packages/cli-darwin-x64 packages/cli-linux-arm64 packages/cli-linux-x64 packages/cli-win32-x64; do
-      (cd "$dir" && pnpm bumpp --release {{level}} --yes --no-commit --no-tag --no-push) &
+    for dir in {{pkgs}}; do
+      (cd "$dir" && pnpm bumpp --release {{level}} --yes --no-commit --no-tag --no-push)
     done
-    cargo set-version --bump {{level}} --workspace &
+    cargo set-version --bump {{level}} --workspace
     wait
-    cargo generate-lockfile
-
-    version=$(node -p "require('./packages/css-var-kit/package.json').version")
 
     just sync-optional-deps
     pnpm install --lockfile-only
+    cargo generate-lockfile
+
+    version=$(node -p "require('./packages/css-var-kit/package.json').version")
 
     git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
     git commit -m "chore: bump version to $version"
