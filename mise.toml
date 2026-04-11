@@ -6,6 +6,7 @@ tombi = "latest"
 just = "latest"
 "cargo:cargo-edit" = "latest"
 pinact = "latest"
+actionlint = "latest"
 
 [hooks]
 postinstall = "mise lock"

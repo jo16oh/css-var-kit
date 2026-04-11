@@ -40,3 +40,11 @@ language = "system"
 entry = "tombi format"
 types = ["toml"]
 pass_filenames = true
+
+[[repos.hooks]]
+id = "actionlint"
+name = "actionlint"
+language = "system"
+entry = "actionlint"
+files = "^.github/workflows/.*\\.ya?ml$"
+pass_filenames = false
