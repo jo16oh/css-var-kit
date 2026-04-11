@@ -69,6 +69,8 @@ language-servers = ["css-var-kit"]
 
 ## Planned Features 📝
 
+- [ ] Supports Vue, Svelte, Astro, and style tags within HTML.
 - [ ] `cvk prune` command
   - Strips unused CSS variables from the final build output.
 - [ ] Zed Extension
+- [ ] Adding configuration examples for Vim, Neovim, and Emacs.
