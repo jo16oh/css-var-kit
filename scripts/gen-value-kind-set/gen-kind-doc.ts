@@ -1,4 +1,4 @@
-import type { KindData } from "./kind-data.js";
+import type { KindData } from "./kind-data.ts";
 
 function invertMap(map: Record<string, string[]>): Record<string, string[]> {
   const result: Record<string, string[]> = {};

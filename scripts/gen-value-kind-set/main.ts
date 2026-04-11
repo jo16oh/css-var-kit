@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 
-import { generateKindDoc } from "./gen-kind-doc.js";
-import { loadKindData, SYNTAX_COMPONENT_KINDS } from "./kind-data.js";
+import { generateKindDoc } from "./gen-kind-doc.ts";
+import { loadKindData, SYNTAX_COMPONENT_KINDS } from "./kind-data.ts";
 
 function kindToConstName(kind: string): string {
   return kind.replaceAll("-", "_").replaceAll("+", "_plus_").toUpperCase();
