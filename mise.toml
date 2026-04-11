@@ -1,7 +1,6 @@
 [tools]
 rust = "1.94"
 node = "24"
-deno = "2.7"
 prek = "latest"
 tombi = "latest"
 just = "latest"
@@ -13,3 +12,4 @@ postinstall = "mise lock"
 [settings]
 lockfile = true
 experimental = true
+install_before = "3d"
