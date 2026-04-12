@@ -195,7 +195,11 @@ impl LspClient {
     }
 
     pub fn collect_diagnostics(&mut self) -> Vec<PublishedDiagnostics> {
-        let mut result = Vec::new();
+        // Use a map keyed by URI so that later notifications replace earlier ones.
+        // The LSP spec treats each publishDiagnostics as a full replacement for that
+        // URI, so callers care about the *current* state, not the history.
+        let mut by_uri: std::collections::HashMap<String, Vec<DiagnosticInfo>> =
+            std::collections::HashMap::new();
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
 
         loop {
@@ -224,7 +228,7 @@ impl LspClient {
                                 .collect()
                         })
                         .unwrap_or_default();
-                    result.push(PublishedDiagnostics { uri, diagnostics });
+                    by_uri.insert(uri, diagnostics);
                 }
                 Ok(_) => continue,
                 Err(mpsc::RecvTimeoutError::Timeout) => break,
@@ -232,7 +236,10 @@ impl LspClient {
             }
         }
 
-        result
+        by_uri
+            .into_iter()
+            .map(|(uri, diagnostics)| PublishedDiagnostics { uri, diagnostics })
+            .collect()
     }
 
     pub fn shutdown(&mut self) {
