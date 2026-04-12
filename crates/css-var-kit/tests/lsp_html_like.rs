@@ -21,14 +21,14 @@ use common::{FIXTURES, copy_fixture_to_tempdir};
 //
 // tokens.css (0-indexed lines):
 //   0: :root {
-//   1:   --color-primary: #3490dc;   ← col 2
+//   1:   --color-primary: #3490dc;   <- col 2
 //   2:   --spacing-md: 16px;
 //   3: }
 //
 // Tokens.vue (0-indexed lines):
 //   0: <style>
 //   1: :root {
-//   2:   --vue-color: #ff6b6b;       ← col 2
+//   2:   --vue-color: #ff6b6b;       <- col 2
 //   3: }
 //   4: </style>
 
@@ -38,7 +38,6 @@ fn fixture_dir() -> std::path::PathBuf {
 
 // ── Diagnostics ─────────────────────────────────────────────────────────────
 
-/// Vue ファイルを開いたとき、未定義変数のエラーが発行される。
 #[test]
 fn publishes_diagnostics_on_open_vue_file() {
     let dir = fixture_dir();
@@ -65,8 +64,7 @@ fn publishes_diagnostics_on_open_vue_file() {
     );
 }
 
-/// 診断の行番号が Vue ファイル全体での絶対行番号になっている。
-/// `--undefined-spacing` は Component.vue の 7 行目（0-indexed）にある。
+// `--undefined-spacing` is on line 7 (0-indexed) of Component.vue.
 #[test]
 fn diagnostic_line_number_is_absolute_in_vue_file() {
     let dir = fixture_dir();
@@ -87,13 +85,12 @@ fn diagnostic_line_number_is_absolute_in_vue_file() {
         .find(|d| d.message.contains("--undefined-spacing"))
         .expect("diagnostic for --undefined-spacing not found");
 
-    // `  margin: var(--undefined-spacing);` は 7 行目（0-indexed）
     assert_eq!(
         diag.line, 7,
         "diagnostic should point to line 7, got: {}",
         diag.line
     );
-    // `  margin: var(` = 14 文字なので、--undefined-spacing は col 14 から始まる
+    // `  margin: var(` is 14 chars, so --undefined-spacing starts at col 14
     assert_eq!(
         diag.character, 14,
         "diagnostic should point to col 14, got: {}",
@@ -103,8 +100,6 @@ fn diagnostic_line_number_is_absolute_in_vue_file() {
 
 // ── Completion ───────────────────────────────────────────────────────────────
 
-/// Vue の `<style>` ブロック内でカーソルを `var(--` の後に置いたとき、補完が返る。
-/// line 6: `  color: var(--color-primary);` の col 14 (--color-primary の先頭) でリクエスト。
 #[test]
 fn completion_in_vue_style_block() {
     let dir = fixture_dir();
@@ -125,7 +120,6 @@ fn completion_in_vue_style_block() {
         .expect("expected completion array");
     let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
 
-    // color プロパティには color 型変数のみ提案される
     assert!(
         labels.contains(&"--color-primary"),
         "--color-primary should be suggested, got: {labels:?}"
@@ -136,12 +130,9 @@ fn completion_in_vue_style_block() {
     );
 }
 
-/// デフォルトでは Vue ファイル内の変数定義は lookupFiles の対象外なので補完候補に現れない。
-/// `lookupFiles` に `**/*.vue` を追加すると候補に出るようになる（opt-in）。
 #[test]
 fn completion_includes_vue_defined_variables_when_opted_in() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
-    // cvk.json に lookupFiles: ["**/*.css", "**/*.vue"] を書き込む
     std::fs::write(
         tmp.path().join("cvk.json"),
         r#"{"lookupFiles":["**/*.css","**/*.vue"]}"#,
@@ -170,7 +161,6 @@ fn completion_includes_vue_defined_variables_when_opted_in() {
     );
 }
 
-/// デフォルト設定では Vue ファイル内の変数定義は lookupFiles 対象外なので補完に出ない。
 #[test]
 fn completion_excludes_vue_defined_variables_by_default() {
     let dir = fixture_dir();
@@ -198,8 +188,6 @@ fn completion_excludes_vue_defined_variables_by_default() {
 
 // ── Go to definition ─────────────────────────────────────────────────────────
 
-/// Vue の `<style>` ブロック内の `var(--color-primary)` でジャンプ定義をリクエストする。
-/// `tokens.css` の行 1 にある定義へジャンプするはず。
 #[test]
 fn goto_definition_from_vue_style_block() {
     let dir = fixture_dir();
@@ -232,9 +220,7 @@ fn goto_definition_from_vue_style_block() {
     assert_eq!(loc["range"]["start"]["character"], 2);
 }
 
-/// Tokens.vue で定義された変数への定義ジャンプが Vue ファイル内の絶対行番号を返す。
-/// Tokens.vue line 2: `  --vue-color: #ff6b6b;` — col 2
-/// `lookupFiles` に `**/*.vue` を追加した場合（opt-in）のみ動作する。
+// Requires `**/*.vue` in lookupFiles (opt-in via cvk.json).
 #[test]
 fn goto_definition_points_to_correct_line_in_vue_definition_file() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
@@ -247,7 +233,6 @@ fn goto_definition_points_to_correct_line_in_vue_definition_file() {
     let mut client = LspClient::spawn(tmp.path());
     client.initialize();
 
-    // Component.vue で --vue-color が使われるよう上書き（その場でテキストを渡す）
     let uri = client.file_uri("Component.vue");
     let text = "<style>\n.box {\n  color: var(--vue-color);\n}\n</style>\n";
     client.open_document(&uri, text);
@@ -276,8 +261,6 @@ fn goto_definition_points_to_correct_line_in_vue_definition_file() {
 
 // ── Rename ────────────────────────────────────────────────────────────────────
 
-/// Vue の `<style>` ブロック内の変数をリネームすると、Vue ファイルと CSS ファイル
-/// 両方のエディットが返る。
 #[test]
 fn rename_from_vue_style_block_edits_both_files() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
@@ -328,8 +311,7 @@ fn rename_from_vue_style_block_edits_both_files() {
     }
 }
 
-/// Vue ファイル内の変数定義をリネームすると、使用箇所も同時に書き換えられる。
-/// `lookupFiles` に `**/*.vue` を追加した場合（opt-in）のみ動作する。
+// Requires `**/*.vue` in lookupFiles (opt-in via cvk.json).
 #[test]
 fn rename_vue_defined_variable() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
@@ -342,7 +324,6 @@ fn rename_vue_defined_variable() {
     let mut client = LspClient::spawn(tmp.path());
     client.initialize();
 
-    // Component.vue で --vue-color を使うよう書き換えたテキストを渡す
     let comp_uri = client.file_uri("Component.vue");
     let comp_text = "<style>\n.box {\n  color: var(--vue-color);\n}\n</style>\n";
     client.open_document(&comp_uri, comp_text);
@@ -362,7 +343,6 @@ fn rename_vue_defined_variable() {
 
     let changes = result["changes"].as_object().expect("expected changes map");
 
-    // Tokens.vue の定義側
     let tokens_edits: Vec<_> = changes
         .iter()
         .filter(|(uri, _)| uri.ends_with("/Tokens.vue"))
@@ -373,7 +353,6 @@ fn rename_vue_defined_variable() {
         "expected edits in Tokens.vue: {changes:?}"
     );
 
-    // Component.vue の使用側（source_cache 経由で参照される）
     let comp_edits: Vec<_> = changes
         .iter()
         .filter(|(uri, _)| uri.ends_with("/Component.vue"))

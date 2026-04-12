@@ -278,10 +278,10 @@ pub fn parse<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
     parse_impl(css, css, file_path, 0, 0, 0, 0)
 }
 
-/// HTML-like ファイルの `<style>` ブロックをパースする際に使用する。
-/// `full_source` は HTML ファイル全体の内容で、`Property.source` に格納される。
-/// `line_offset` / `column_offset` は CSS コンテンツの開始位置（ファイル全体での絶対位置）。
-/// `byte_offset` は CSS コンテンツの開始バイト位置（`Property.name.offset` / `Property.value.offset` に加算される）。
+/// Used when parsing `<style>` blocks from HTML-like files.
+/// `full_source` is the entire file content stored in `Property.source`.
+/// `line_offset`/`column_offset` are the absolute start position of the CSS content.
+/// `byte_offset` is added to `Property.name.offset` and `Property.value.offset`.
 pub fn parse_with_offset<'src>(
     css: &'src str,
     file_path: &'src Path,

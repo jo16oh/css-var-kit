@@ -2,31 +2,21 @@ use std::path::Path;
 
 use super::css::{self, ParseResult};
 
-/// `<style>` ブロックの抽出結果。
 struct StyleBlock<'src> {
-    /// `<style>` タグの内側の CSS 文字列。
     content: &'src str,
-    /// `content` の開始行（ファイル全体での 0-indexed 行番号）。
     line_offset: u32,
-    /// `content` の最初の行における開始列（0-indexed）。2 行目以降には適用されない。
+    // Column offset of the first content line only; resets to 0 after the first newline.
     column_offset: u32,
-    /// `content` の開始バイト位置（ファイル全体での絶対バイトオフセット）。
     byte_offset: usize,
 }
 
-/// `lang` 属性の値から、CSS パーサーに渡すべきかどうかを判定する。
-/// `lang` なし・`css`・`scss` のみ許可する。
 fn is_lang_supported(lang: &str) -> bool {
     matches!(lang, "css" | "scss")
 }
 
-/// HTML-like ファイルのソースから `<style>` ブロックを抽出する。
-///
-/// 対象とするブロック:
-/// - `lang` 属性なし
-/// - `lang="css"` または `lang="scss"`
-///
-/// それ以外の `lang`（`less`, `stylus` 等）はスキップする。
+/// Extracts `<style>` blocks from an HTML-like source.
+/// Blocks with `lang="less"`, `lang="stylus"`, etc. are skipped;
+/// no `lang`, `lang="css"`, and `lang="scss"` are accepted.
 fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
     let bytes = source.as_bytes();
     let len = bytes.len();
@@ -35,7 +25,6 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
     let mut col = 0u32;
     let mut blocks = Vec::new();
 
-    // 行・列カウンタを進めるクロージャ
     macro_rules! advance {
         ($n:expr) => {
             for _ in 0..$n {
@@ -60,19 +49,17 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
     }
 
     while pos < len {
-        // `<style` を探す（大文字小文字は区別する）
         if pos + 6 <= len && &bytes[pos..pos + 6] == b"<style" {
             let tag_start = pos;
             let tag_start_line = line;
             let tag_start_col = col;
-            advance!(6); // `<style` を消費
+            advance!(6);
 
-            // `<style` の直後が識別子継続文字（例: `<styles>`）なら無視する
+            // Ignore `<styles>`, `<stylesheet>`, etc.
             if pos < len && is_ident_char(bytes[pos]) {
                 continue;
             }
 
-            // 属性部分をスキャンして lang を取得
             let mut lang: Option<String> = None;
 
             loop {
@@ -80,7 +67,7 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                     break;
                 }
                 match bytes[pos] {
-                    // 自己終了タグ `<style />` は存在しないが念のためスキップ
+                    // Self-closing `<style />` is not valid HTML but handle defensively.
                     b'/' => {
                         advance!(1);
                         if pos < len && bytes[pos] == b'>' {
@@ -95,10 +82,8 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                     b' ' | b'\t' | b'\n' | b'\r' => {
                         advance!(1);
                     }
-                    // 属性名の開始
                     _ => {
                         let attr_name = scan_attr_name(bytes, &mut pos, &mut line, &mut col);
-                        // `=` があれば属性値を読む
                         skip_ascii_whitespace(bytes, &mut pos, &mut line, &mut col);
                         if pos < len && bytes[pos] == b'=' {
                             advance!(1);
@@ -112,9 +97,8 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                 }
             }
 
-            // lang フィルタリング
             let supported = match &lang {
-                None => true, // lang 未指定は CSS 扱い
+                None => true, // no lang attr defaults to CSS
                 Some(v) => is_lang_supported(v),
             };
 
@@ -122,12 +106,10 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                 continue;
             }
 
-            // `>` の直後がコンテンツの開始
             let content_start = pos;
             let content_line = line;
             let content_col = col;
 
-            // `</style>` を探す
             let end = find_close_style_tag(bytes, pos);
             if end > content_start {
                 blocks.push(StyleBlock {
@@ -138,7 +120,7 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                 });
             }
 
-            // `</style>` の直後まで進める（次の検索のため）
+            // Advance past `</style>` for the next iteration.
             let close_len = end + "</style>".len();
             let skip = close_len.saturating_sub(pos).min(len - pos);
             advance!(skip);
@@ -152,7 +134,7 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
     blocks
 }
 
-/// `</style>` の開始位置を返す。見つからない場合は `from` を返す。
+/// Returns the start position of `</style>`. Returns `from` if not found.
 fn find_close_style_tag(bytes: &[u8], from: usize) -> usize {
     let needle = b"</style>";
     let len = bytes.len();
@@ -166,7 +148,6 @@ fn find_close_style_tag(bytes: &[u8], from: usize) -> usize {
     from
 }
 
-/// 属性名を読み進め、文字列として返す。
 fn scan_attr_name<'b>(bytes: &'b [u8], pos: &mut usize, _line: &mut u32, col: &mut u32) -> &'b str {
     let start = *pos;
     while *pos < bytes.len() {
@@ -178,11 +159,10 @@ fn scan_attr_name<'b>(bytes: &'b [u8], pos: &mut usize, _line: &mut u32, col: &m
             }
         }
     }
-    // SAFETY: HTML-like ファイルは有効な UTF-8 を前提とする
+    // SAFETY: HTML-like files are assumed to be valid UTF-8.
     std::str::from_utf8(&bytes[start..*pos]).unwrap_or("")
 }
 
-/// クォートされた（またはクォートなしの）属性値を読み進め、文字列として返す。
 fn scan_attr_value(bytes: &[u8], pos: &mut usize, line: &mut u32, col: &mut u32) -> String {
     if *pos >= bytes.len() {
         return String::new();
@@ -206,11 +186,10 @@ fn scan_attr_value(bytes: &[u8], pos: &mut usize, line: &mut u32, col: &mut u32)
             .to_owned();
         if *pos < bytes.len() {
             *col += 1;
-            *pos += 1; // 閉じクォート
+            *pos += 1;
         }
         value
     } else {
-        // クォートなし属性値
         let start = *pos;
         while *pos < bytes.len() {
             match bytes[*pos] {
@@ -253,11 +232,11 @@ fn is_ident_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'-' || b == b'_'
 }
 
-/// HTML-like ファイル（Vue / Svelte / Astro 等）をパースする。
+/// Parses an HTML-like file (Vue, Svelte, Astro, etc.).
 ///
-/// `<style>` ブロックをすべて抽出し、それぞれを CSS パーサーに渡す。
-/// 結果の `Property.source` には `source` 全体が格納され、
-/// `line` / `column` はファイル全体での絶対位置になる。
+/// Extracts all `<style>` blocks and passes each to the CSS parser.
+/// `Property.source` is set to the full file source, and `line`/`column`
+/// are absolute positions within the file.
 pub fn parse_html_like<'src>(source: &'src str, file_path: &'src Path) -> Vec<ParseResult<'src>> {
     extract_style_blocks(source)
         .into_iter()
@@ -284,15 +263,13 @@ mod tests {
         Path::new("test.vue")
     }
 
-    // --- extract_style_blocks のユニットテスト ---
-
     #[test]
     fn extracts_simple_style_block() {
         let source = "<style>\n.a { --color: red; }\n</style>";
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].content.trim(), ".a { --color: red; }");
-        // `>` を消費した直後はまだ line=0。`\n` はコンテンツの先頭。
+        // After consuming `>`, position is still on line 0; the `\n` is the first content char.
         assert_eq!(blocks[0].line_offset, 0);
         assert_eq!(blocks[0].column_offset, 7); // len("<style>") == 7
     }
@@ -312,7 +289,7 @@ mod tests {
         let source = "<p>x</p><style>.a { --x: 1; }</style>";
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
-        // `<p>x</p>` (8) + `<style>` (7) = 15 文字消費後にコンテンツ開始
+        // `<p>x</p>` (8) + `<style>` (7) = 15 chars consumed before content start
         assert_eq!(blocks[0].column_offset, 15);
     }
 
@@ -360,13 +337,10 @@ mod tests {
 
     #[test]
     fn ignores_style_tag_prefix_like_styles() {
-        // `<styles>` はタグ名が style で終わらないので無視される
         let source = "<styles>.a { --x: 1px; }</styles>";
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
-
-    // --- parse_html_like の統合テスト ---
 
     #[test]
     fn property_line_is_absolute_multiline() {
@@ -379,14 +353,12 @@ mod tests {
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
-        // `--color` は line 2（0-indexed）にある
         assert_eq!(props[0].name.line, 2);
     }
 
     #[test]
     fn property_column_is_absolute_single_line() {
-        // `<style>.a { --color: red; }</style>` の 1 行
-        // `--color` は column 12 から始まる（`.a { ` = 5 文字 + `<style>` = 7 文字）
+        // `--color` starts at column 12: `<style>` (7) + `.a { ` (5) = 12
         let source = "<style>.a { --color: red; }</style>";
         let results = parse_html_like(source, path());
         assert_eq!(results.len(), 1);
