@@ -8,9 +8,10 @@ use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
+const HTML_LIKE_EXTENSIONS: &[&str] = &["vue", "svelte", "astro"];
 
 pub fn run(config: &Config) {
-    let css_files = collect_css_files(config.root_dir.as_path());
+    let css_files = collect_source_files(config.root_dir.as_path());
 
     if css_files.is_empty() {
         return;
@@ -30,7 +31,7 @@ pub fn run(config: &Config) {
 
     let parse_results: Vec<_> = sources
         .iter()
-        .map(|(path, content)| parser::css::parse(content.as_str(), path.as_path()))
+        .flat_map(|(path, content)| parse_file(content.as_str(), path.as_path()))
         .collect();
 
     let diagnostics = check(&parse_results, config);
@@ -72,14 +73,14 @@ pub fn check<'src>(
     diagnostics
 }
 
-pub fn collect_css_files(dir: &Path) -> Vec<PathBuf> {
+pub fn collect_source_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
-    collect_css_files_recursive(dir, &mut files);
+    collect_source_files_recursive(dir, &mut files);
     files.sort();
     files
 }
 
-fn collect_css_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
+fn collect_source_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
         Err(_) => return,
@@ -93,9 +94,25 @@ fn collect_css_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
                     continue;
                 }
             }
-            collect_css_files_recursive(&path, files);
-        } else if path.extension().is_some_and(|ext| ext == "css") {
+            collect_source_files_recursive(&path, files);
+        } else if path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|ext| ext == "css" || HTML_LIKE_EXTENSIONS.contains(&ext))
+        {
             files.push(path);
         }
+    }
+}
+
+pub fn parse_file<'src>(
+    content: &'src str,
+    path: &'src Path,
+) -> Vec<parser::css::ParseResult<'src>> {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
+            parser::html_like::parse_html_like(content, path)
+        }
+        _ => vec![parser::css::parse(content, path)],
     }
 }

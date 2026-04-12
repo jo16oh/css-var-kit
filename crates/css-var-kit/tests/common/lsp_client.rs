@@ -23,6 +23,8 @@ pub struct PublishedDiagnostics {
 
 pub struct DiagnosticInfo {
     pub message: String,
+    pub line: u64,
+    pub character: u64,
 }
 
 impl LspClient {
@@ -213,6 +215,10 @@ impl LspClient {
                             arr.iter()
                                 .map(|d| DiagnosticInfo {
                                     message: d["message"].as_str().unwrap_or_default().to_owned(),
+                                    line: d["range"]["start"]["line"].as_u64().unwrap_or(0),
+                                    character: d["range"]["start"]["character"]
+                                        .as_u64()
+                                        .unwrap_or(0),
                                 })
                                 .collect()
                         })

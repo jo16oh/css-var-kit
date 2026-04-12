@@ -286,7 +286,7 @@ impl Server<'_> {
 }
 
 fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
-    lint::collect_css_files(config.root_dir.as_path())
+    lint::collect_source_files(config.root_dir.as_path())
         .into_iter()
         .filter_map(|path| {
             let content = fs::read_to_string(&path).ok()?;

@@ -10,7 +10,7 @@ use lsp_types::{
 use super::Server;
 use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cursor};
 use super::uri::path_to_uri;
-use crate::parser;
+use crate::commands::lint;
 use crate::position::offset_to_position;
 use crate::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 use crate::searcher::SearcherBuilder;
@@ -89,7 +89,7 @@ impl Server<'_> {
 
         let parse_results: Vec<_> = sources
             .iter()
-            .map(|(path, content)| parser::css::parse(content, path))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let search_result = SearcherBuilder::new(&parse_results)

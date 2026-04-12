@@ -131,7 +131,12 @@ fn default_root_dir() -> String {
 }
 
 fn default_lookup_files() -> Vec<String> {
-    vec!["**/*.css".to_string()]
+    vec![
+        "**/*.css".to_string(),
+        "**/*.vue".to_string(),
+        "**/*.svelte".to_string(),
+        "**/*.astro".to_string(),
+    ]
 }
 
 fn default_error() -> SeverityToggle {

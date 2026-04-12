@@ -6,7 +6,7 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 
 use super::Server;
 use super::uri::path_to_uri;
-use crate::parser;
+use crate::commands::lint;
 use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -43,7 +43,7 @@ impl Server<'_> {
 
         let parse_results: Vec<_> = sources
             .iter()
-            .map(|(path, content)| parser::css::parse(content, path))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let search_result = SearcherBuilder::new(&parse_results)

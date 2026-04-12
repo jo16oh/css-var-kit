@@ -45,12 +45,12 @@ struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    fn new(css: &'a str) -> Self {
+    fn new_with_offset(css: &'a str, line_offset: u32, column_offset: u32) -> Self {
         Self {
             bytes: css.as_bytes(),
             pos: 0,
-            line: 0,
-            col: 0,
+            line: line_offset,
+            col: column_offset,
         }
     }
 
@@ -275,11 +275,42 @@ impl<'a> Scanner<'a> {
 }
 
 pub fn parse<'a>(css: &'a str, file_path: &'a Path) -> ParseResult<'a> {
-    parse_impl(css, file_path, 0)
+    parse_impl(css, css, file_path, 0, 0, 0, 0)
 }
 
-fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -> ParseResult<'a> {
-    let mut s = Scanner::new(css);
+/// HTML-like ファイルの `<style>` ブロックをパースする際に使用する。
+/// `full_source` は HTML ファイル全体の内容で、`Property.source` に格納される。
+/// `line_offset` / `column_offset` は CSS コンテンツの開始位置（ファイル全体での絶対位置）。
+/// `byte_offset` は CSS コンテンツの開始バイト位置（`Property.name.offset` / `Property.value.offset` に加算される）。
+pub fn parse_with_offset<'src>(
+    css: &'src str,
+    file_path: &'src Path,
+    full_source: &'src str,
+    line_offset: u32,
+    column_offset: u32,
+    byte_offset: usize,
+) -> ParseResult<'src> {
+    parse_impl(
+        css,
+        full_source,
+        file_path,
+        0,
+        line_offset,
+        column_offset,
+        byte_offset,
+    )
+}
+
+fn parse_impl<'a>(
+    css: &'a str,
+    source: &'a str,
+    file_path: &'a Path,
+    initial_brace_depth: i32,
+    line_offset: u32,
+    column_offset: u32,
+    byte_offset: usize,
+) -> ParseResult<'a> {
+    let mut s = Scanner::new_with_offset(css, line_offset, column_offset);
     let mut properties = Vec::new();
     let mut pending_ignores: Vec<&'a str> = Vec::new();
     let mut last_comment_end_line: u32 = 0;
@@ -367,18 +398,18 @@ fn parse_impl<'a>(css: &'a str, file_path: &'a Path, initial_brace_depth: i32) -
                     let property_id = PropertyId::from(CowArcStr::from(unescaped.clone()));
                     properties.push(Property {
                         file_path,
-                        source: css,
+                        source,
                         name: PropertyIdent {
                             raw: raw_name,
                             property_id,
                             unescaped,
-                            offset: name_start,
+                            offset: name_start + byte_offset,
                             line: name_line,
                             column: name_col,
                         },
                         value: PropertyValue {
                             raw: raw_value,
-                            offset: value_start,
+                            offset: value_start + byte_offset,
                             line: value_line,
                             column: value_col,
                         },
@@ -863,7 +894,7 @@ mod tests {
 
     #[test]
     fn unterminated_comment_consumes_all_bytes() {
-        let mut s = Scanner::new("/* {");
+        let mut s = Scanner::new_with_offset("/* {", 0, 0);
         s.skip_comment();
         assert!(
             s.is_eof(),
