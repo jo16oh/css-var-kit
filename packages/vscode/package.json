@@ -1,7 +1,7 @@
 {
   "name": "css-var-kit-vscode",
   "displayName": "css-var-kit for VS Code",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "A simple, lightweight toolkit for building design systems with CSS variables, offering type-aware completion and linting.",
   "categories": [
     "Linters",

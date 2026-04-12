@@ -1,6 +1,6 @@
 {
   "name": "css-var-kit",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "A simple, lightweight toolkit for building design systems with CSS variables, offering type-aware completion and linting.",
   "license": "MIT",
   "repository": {
@@ -14,10 +14,10 @@
     "bin/css-var-kit.js"
   ],
   "optionalDependencies": {
-    "@css-var-kit/cli-darwin-arm64": "0.2.5",
-    "@css-var-kit/cli-darwin-x64": "0.2.5",
-    "@css-var-kit/cli-linux-arm64": "0.2.5",
-    "@css-var-kit/cli-linux-x64": "0.2.5",
-    "@css-var-kit/cli-win32-x64": "0.2.5"
+    "@css-var-kit/cli-darwin-arm64": "0.3.0",
+    "@css-var-kit/cli-darwin-x64": "0.3.0",
+    "@css-var-kit/cli-linux-arm64": "0.3.0",
+    "@css-var-kit/cli-linux-x64": "0.3.0",
+    "@css-var-kit/cli-win32-x64": "0.3.0"
   }
 }
