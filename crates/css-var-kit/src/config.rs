@@ -43,6 +43,7 @@ pub enum ConfigError {
 pub struct Config {
     pub root_dir: PathBuf,
     pub lookup_files: LookupFilesMatcher,
+    pub exclude_files: LookupFilesMatcher,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
 }
@@ -124,6 +125,9 @@ impl Config {
         let lookup_files = LookupFilesMatcher::compile(lookup_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
+        let exclude_files = LookupFilesMatcher::compile(&raw.exclude_files)
+            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
 
@@ -132,6 +136,7 @@ impl Config {
         Ok(Self {
             root_dir,
             lookup_files,
+            exclude_files,
             rules,
             lsp_log_file,
         })
@@ -154,6 +159,9 @@ impl Config {
         let lookup_files = LookupFilesMatcher::compile(&raw.lookup_files)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
+        let exclude_files = LookupFilesMatcher::compile(&raw.exclude_files)
+            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+
         let rules = Rules::from_raw(raw.rules)?;
 
         let lsp_log_file = raw.lsp.log_file.map(|p| project_root.join(p));
@@ -161,6 +169,7 @@ impl Config {
         Ok(Self {
             root_dir: resolved_root_dir,
             lookup_files,
+            exclude_files,
             rules,
             lsp_log_file,
         })

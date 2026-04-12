@@ -25,6 +25,9 @@ pub fn run(config: &Config) {
                 .strip_prefix(config.root_dir.as_path())
                 .unwrap_or(&path)
                 .to_path_buf();
+            if config.exclude_files.matches(&rel_path) {
+                return None;
+            }
             Some((rel_path, content))
         })
         .collect();

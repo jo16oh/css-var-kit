@@ -162,8 +162,10 @@ impl Server<'_> {
                     params.text_document.uri.as_str()
                 ));
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    self.source_cache
-                        .insert(rel_path, params.text_document.text.clone());
+                    if !self.config.exclude_files.matches(&rel_path) {
+                        self.source_cache
+                            .insert(rel_path, params.text_document.text.clone());
+                    }
                 }
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
@@ -294,6 +296,9 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
                 .to_path_buf();
+            if config.exclude_files.matches(&rel_path) {
+                return None;
+            }
             Some((rel_path, content))
         })
         .collect()

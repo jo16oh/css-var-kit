@@ -16,6 +16,8 @@ pub struct RawConfig {
     #[serde(default = "default_lookup_files")]
     pub lookup_files: Vec<String>,
     #[serde(default)]
+    pub exclude_files: Vec<String>,
+    #[serde(default)]
     pub rules: RawRules,
     #[serde(default)]
     pub lsp: RawLspConfig,
@@ -32,6 +34,7 @@ impl Default for RawConfig {
         Self {
             root_dir: default_root_dir(),
             lookup_files: default_lookup_files(),
+            exclude_files: vec![],
             rules: RawRules::default(),
             lsp: RawLspConfig::default(),
         }
