@@ -55,7 +55,7 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
     let (tx, rx) = crossbeam_channel::bounded(1);
 
     let mut debouncer = new_debouncer(
-        Duration::from_millis(300),
+        Duration::from_millis(50),
         None,
         move |events: Result<Vec<DebouncedEvent>, _>| {
             if let Ok(events) = events {

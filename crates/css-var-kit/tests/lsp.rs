@@ -1,11 +1,8 @@
 mod common;
 
+use common::lsp_client::LspClient;
 use std::fs;
 use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
-
-use common::lsp_client::LspClient;
 
 use crate::common::copy_fixture_to_tempdir;
 
@@ -150,8 +147,6 @@ fn updates_diagnostics_on_background_file_change_via_server_watcher() {
         ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n",
     )
     .unwrap();
-
-    sleep(Duration::from_millis(350));
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");
