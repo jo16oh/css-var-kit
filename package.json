@@ -9,6 +9,7 @@
   "devDependencies": {
     "@types/node": "^25.5.2",
     "bumpp": "^11.0.1",
+    "knip": "^6.4.1",
     "oxfmt": "^0.44.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.20.0",

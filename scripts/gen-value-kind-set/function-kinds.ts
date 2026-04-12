@@ -1,12 +1,12 @@
 // Groups auto-classified from the `for` field
-export const FOR_FIELD_MAPPING: Record<string, string> = {
+const FOR_FIELD_MAPPING: Record<string, string> = {
   transform: "transform-function",
   filter: "filter",
   "<basic-shape>": "basic-shape",
 };
 
 // Groups that require manual classification
-export const MANUAL_GROUPS: Record<string, string[]> = {
+const MANUAL_GROUPS: Record<string, string[]> = {
   color: [
     "rgb",
     "rgba",
