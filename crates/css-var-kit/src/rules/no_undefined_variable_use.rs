@@ -12,13 +12,17 @@ const RULE_NAME: &str = "no-undefined-variable-use";
 
 pub struct NoUndefinedVariableUse {
     pub severity: Severity,
-    pub lookup_files: LookupFilesMatcher,
+    pub definition_files: LookupFilesMatcher,
+    pub include: LookupFilesMatcher,
 }
 
 impl Rule for NoUndefinedVariableUse {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
         searcher
-            .add_condition(VariableDefinitions::new(self.lookup_files.clone()))
+            .add_condition(VariableDefinitions::new(
+                self.definition_files.clone(),
+                self.include.clone(),
+            ))
             .add_condition(VariableUsages)
     }
 
@@ -183,7 +187,8 @@ mod tests {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
         let rule = NoUndefinedVariableUse {
             severity: Severity::Warning,
-            lookup_files: LookupFilesMatcher::default(),
+            definition_files: LookupFilesMatcher::default(),
+            include: LookupFilesMatcher::default(),
         };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))

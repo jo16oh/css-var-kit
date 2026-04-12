@@ -16,6 +16,7 @@ impl Server<'_> {
         let sources: Vec<(&Path, &str)> = self
             .source_cache
             .iter()
+            .filter(|(path, _)| !self.config.include.is_negated(path))
             .map(|(path, content)| (path.as_path(), content.as_str()))
             .collect();
 

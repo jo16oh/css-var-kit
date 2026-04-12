@@ -42,11 +42,20 @@ pub enum ConfigError {
 
 pub struct Config {
     pub root_dir: PathBuf,
-    pub lookup_files: LookupFilesMatcher,
-    pub exclude_files: LookupFilesMatcher,
+    pub definition_files: LookupFilesMatcher,
+    pub include: LookupFilesMatcher,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
 }
+
+pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
+    "!**/node_modules/**",
+    "!**/target/**",
+    "!**/.git/**",
+    "!**/dist/**",
+    "!**/build/**",
+    "!**/vendor/**",
+];
 
 #[derive(Clone)]
 pub struct LookupFilesMatcher {
@@ -83,6 +92,28 @@ impl LookupFilesMatcher {
             .map(|patterns| Self { patterns })
     }
 
+    pub fn has_positive_patterns(&self) -> bool {
+        self.patterns.iter().any(|p| !p.negated)
+    }
+
+    /// Returns true if a synthetic file inside `dir_rel_path` would be negated.
+    /// Used as a fast pruning check to skip entire directory trees during file collection.
+    pub fn is_dir_negated(&self, dir_rel_path: &Path) -> bool {
+        self.is_negated(&dir_rel_path.join("_"))
+    }
+
+    /// Returns true if the last matching pattern for `path` is a negation.
+    /// Used to exclude files from linting via `include: ["!**/vendor/**"]`.
+    pub fn is_negated(&self, path: &Path) -> bool {
+        let mut last_negated = false;
+        for pattern in &self.patterns {
+            if pattern.matcher.is_match(path) {
+                last_negated = pattern.negated;
+            }
+        }
+        last_negated
+    }
+
     pub fn matches(&self, path: &Path) -> bool {
         let mut matched = false;
         for pattern in &self.patterns {
@@ -116,17 +147,18 @@ impl Config {
             None => config_base.join(&raw.root_dir),
         };
 
-        let lookup_patterns = if args.files.is_empty() {
-            &raw.lookup_files
+        let definition_patterns = if !args.files.is_empty() {
+            args.files.as_slice()
+        } else if let Some(ref df) = raw.definition_files {
+            df.as_slice()
         } else {
-            &args.files
+            raw.lookup_files.as_slice()
         };
 
-        let lookup_files = LookupFilesMatcher::compile(lookup_patterns)
+        let definition_files = LookupFilesMatcher::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let exclude_files = LookupFilesMatcher::compile(&raw.exclude_files)
-            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+        let include = compile_include(&raw.include)?;
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
@@ -135,8 +167,8 @@ impl Config {
 
         Ok(Self {
             root_dir,
-            lookup_files,
-            exclude_files,
+            definition_files,
+            include,
             rules,
             lsp_log_file,
         })
@@ -156,11 +188,11 @@ impl Config {
 
         let resolved_root_dir = project_root.join(&raw.root_dir);
 
-        let lookup_files = LookupFilesMatcher::compile(&raw.lookup_files)
+        let definition_patterns = raw.definition_files.as_deref().unwrap_or(&raw.lookup_files);
+        let definition_files = LookupFilesMatcher::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let exclude_files = LookupFilesMatcher::compile(&raw.exclude_files)
-            .map_err(|e| ConfigError::InvalidPattern { source: e })?;
+        let include = compile_include(&raw.include)?;
 
         let rules = Rules::from_raw(raw.rules)?;
 
@@ -168,8 +200,8 @@ impl Config {
 
         Ok(Self {
             root_dir: resolved_root_dir,
-            lookup_files,
-            exclude_files,
+            definition_files,
+            include,
             rules,
             lsp_log_file,
         })
@@ -230,6 +262,18 @@ impl RawRules {
             _ => Err("expected 'error', 'warn', 'on', 'off', or a JSON object".into()),
         }
     }
+}
+
+/// Compiles an `include` matcher by prepending the default skip patterns before user-supplied
+/// patterns. With last-wins semantics, user patterns can selectively override the defaults
+/// (e.g. `"node_modules/my-lib/tokens.css"` overrides `"!**/node_modules/**"` for that path).
+fn compile_include(user_patterns: &[String]) -> Result<LookupFilesMatcher, ConfigError> {
+    let patterns: Vec<String> = DEFAULT_INCLUDE_PATTERNS
+        .iter()
+        .map(|s| s.to_string())
+        .chain(user_patterns.iter().cloned())
+        .collect();
+    LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
 }
 
 pub fn find_project_root(cwd: &Path) -> PathBuf {

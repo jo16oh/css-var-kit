@@ -16,18 +16,18 @@ fn reports_undefined_variables() {
 }
 
 #[test]
-fn exclude_files_suppresses_lint_for_matched_files() {
+fn include_negation_excludes_file_from_lint() {
     let tmp = common::copy_fixture_to_tempdir("default");
     fs::write(
         tmp.path().join("cvk.json"),
-        r#"{"excludeFiles": ["components/button.css"]}"#,
+        r#"{"include": ["!components/button.css"]}"#,
     )
     .unwrap();
 
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
     cmd.current_dir(tmp.path());
     // card.css still has errors (--radius-lg, --spacing-md), so lint exits non-zero.
-    // button.css is excluded, so --border-color (defined only there) must not appear.
+    // button.css is excluded via negation, so --border-color must not appear.
     cmd.args(["lint"])
         .assert()
         .failure()

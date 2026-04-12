@@ -783,7 +783,7 @@ fn excluded_file_produces_no_diagnostics_on_open() {
     let tmp = copy_fixture_to_tempdir("default");
     fs::write(
         tmp.path().join("cvk.json"),
-        r#"{"excludeFiles": ["components/button.css"]}"#,
+        r#"{"include": ["!components/button.css"]}"#,
     )
     .unwrap();
 

@@ -14,8 +14,15 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 // Default configuration (all fields are optional).
 {
   "rootDir": ".",
-  "lookupFiles": ["**/*.css"],
-  "excludeFiles": [],
+  "definitionFiles": ["**/*.css"],
+  "include": [
+    "!**/node_modules/**",
+    "!**/target/**",
+    "!**/.git/**",
+    "!**/dist/**",
+    "!**/build/**",
+    "!**/vendor/**",
+  ],
   "rules": {
     "no-undefined-variable-use": "error",
     "no-variable-type-mismatch": "error",
@@ -41,33 +48,25 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 }
 ```
 
-### `lookupFiles`
+### `definitionFiles`
 
-Glob patterns that determine which files are scanned for CSS variable **definitions**. Defaults to `["**/*.css"]`.
+Glob patterns that determine which files are scanned for CSS variable **definitions** and are also **linted**. Defaults to `["**/*.css"]`.
 
-Supports negation patterns (e.g. `"!**/node_modules/**"`). The last matching pattern wins.
-
-Supported file types: `.css`, `.scss`, `.html`, `.vue`, `.svelte`, `.astro`.
+Supports negation patterns (e.g. `"!**/vendor/**"`). The last matching pattern wins.
 
 ```jsonc
 {
-  // Also scan Vue SFCs for variable definitions
-  "lookupFiles": ["**/*.css", "**/*.vue"]
+  "definitionFiles": ["**/*.css", "**/*.scss"],
 }
 ```
 
-### `excludeFiles`
+> `lookupFiles` is accepted as a legacy alias and is overridden when `definitionFiles` is present.
 
-Glob patterns for files to **exclude from linting**. Defaults to `[]` (nothing excluded).
+### `include`
 
-Any file whose relative path matches at least one pattern is skipped entirely — it is neither linted nor used as a source of variable definitions.
+Additional glob patterns for definition-only sources (not linted). Supports negation patterns (`!`) to exclude files from linting and definition collection. The last matching pattern wins.
 
-```jsonc
-{
-  // Do not lint generated or vendored files
-  "excludeFiles": ["**/generated/**", "**/vendor/**"]
-}
-```
+Default configurations are prepended to user-supplied patterns, so they can be selectively overridden. For example, `"node_modules/my-ui-lib/dist/tokens.css"` adds that file as a definition source despite the `!**/node_modules/**` default.
 
 ### Rule severity
 
