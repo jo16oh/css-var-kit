@@ -21,6 +21,7 @@ pub struct PublishedDiagnostics {
     pub diagnostics: Vec<DiagnosticInfo>,
 }
 
+#[derive(Debug)]
 pub struct DiagnosticInfo {
     pub message: String,
     pub line: u64,

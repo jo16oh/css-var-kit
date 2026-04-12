@@ -778,6 +778,50 @@ fn initialization_options_ignored_when_config_file_exists() {
     );
 }
 
+#[test]
+fn excluded_file_produces_no_diagnostics_on_open() {
+    let tmp = copy_fixture_to_tempdir("default");
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"excludeFiles": ["components/button.css"]}"#,
+    )
+    .unwrap();
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let diagnostics = client.collect_diagnostics();
+    client.shutdown();
+
+    // button.css is excluded — no diagnostics notification should be published for it
+    let button_diagnostics: Vec<_> = diagnostics
+        .iter()
+        .filter(|p| p.uri.ends_with("components/button.css"))
+        .flat_map(|p| &p.diagnostics)
+        .collect();
+    assert!(
+        button_diagnostics.is_empty(),
+        "excluded file should produce no diagnostics, got: {button_diagnostics:?}"
+    );
+
+    // card.css is not excluded — it still has errors (--radius-lg, --spacing-md)
+    let card_diagnostics: Vec<_> = diagnostics
+        .iter()
+        .filter(|p| p.uri.ends_with("components/card.css"))
+        .flat_map(|p| &p.diagnostics)
+        .collect();
+    assert!(
+        card_diagnostics
+            .iter()
+            .any(|d| d.message.contains("--radius-lg")),
+        "non-excluded card.css should still have diagnostics, got: {card_diagnostics:?}"
+    );
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,
