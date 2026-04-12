@@ -1,12 +1,4 @@
-# Linter
-
-```sh
-cvk lint
-```
-
-By default, `cvk lint` looks for `cvk.json` (or `cvk.jsonc`) in the current project and lints all css files. Run `cvk lint -h` for available options.
-
-## Configuration
+# Configuration
 
 Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
@@ -47,6 +39,8 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
   },
 }
 ```
+
+## Options
 
 ### `definitionFiles`
 
@@ -192,20 +186,3 @@ Common types for the `types` and `allowedKinds` fields:
 
 See [VALUE_KINDS.md](VALUE_KINDS.md) for the full list of supported types.
 
-## Suppressing diagnostics
-
-Use `/* cvk-ignore */` comments to suppress diagnostics for the next declaration:
-
-```css
-/* Suppress all rules */
-/* cvk-ignore */
-.btn {
-  color: var(--undefined);
-}
-
-/* Suppress a specific rule */
-/* cvk-ignore: no-undefined-variable-use */
-.btn {
-  color: var(--undefined);
-}
-```

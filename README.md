@@ -35,7 +35,25 @@ cargo install css-var-kit
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
-👉 [More Documentation](docs/linter.md)
+👉 [Configuration & Rules](docs/config.md)
+
+#### Suppressing diagnostics
+
+Use `/* cvk-ignore */` comments to suppress diagnostics for the next declaration:
+
+```css
+/* Suppress all rules */
+/* cvk-ignore */
+.btn {
+  color: var(--undefined);
+}
+
+/* Suppress a specific rule */
+/* cvk-ignore: no-undefined-variable-use */
+.btn {
+  color: var(--undefined);
+}
+```
 
 ### `cvk lsp`
 
@@ -69,7 +87,6 @@ language-servers = ["css-var-kit"]
 
 ## Planned Features 📝
 
-- [ ] Supports Vue, Svelte, Astro, and style tags within HTML.
 - [ ] `cvk prune` command
   - Strips unused CSS variables from the final build output.
 - [ ] Zed Extension
