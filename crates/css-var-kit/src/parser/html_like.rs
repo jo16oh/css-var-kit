@@ -11,7 +11,7 @@ struct StyleBlock<'src> {
 }
 
 fn is_lang_supported(lang: &str) -> bool {
-    matches!(lang, "css" | "scss")
+    lang.eq_ignore_ascii_case("css") || lang.eq_ignore_ascii_case("scss")
 }
 
 /// Extracts `<style>` blocks from an HTML-like source.
@@ -33,16 +33,22 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
                         b'\n' => {
                             line += 1;
                             col = 0;
+                            pos += 1;
                         }
                         b'\r' => {
                             line += 1;
                             col = 0;
+                            pos += 1;
+                            // Treat CRLF as a single newline.
+                            if pos < len && bytes[pos] == b'\n' {
+                                pos += 1;
+                            }
                         }
                         _ => {
                             col += 1;
+                            pos += 1;
                         }
                     }
-                    pos += 1;
                 }
             }
         };
@@ -222,6 +228,10 @@ fn skip_ascii_whitespace(bytes: &[u8], pos: &mut usize, line: &mut u32, col: &mu
                 *line += 1;
                 *col = 0;
                 *pos += 1;
+                // Treat CRLF as a single newline.
+                if *pos < bytes.len() && bytes[*pos] == b'\n' {
+                    *pos += 1;
+                }
             }
             _ => break,
         }
@@ -373,5 +383,111 @@ mod tests {
         let source = "<style>.a { --x: 1px; }</style>";
         let results = parse_html_like(source, path());
         assert_eq!(results[0].properties[0].source, source);
+    }
+
+    // --- Edge case tests ---
+
+    #[test]
+    fn crlf_line_endings_counted_as_single_newline() {
+        // line 0: <template></template>
+        // line 1: <style>
+        // line 2: .a { --color: red; }
+        // line 3: </style>
+        let source = "<template></template>\r\n<style>\r\n.a { --color: red; }\r\n</style>";
+        let results = parse_html_like(source, path());
+        assert_eq!(results.len(), 1);
+        let props = &results[0].properties;
+        assert_eq!(props.len(), 1);
+        assert_eq!(props[0].name.line, 2);
+    }
+
+    #[test]
+    fn crlf_block_offset_is_correct() {
+        // The content_line of the style block itself should reflect correct CRLF counting.
+        let source = "<p></p>\r\n<style>\r\n.a { --x: 1; }\r\n</style>";
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+        // "<p></p>\r\n" — CRLF counts as one newline, so <style> is on line 1.
+        // After consuming `<style>` and its closing `>`, content_line = 1.
+        // (The `\r\n` after `>` is part of the content, not yet consumed.)
+        assert_eq!(blocks[0].line_offset, 1);
+    }
+
+    #[test]
+    fn lang_uppercase_css_is_accepted() {
+        let source = r#"<style lang="CSS">.a { --x: 1px; }</style>"#;
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn lang_uppercase_scss_is_accepted() {
+        let source = r#"<style lang="SCSS">.a { --x: 1px; }</style>"#;
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn lang_mixed_case_is_accepted() {
+        let source = r#"<style lang="Css">.a { --x: 1px; }</style>"#;
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn lang_single_quote_is_accepted() {
+        let source = "<style lang='css'>.a { --x: 1px; }</style>";
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn lang_attr_after_other_attrs() {
+        let source = r#"<style scoped lang="css">.a { --x: 1px; }</style>"#;
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn lang_attr_before_other_attrs() {
+        let source = r#"<style lang="css" scoped>.a { --x: 1px; }</style>"#;
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn self_closing_style_tag_produces_no_block() {
+        let source = "<style/>";
+        let blocks = extract_style_blocks(source);
+        assert!(blocks.is_empty());
+    }
+
+    #[test]
+    fn unclosed_style_tag_produces_no_block() {
+        let source = "<style>.a { --x: 1; }";
+        let blocks = extract_style_blocks(source);
+        assert!(blocks.is_empty());
+    }
+
+    #[test]
+    fn closing_tag_is_case_insensitive() {
+        let source = "<style>.a { --x: 1px; }</STYLE>";
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].content, ".a { --x: 1px; }");
+    }
+
+    #[test]
+    fn lang_attr_with_spaces_around_equals() {
+        let source = "<style lang = \"css\">.a { --x: 1px; }</style>";
+        let blocks = extract_style_blocks(source);
+        assert_eq!(blocks.len(), 1);
+    }
+
+    #[test]
+    fn empty_style_block_produces_no_block() {
+        let source = "<style></style>";
+        let blocks = extract_style_blocks(source);
+        assert!(blocks.is_empty());
     }
 }
