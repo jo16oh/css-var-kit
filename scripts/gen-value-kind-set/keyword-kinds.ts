@@ -1,4 +1,4 @@
-export interface TypeEntry {
+interface TypeEntry {
   name: string;
   syntax?: string;
   extended: unknown[];
@@ -125,7 +125,7 @@ const AGGREGATION_MAP: Record<string, string> = {
   "corner-shape-value": "corner-shape",
 };
 
-export function extractKeywords(syntax: string): string[] {
+function extractKeywords(syntax: string): string[] {
   return syntax
     .split("|")
     .map((s) => s.trim())
@@ -165,7 +165,7 @@ export function extractTerminalTypes(types: TypeEntry[]): Map<string, string[]> 
   return result;
 }
 
-export function aggregateType(terminalType: string): string {
+function aggregateType(terminalType: string): string {
   return AGGREGATION_MAP[terminalType] ?? terminalType;
 }
 

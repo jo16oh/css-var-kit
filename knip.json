@@ -1,0 +1,11 @@
+{
+  "ignoreDependencies": ["bumpp"],
+  "workspaces": {
+    "packages/css-var-kit": {
+      "entry": ["bin/css-var-kit.js"]
+    },
+    "packages/vscode": {
+      "entry": ["src/extension.ts"]
+    }
+  }
+}

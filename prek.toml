@@ -22,7 +22,18 @@ id = "oxfmt"
 name = "oxfmt"
 language = "system"
 entry = "pnpm oxfmt"
-types = ["ts"]
+types = [
+  "ts",
+  "json",
+  "yaml",
+  "markdown",
+  "vue",
+  "svelte",
+  "astro",
+  "html",
+  "css",
+  "scss"
+]
 pass_filenames = true
 
 [[repos.hooks]]
