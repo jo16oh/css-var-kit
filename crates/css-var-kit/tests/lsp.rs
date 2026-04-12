@@ -1,11 +1,8 @@
 mod common;
 
+use common::lsp_client::LspClient;
 use std::fs;
 use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
-
-use common::lsp_client::LspClient;
 
 use crate::common::copy_fixture_to_tempdir;
 
@@ -150,8 +147,6 @@ fn updates_diagnostics_on_background_file_change_via_server_watcher() {
         ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n",
     )
     .unwrap();
-
-    sleep(Duration::from_millis(350));
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");
@@ -757,7 +752,7 @@ fn initialization_options_ignored_when_config_file_exists() {
 
     let mut client = LspClient::spawn(tmp.path());
 
-    // Try to disable no-undefined-variable-use, but cvk.json exists so this should be ignored
+    // Try to disable no-undefined-variable-use, but cvk.json exists so this should be ignored.
     client.initialize_with_options(Some(serde_json::json!({
         "rules": {
             "no-undefined-variable-use": "off"
@@ -775,6 +770,50 @@ fn initialization_options_ignored_when_config_file_exists() {
     assert!(
         messages.iter().any(|m| m.contains("--spacing-md")),
         "cvk.json should take precedence over initializationOptions, got: {messages:?}"
+    );
+}
+
+#[test]
+fn excluded_file_produces_no_diagnostics_on_open() {
+    let tmp = copy_fixture_to_tempdir("default");
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"include": ["!components/button.css"]}"#,
+    )
+    .unwrap();
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let diagnostics = client.collect_diagnostics();
+    client.shutdown();
+
+    // button.css is excluded — no diagnostics notification should be published for it
+    let button_diagnostics: Vec<_> = diagnostics
+        .iter()
+        .filter(|p| p.uri.ends_with("components/button.css"))
+        .flat_map(|p| &p.diagnostics)
+        .collect();
+    assert!(
+        button_diagnostics.is_empty(),
+        "excluded file should produce no diagnostics, got: {button_diagnostics:?}"
+    );
+
+    // card.css is not excluded — it still has errors (--radius-lg, --spacing-md)
+    let card_diagnostics: Vec<_> = diagnostics
+        .iter()
+        .filter(|p| p.uri.ends_with("components/card.css"))
+        .flat_map(|p| &p.diagnostics)
+        .collect();
+    assert!(
+        card_diagnostics
+            .iter()
+            .any(|d| d.message.contains("--radius-lg")),
+        "non-excluded card.css should still have diagnostics, got: {card_diagnostics:?}"
     );
 }
 

@@ -1,12 +1,4 @@
-# Linter
-
-```sh
-cvk lint
-```
-
-By default, `cvk lint` looks for `cvk.json` (or `cvk.jsonc`) in the current project and lints all css files. Run `cvk lint -h` for available options.
-
-## Configuration
+# Configuration
 
 Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
@@ -14,7 +6,15 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 // Default configuration (all fields are optional).
 {
   "rootDir": ".",
-  "lookupFiles": ["**/*.css"],
+  "definitionFiles": ["**/*.css"],
+  "include": [
+    "!**/node_modules/**",
+    "!**/target/**",
+    "!**/.git/**",
+    "!**/dist/**",
+    "!**/build/**",
+    "!**/vendor/**",
+  ],
   "rules": {
     "no-undefined-variable-use": "error",
     "no-variable-type-mismatch": "error",
@@ -39,6 +39,28 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
   },
 }
 ```
+
+## Options
+
+### `definitionFiles`
+
+Glob patterns that determine which files are scanned for CSS variable **definitions** and are also **linted**. Defaults to `["**/*.css"]`.
+
+Supports negation patterns (e.g. `"!**/vendor/**"`). The last matching pattern wins.
+
+```jsonc
+{
+  "definitionFiles": ["**/*.css", "**/*.scss"],
+}
+```
+
+> `lookupFiles` is accepted as a legacy alias and is overridden when `definitionFiles` is present.
+
+### `include`
+
+Additional glob patterns for definition-only sources (not linted). Supports negation patterns (`!`) to exclude files from linting and definition collection. The last matching pattern wins.
+
+Default configurations are prepended to user-supplied patterns, so they can be selectively overridden. For example, `"node_modules/my-ui-lib/dist/tokens.css"` adds that file as a definition source despite the `!**/node_modules/**` default.
 
 ### Rule severity
 
@@ -163,21 +185,3 @@ Common types for the `types` and `allowedKinds` fields:
 `color`, `length`, `length-percentage`, `percentage`, `number`, `integer`, `angle`, `time`, `resolution`, `string`, `url`, `image`, `display`, `position`, `line-style`, `easing-function`, `filter`, `transform-function`, `font-weight-absolute`, `generic-family`, `flex`, `frequency`
 
 See [VALUE_KINDS.md](VALUE_KINDS.md) for the full list of supported types.
-
-## Suppressing diagnostics
-
-Use `/* cvk-ignore */` comments to suppress diagnostics for the next declaration:
-
-```css
-/* Suppress all rules */
-/* cvk-ignore */
-.btn {
-  color: var(--undefined);
-}
-
-/* Suppress a specific rule */
-/* cvk-ignore: no-undefined-variable-use */
-.btn {
-  color: var(--undefined);
-}
-```

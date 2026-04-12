@@ -10,18 +10,24 @@ pub type VarsMap<'src> = HashMap<&'src str, TokenList<'src>>;
 
 #[derive(Default)]
 pub struct VariableDefinitions {
-    lookup_files: LookupFilesMatcher,
+    definition_files: LookupFilesMatcher,
+    include: LookupFilesMatcher,
 }
 
 impl VariableDefinitions {
-    pub fn new(lookup_files: LookupFilesMatcher) -> Self {
-        Self { lookup_files }
+    pub fn new(definition_files: LookupFilesMatcher, include: LookupFilesMatcher) -> Self {
+        Self {
+            definition_files,
+            include,
+        }
     }
 }
 
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.name.raw.starts_with("--") && self.lookup_files.matches(prop.file_path)
+        prop.name.raw.starts_with("--")
+            && (self.definition_files.matches(prop.file_path)
+                || self.include.matches(prop.file_path))
     }
 }
 

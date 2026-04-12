@@ -12,12 +12,16 @@ const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
 pub struct NoInconsistentVariableDefinition {
     pub severity: Severity,
-    pub lookup_files: LookupFilesMatcher,
+    pub definition_files: LookupFilesMatcher,
+    pub include: LookupFilesMatcher,
 }
 
 impl Rule for NoInconsistentVariableDefinition {
     fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
-        searcher.add_condition(VariableDefinitions::new(self.lookup_files.clone()))
+        searcher.add_condition(VariableDefinitions::new(
+            self.definition_files.clone(),
+            self.include.clone(),
+        ))
     }
 
     fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
@@ -109,7 +113,8 @@ mod tests {
         let parse_results = [parser::css::parse(css, Path::new("test.css"))];
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,
-            lookup_files: LookupFilesMatcher::default(),
+            definition_files: LookupFilesMatcher::default(),
+            include: LookupFilesMatcher::default(),
         };
         let searcher = rule
             .register_conditions(SearcherBuilder::new(&parse_results))

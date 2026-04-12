@@ -8,7 +8,6 @@ use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnostics
 use super::Server;
 use crate::commands::lint;
 use crate::commands::lsp::uri::path_to_uri;
-use crate::parser;
 use crate::position::byte_col_to_utf16_in_source;
 use crate::rules::{Diagnostic, Severity};
 
@@ -17,12 +16,13 @@ impl Server<'_> {
         let sources: Vec<(&Path, &str)> = self
             .source_cache
             .iter()
+            .filter(|(path, _)| !self.config.include.is_negated(path))
             .map(|(path, content)| (path.as_path(), content.as_str()))
             .collect();
 
         let parse_results: Vec<_> = sources
             .iter()
-            .map(|(path, content)| parser::css::parse(content, path))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let diagnostics = lint::check(&parse_results, self.config);

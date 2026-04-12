@@ -61,12 +61,14 @@ impl Rules {
     pub fn compile(&self, config: &Config) -> Vec<Box<dyn Rule>> {
         let mut rules: Vec<Box<dyn Rule>> = vec![];
 
-        let lookup_files = &config.lookup_files;
+        let definition_files = &config.definition_files;
+        let include = &config.include;
 
         if let Some(severity) = self.no_undefined_variable_use {
             rules.push(Box::new(NoUndefinedVariableUse {
                 severity,
-                lookup_files: lookup_files.clone(),
+                definition_files: definition_files.clone(),
+                include: include.clone(),
             }));
         }
 
@@ -77,14 +79,16 @@ impl Rules {
         if let Some(severity) = self.no_variable_type_mismatch {
             rules.push(Box::new(NoVariableTypeMismatch {
                 severity,
-                lookup_files: lookup_files.clone(),
+                definition_files: definition_files.clone(),
+                include: include.clone(),
             }));
         }
 
         if let Some(severity) = self.no_inconsistent_variable_definition {
             rules.push(Box::new(NoInconsistentVariableDefinition {
                 severity,
-                lookup_files: lookup_files.clone(),
+                definition_files: definition_files.clone(),
+                include: include.clone(),
             }));
         }
 

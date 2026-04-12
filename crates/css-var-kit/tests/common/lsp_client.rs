@@ -21,8 +21,11 @@ pub struct PublishedDiagnostics {
     pub diagnostics: Vec<DiagnosticInfo>,
 }
 
+#[derive(Debug)]
 pub struct DiagnosticInfo {
     pub message: String,
+    pub line: u64,
+    pub character: u64,
 }
 
 impl LspClient {
@@ -192,7 +195,11 @@ impl LspClient {
     }
 
     pub fn collect_diagnostics(&mut self) -> Vec<PublishedDiagnostics> {
-        let mut result = Vec::new();
+        // Use a map keyed by URI so that later notifications replace earlier ones.
+        // The LSP spec treats each publishDiagnostics as a full replacement for that
+        // URI, so callers care about the *current* state, not the history.
+        let mut by_uri: std::collections::HashMap<String, Vec<DiagnosticInfo>> =
+            std::collections::HashMap::new();
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
 
         loop {
@@ -213,11 +220,15 @@ impl LspClient {
                             arr.iter()
                                 .map(|d| DiagnosticInfo {
                                     message: d["message"].as_str().unwrap_or_default().to_owned(),
+                                    line: d["range"]["start"]["line"].as_u64().unwrap_or(0),
+                                    character: d["range"]["start"]["character"]
+                                        .as_u64()
+                                        .unwrap_or(0),
                                 })
                                 .collect()
                         })
                         .unwrap_or_default();
-                    result.push(PublishedDiagnostics { uri, diagnostics });
+                    by_uri.insert(uri, diagnostics);
                 }
                 Ok(_) => continue,
                 Err(mpsc::RecvTimeoutError::Timeout) => break,
@@ -225,7 +236,10 @@ impl LspClient {
             }
         }
 
-        result
+        by_uri
+            .into_iter()
+            .map(|(uri, diagnostics)| PublishedDiagnostics { uri, diagnostics })
+            .collect()
     }
 
     pub fn shutdown(&mut self) {

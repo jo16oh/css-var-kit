@@ -14,6 +14,7 @@ interface RawLspConfig {
 interface InitializationOptions {
   rootDir?: string | undefined;
   lookupFiles?: string[] | undefined;
+  excludeFiles?: string[] | undefined;
   rules?: RawRules | undefined;
   lsp?: RawLspConfig | undefined;
 }
@@ -21,6 +22,7 @@ interface InitializationOptions {
 const CONFIG_KEYS = [
   "rootDir",
   "lookupFiles",
+  "excludeFiles",
   "rules.noUndefinedVariableUse",
   "rules.noVariableTypeMismatch",
   "rules.noInconsistentVariableDefinition",
@@ -52,6 +54,11 @@ export function buildInitializationOptions(): InitializationOptions | undefined 
 
   if (isExplicitlySet(config, "lookupFiles")) {
     opts.lookupFiles = config.get<string[]>("lookupFiles");
+    hasAny = true;
+  }
+
+  if (isExplicitlySet(config, "excludeFiles")) {
+    opts.excludeFiles = config.get<string[]>("excludeFiles");
     hasAny = true;
   }
 

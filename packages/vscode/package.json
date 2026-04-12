@@ -55,6 +55,14 @@
           ],
           "description": "Glob patterns for CSS files to include."
         },
+        "cvk.excludeFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Glob patterns for files to exclude from linting."
+        },
         "cvk.rules.noUndefinedVariableUse": {
           "type": "string",
           "enum": [

@@ -30,10 +30,13 @@ pub fn register_client_watcher(connection: &Connection) -> Result<(), Box<dyn Er
         method: DidChangeWatchedFiles::METHOD.to_owned(),
         register_options: Some(serde_json::to_value(
             DidChangeWatchedFilesRegistrationOptions {
-                watchers: vec![FileSystemWatcher {
-                    glob_pattern: GlobPattern::String("**/*.css".to_owned()),
-                    kind: None,
-                }],
+                watchers: ["**/*.css", "**/*.vue", "**/*.svelte", "**/*.astro"]
+                    .into_iter()
+                    .map(|pattern| FileSystemWatcher {
+                        glob_pattern: GlobPattern::String(pattern.to_owned()),
+                        kind: None,
+                    })
+                    .collect(),
             },
         )?),
     };
@@ -52,14 +55,19 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
     let (tx, rx) = crossbeam_channel::bounded(1);
 
     let mut debouncer = new_debouncer(
-        Duration::from_millis(300),
+        Duration::from_millis(50),
         None,
         move |events: Result<Vec<DebouncedEvent>, _>| {
             if let Ok(events) = events {
+                const WATCHED_EXTENSIONS: &[&str] = &["css", "vue", "svelte", "astro"];
                 let mut css_paths: Vec<PathBuf> = events
                     .iter()
                     .flat_map(|e| &e.paths)
-                    .filter(|p| p.extension().is_some_and(|ext| ext == "css"))
+                    .filter(|p| {
+                        p.extension()
+                            .and_then(|e| e.to_str())
+                            .is_some_and(|ext| WATCHED_EXTENSIONS.contains(&ext))
+                    })
                     .cloned()
                     .collect();
 

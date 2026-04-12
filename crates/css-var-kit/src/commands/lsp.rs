@@ -286,7 +286,21 @@ impl Server<'_> {
 }
 
 fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
-    lint::collect_css_files(config.root_dir.as_path())
+    let lint_sources = lint::collect_source_files(config.root_dir.as_path(), &config.include)
+        .into_iter()
+        .filter_map(|path| {
+            let content = fs::read_to_string(&path).ok()?;
+            let rel_path = path
+                .strip_prefix(&config.root_dir)
+                .unwrap_or(&path)
+                .to_path_buf();
+            if config.include.is_negated(&rel_path) {
+                return None;
+            }
+            Some((rel_path, content))
+        });
+
+    let include_sources = lint::collect_include_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
             let content = fs::read_to_string(&path).ok()?;
@@ -295,6 +309,7 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
                 .unwrap_or(&path)
                 .to_path_buf();
             Some((rel_path, content))
-        })
-        .collect()
+        });
+
+    lint_sources.chain(include_sources).collect()
 }
