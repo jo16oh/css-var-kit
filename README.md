@@ -35,7 +35,7 @@ cargo install css-var-kit
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
-Supports `.css`, `.scss`, `.vue`, `.svelte`, `.astro`, and `.html` — `<style>` blocks are extracted and linted.
+Supports `.css` and `.scss`, plus `<style>` blocks in `.vue`, `.svelte`, `.astro`, and `.html`.
 
 👉 [Configuration & Rules](docs/config.md)
 
