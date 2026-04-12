@@ -137,18 +137,16 @@ impl Config {
         })
     }
 
-    /// Loads config for LSP. `init_options` (from `initializationOptions`) takes
-    /// precedence over any `cvk.json` file found in the project root.
+    /// Loads config for LSP. `cvk.json` takes precedence over `initializationOptions`;
+    /// `initializationOptions` is used only when no config file is found.
     pub fn load_for_lsp(
         root_dir: &Path,
         init_options: Option<file::RawConfig>,
     ) -> Result<Self, ConfigError> {
         let project_root = find_project_root(root_dir);
 
-        let raw = init_options
-            .map(Ok)
-            .or_else(|| file::RawConfig::load(&project_root).transpose())
-            .transpose()?
+        let raw = file::RawConfig::load(&project_root)?
+            .or(init_options)
             .unwrap_or_default();
 
         let resolved_root_dir = project_root.join(&raw.root_dir);

@@ -140,15 +140,19 @@ fn completion_in_vue_style_block() {
 /// `lookupFiles` に `**/*.vue` を追加すると候補に出るようになる（opt-in）。
 #[test]
 fn completion_includes_vue_defined_variables_when_opted_in() {
-    let dir = fixture_dir();
-    let mut client = LspClient::spawn(&dir);
-    // lookupFiles に *.vue を明示的に追加
-    client.initialize_with_options(Some(serde_json::json!({
-        "lookupFiles": ["**/*.css", "**/*.vue"]
-    })));
+    let tmp = copy_fixture_to_tempdir("html-like-lsp");
+    // cvk.json に lookupFiles: ["**/*.css", "**/*.vue"] を書き込む
+    std::fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"lookupFiles":["**/*.css","**/*.vue"]}"#,
+    )
+    .unwrap();
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
 
     let uri = client.file_uri("Component.vue");
-    let text = std::fs::read_to_string(dir.join("Component.vue")).unwrap();
+    let text = std::fs::read_to_string(tmp.path().join("Component.vue")).unwrap();
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
@@ -233,11 +237,15 @@ fn goto_definition_from_vue_style_block() {
 /// `lookupFiles` に `**/*.vue` を追加した場合（opt-in）のみ動作する。
 #[test]
 fn goto_definition_points_to_correct_line_in_vue_definition_file() {
-    let dir = fixture_dir();
-    let mut client = LspClient::spawn(&dir);
-    client.initialize_with_options(Some(serde_json::json!({
-        "lookupFiles": ["**/*.css", "**/*.vue"]
-    })));
+    let tmp = copy_fixture_to_tempdir("html-like-lsp");
+    std::fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"lookupFiles":["**/*.css","**/*.vue"]}"#,
+    )
+    .unwrap();
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
 
     // Component.vue で --vue-color が使われるよう上書き（その場でテキストを渡す）
     let uri = client.file_uri("Component.vue");
@@ -325,10 +333,14 @@ fn rename_from_vue_style_block_edits_both_files() {
 #[test]
 fn rename_vue_defined_variable() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
+    std::fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"lookupFiles":["**/*.css","**/*.vue"]}"#,
+    )
+    .unwrap();
+
     let mut client = LspClient::spawn(tmp.path());
-    client.initialize_with_options(Some(serde_json::json!({
-        "lookupFiles": ["**/*.css", "**/*.vue"]
-    })));
+    client.initialize();
 
     // Component.vue で --vue-color を使うよう書き換えたテキストを渡す
     let comp_uri = client.file_uri("Component.vue");
