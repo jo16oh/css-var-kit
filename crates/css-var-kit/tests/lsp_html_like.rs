@@ -136,9 +136,39 @@ fn completion_in_vue_style_block() {
     );
 }
 
-/// Tokens.vue で定義された変数も補完候補に現れる。
+/// デフォルトでは Vue ファイル内の変数定義は lookupFiles の対象外なので補完候補に現れない。
+/// `lookupFiles` に `**/*.vue` を追加すると候補に出るようになる（opt-in）。
 #[test]
-fn completion_includes_variables_defined_in_vue_files() {
+fn completion_includes_vue_defined_variables_when_opted_in() {
+    let dir = fixture_dir();
+    let mut client = LspClient::spawn(&dir);
+    // lookupFiles に *.vue を明示的に追加
+    client.initialize_with_options(Some(serde_json::json!({
+        "lookupFiles": ["**/*.css", "**/*.vue"]
+    })));
+
+    let uri = client.file_uri("Component.vue");
+    let text = std::fs::read_to_string(dir.join("Component.vue")).unwrap();
+    client.open_document(&uri, &text);
+    let _ = client.collect_diagnostics();
+
+    let response = client.request_completion(&uri, 6, 14);
+    client.shutdown();
+
+    let items = response["result"]
+        .as_array()
+        .expect("expected completion array");
+    let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
+
+    assert!(
+        labels.contains(&"--vue-color"),
+        "--vue-color defined in Tokens.vue should be suggested when *.vue is in lookupFiles, got: {labels:?}"
+    );
+}
+
+/// デフォルト設定では Vue ファイル内の変数定義は lookupFiles 対象外なので補完に出ない。
+#[test]
+fn completion_excludes_vue_defined_variables_by_default() {
     let dir = fixture_dir();
     let mut client = LspClient::spawn(&dir);
     client.initialize();
@@ -157,8 +187,8 @@ fn completion_includes_variables_defined_in_vue_files() {
     let labels: Vec<&str> = items.iter().filter_map(|i| i["label"].as_str()).collect();
 
     assert!(
-        labels.contains(&"--vue-color"),
-        "--vue-color defined in Tokens.vue should be suggested, got: {labels:?}"
+        !labels.contains(&"--vue-color"),
+        "--vue-color should NOT be suggested by default (not in lookupFiles), got: {labels:?}"
     );
 }
 
@@ -200,11 +230,14 @@ fn goto_definition_from_vue_style_block() {
 
 /// Tokens.vue で定義された変数への定義ジャンプが Vue ファイル内の絶対行番号を返す。
 /// Tokens.vue line 2: `  --vue-color: #ff6b6b;` — col 2
+/// `lookupFiles` に `**/*.vue` を追加した場合（opt-in）のみ動作する。
 #[test]
 fn goto_definition_points_to_correct_line_in_vue_definition_file() {
     let dir = fixture_dir();
     let mut client = LspClient::spawn(&dir);
-    client.initialize();
+    client.initialize_with_options(Some(serde_json::json!({
+        "lookupFiles": ["**/*.css", "**/*.vue"]
+    })));
 
     // Component.vue で --vue-color が使われるよう上書き（その場でテキストを渡す）
     let uri = client.file_uri("Component.vue");
@@ -288,11 +321,14 @@ fn rename_from_vue_style_block_edits_both_files() {
 }
 
 /// Vue ファイル内の変数定義をリネームすると、使用箇所も同時に書き換えられる。
+/// `lookupFiles` に `**/*.vue` を追加した場合（opt-in）のみ動作する。
 #[test]
 fn rename_vue_defined_variable() {
     let tmp = copy_fixture_to_tempdir("html-like-lsp");
     let mut client = LspClient::spawn(tmp.path());
-    client.initialize();
+    client.initialize_with_options(Some(serde_json::json!({
+        "lookupFiles": ["**/*.css", "**/*.vue"]
+    })));
 
     // Component.vue で --vue-color を使うよう書き換えたテキストを渡す
     let comp_uri = client.file_uri("Component.vue");

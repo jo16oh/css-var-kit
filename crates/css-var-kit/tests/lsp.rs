@@ -752,15 +752,16 @@ fn initialization_options_applied_when_no_config_file() {
 }
 
 #[test]
-fn initialization_options_ignored_when_config_file_exists() {
+fn initialization_options_override_config_file() {
     let tmp = copy_fixture_to_tempdir("default");
 
     let mut client = LspClient::spawn(tmp.path());
 
-    // Try to disable no-undefined-variable-use, but cvk.json exists so this should be ignored
+    // Disable rules via initializationOptions — should take precedence over cvk.json.
     client.initialize_with_options(Some(serde_json::json!({
         "rules": {
-            "no-undefined-variable-use": "off"
+            "no-undefined-variable-use": "off",
+            "no-variable-type-mismatch": "off"
         }
     })));
 
@@ -773,8 +774,8 @@ fn initialization_options_ignored_when_config_file_exists() {
     client.shutdown();
 
     assert!(
-        messages.iter().any(|m| m.contains("--spacing-md")),
-        "cvk.json should take precedence over initializationOptions, got: {messages:?}"
+        !messages.iter().any(|m| m.contains("--spacing-md")),
+        "initializationOptions should override cvk.json, got: {messages:?}"
     );
 }
 
