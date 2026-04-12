@@ -15,6 +15,7 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 {
   "rootDir": ".",
   "lookupFiles": ["**/*.css"],
+  "excludeFiles": [],
   "rules": {
     "no-undefined-variable-use": "error",
     "no-variable-type-mismatch": "error",
@@ -37,6 +38,34 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
       "allowedProperties": [],
     },
   },
+}
+```
+
+### `lookupFiles`
+
+Glob patterns that determine which files are scanned for CSS variable **definitions**. Defaults to `["**/*.css"]`.
+
+Supports negation patterns (e.g. `"!**/node_modules/**"`). The last matching pattern wins.
+
+Supported file types: `.css`, `.scss`, `.html`, `.vue`, `.svelte`, `.astro`.
+
+```jsonc
+{
+  // Also scan Vue SFCs for variable definitions
+  "lookupFiles": ["**/*.css", "**/*.vue"]
+}
+```
+
+### `excludeFiles`
+
+Glob patterns for files to **exclude from linting**. Defaults to `[]` (nothing excluded).
+
+Any file whose relative path matches at least one pattern is skipped entirely — it is neither linted nor used as a source of variable definitions.
+
+```jsonc
+{
+  // Do not lint generated or vendored files
+  "excludeFiles": ["**/generated/**", "**/vendor/**"]
 }
 ```
 
