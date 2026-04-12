@@ -28,6 +28,7 @@ async function startClient(): Promise<void> {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [
       { language: "css" },
+      { language: "scss" },
       { language: "html" },
       { pattern: "**/*.vue" },
       { pattern: "**/*.svelte" },

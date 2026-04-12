@@ -98,7 +98,7 @@ fn collect_source_files_recursive(dir: &Path, files: &mut Vec<PathBuf>) {
         } else if path
             .extension()
             .and_then(|e| e.to_str())
-            .is_some_and(|ext| ext == "css" || HTML_LIKE_EXTENSIONS.contains(&ext))
+            .is_some_and(|ext| matches!(ext, "css" | "scss") || HTML_LIKE_EXTENSIONS.contains(&ext))
         {
             files.push(path);
         }
