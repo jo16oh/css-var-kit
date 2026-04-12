@@ -8,7 +8,7 @@ use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 
 const SKIP_DIRS: &[&str] = &["node_modules", "target", ".git", "dist", "build", "vendor"];
-const HTML_LIKE_EXTENSIONS: &[&str] = &["vue", "svelte", "astro"];
+const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
 pub fn run(config: &Config) {
     let css_files = collect_source_files(config.root_dir.as_path());
