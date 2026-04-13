@@ -817,6 +817,79 @@ fn excluded_file_produces_no_diagnostics_on_open() {
     );
 }
 
+/// config reload via client-side watcher: disabling a rule in cvk.json and notifying via
+/// workspace/didChangeWatchedFiles should make the server reload and re-publish diagnostics.
+#[test]
+fn config_reload_updates_rules_via_watched_files() {
+    let tmp = copy_fixture_to_tempdir("default");
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.iter().any(|m| m.contains("--spacing-md")),
+        "expected --spacing-md diagnostic before config reload, got: {messages:?}"
+    );
+
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"rules": {"no-undefined-variable-use": "off"}}"#,
+    )
+    .unwrap();
+    let config_uri = client.file_uri("cvk.json");
+    client.notify_watched_files_changed(&[&config_uri]);
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.is_empty(),
+        "diagnostics should be empty after disabling rule via config reload, got: {messages:?}"
+    );
+
+    client.shutdown();
+}
+
+/// config reload via server-side watcher: writing cvk.json to disk without any LSP notification
+/// should also trigger a reload and re-publish updated diagnostics.
+#[test]
+fn config_reload_updates_rules_via_server_watcher() {
+    let tmp = copy_fixture_to_tempdir("default");
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.iter().any(|m| m.contains("--spacing-md")),
+        "expected --spacing-md diagnostic before config reload, got: {messages:?}"
+    );
+
+    // Modify cvk.json on disk only — the server-side watcher (notify crate) should detect this.
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"rules": {"no-undefined-variable-use": "off"}}"#,
+    )
+    .unwrap();
+
+    let diagnostics = client.collect_diagnostics();
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.is_empty(),
+        "diagnostics should be empty after disabling rule via server watcher reload, got: {messages:?}"
+    );
+
+    client.shutdown();
+}
+
 fn collect_messages_for<'a>(
     diagnostics: &'a [common::lsp_client::PublishedDiagnostics],
     suffix: &str,
