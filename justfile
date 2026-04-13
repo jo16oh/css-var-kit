@@ -35,6 +35,8 @@ sync-optional-deps:
       fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');\
     "
 
+gen-value-kinds: gen-value-kind-set gen-value-kind-doc gen-value-kind-schema
+
 gen-value-kind-set:
     @pnpm node scripts/gen-value-kind-set/main.ts crates/css-var-kit/generated/value_kind_set.rs
     @rustfmt crates/css-var-kit/generated/value_kind_set.rs
@@ -42,3 +44,6 @@ gen-value-kind-set:
 gen-value-kind-doc:
     @pnpm node scripts/gen-value-kind-set/main.ts --gen-doc docs/VALUE_KINDS.md
     @pnpm oxfmt docs/VALUE_KINDS.md
+
+gen-value-kind-schema:
+    @pnpm node scripts/gen-value-kind-set/main.ts --gen-schema packages/css-var-kit/value-kinds.schema.json

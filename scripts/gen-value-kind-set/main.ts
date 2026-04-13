@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 
-import { generateKindDoc } from "./gen-kind-doc.ts";
+import { generateKindDoc, generateValueKindSchema } from "./gen-kind-doc.ts";
 import { loadKindData, SYNTAX_COMPONENT_KINDS } from "./kind-data.ts";
 
 function kindToConstName(kind: string): string {
@@ -135,6 +135,20 @@ async function main() {
     const doc = generateKindDoc(data);
     await writeFile(docPath, doc);
     console.log(`Written value kind doc to ${docPath}`);
+    return;
+  }
+
+  const genSchemaIndex = args.indexOf("--gen-schema");
+  if (genSchemaIndex !== -1) {
+    const schemaPath = args[genSchemaIndex + 1];
+    if (!schemaPath) {
+      console.error("Usage: deno run main.ts --gen-schema <output-path>");
+      process.exit(1);
+    }
+    const data = await loadKindData();
+    const schema = generateValueKindSchema(data);
+    await writeFile(schemaPath, schema);
+    console.log(`Written value kind schema to ${schemaPath}`);
     return;
   }
 

@@ -11,7 +11,9 @@
     "cvk": "bin/css-var-kit.js"
   },
   "files": [
-    "bin/css-var-kit.js"
+    "bin/css-var-kit.js",
+    "cvk.schema.json",
+    "value-kinds.schema.json"
   ],
   "optionalDependencies": {
     "@css-var-kit/cli-darwin-arm64": "0.3.0",
