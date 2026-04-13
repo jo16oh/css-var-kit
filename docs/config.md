@@ -5,6 +5,7 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 ```jsonc
 // Default configuration (all fields are optional).
 {
+  "$schema": "./node_modules/css-var-kit/cvk.schema.json",
   "rootDir": ".",
   "definitionFiles": ["**/*.css"],
   "include": [
