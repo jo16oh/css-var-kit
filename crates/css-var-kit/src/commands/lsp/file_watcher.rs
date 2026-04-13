@@ -30,13 +30,20 @@ pub fn register_client_watcher(connection: &Connection) -> Result<(), Box<dyn Er
         method: DidChangeWatchedFiles::METHOD.to_owned(),
         register_options: Some(serde_json::to_value(
             DidChangeWatchedFilesRegistrationOptions {
-                watchers: ["**/*.css", "**/*.vue", "**/*.svelte", "**/*.astro"]
-                    .into_iter()
-                    .map(|pattern| FileSystemWatcher {
-                        glob_pattern: GlobPattern::String(pattern.to_owned()),
-                        kind: None,
-                    })
-                    .collect(),
+                watchers: [
+                    "**/*.css",
+                    "**/*.vue",
+                    "**/*.svelte",
+                    "**/*.astro",
+                    "**/cvk.json",
+                    "**/cvk.jsonc",
+                ]
+                .into_iter()
+                .map(|pattern| FileSystemWatcher {
+                    glob_pattern: GlobPattern::String(pattern.to_owned()),
+                    kind: None,
+                })
+                .collect(),
             },
         )?),
     };
@@ -60,22 +67,26 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
         move |events: Result<Vec<DebouncedEvent>, _>| {
             if let Ok(events) = events {
                 const WATCHED_EXTENSIONS: &[&str] = &["css", "vue", "svelte", "astro"];
-                let mut css_paths: Vec<PathBuf> = events
+                const CONFIG_FILENAMES: &[&str] = &["cvk.json", "cvk.jsonc"];
+                let mut paths: Vec<PathBuf> = events
                     .iter()
                     .flat_map(|e| &e.paths)
                     .filter(|p| {
                         p.extension()
                             .and_then(|e| e.to_str())
                             .is_some_and(|ext| WATCHED_EXTENSIONS.contains(&ext))
+                            || p.file_name()
+                                .and_then(|n| n.to_str())
+                                .is_some_and(|name| CONFIG_FILENAMES.contains(&name))
                     })
                     .cloned()
                     .collect();
 
-                css_paths.sort();
-                css_paths.dedup();
+                paths.sort();
+                paths.dedup();
 
-                if !css_paths.is_empty() {
-                    let _ = tx.try_send(css_paths);
+                if !paths.is_empty() {
+                    let _ = tx.try_send(paths);
                 }
             }
         },
