@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jo16oh/css-var-kit/blob/main/packages/css-var-kit/cvk.schema.json",
+  "title": "css-var-kit configuration",
+  "description": "Configuration schema for cvk.json / cvk.jsonc",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "rootDir": {
+      "type": "string",
+      "description": "The root directory for resolving file paths. Defaults to \".\".",
+      "default": "."
+    },
+    "definitionFiles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns that determine which files are scanned for CSS variable definitions and are also linted. Defaults to [\"**/*.css\"]. Supports negation patterns (e.g. \"!**/vendor/**\").",
+      "default": ["**/*.css"]
+    },
+    "lookupFiles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Legacy alias for definitionFiles. Overridden when definitionFiles is present.",
+      "default": ["**/*.css"]
+    },
+    "include": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Additional glob patterns for definition-only sources (not linted). Supports negation patterns to exclude files. The last matching pattern wins.",
+      "default": []
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lint rule configuration.",
+      "properties": {
+        "no-undefined-variable-use": {
+          "$ref": "#/definitions/severityToggle",
+          "description": "Reports usages of CSS variables that are not defined anywhere in the definition files.",
+          "default": "error"
+        },
+        "no-variable-type-mismatch": {
+          "$ref": "#/definitions/severityToggle",
+          "description": "Reports when a CSS variable's resolved type does not match the property it is used in. Requires no-undefined-variable-use and no-inconsistent-variable-definition to be enabled.",
+          "default": "error"
+        },
+        "no-inconsistent-variable-definition": {
+          "$ref": "#/definitions/severityToggle",
+          "description": "Reports when the same CSS variable is defined with conflicting value types across different selectors or files.",
+          "default": "error"
+        },
+        "enforce-variable-use": {
+          "description": "Enforces that literal values of specified types must use CSS variables instead of being written inline.",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/severityToggle",
+              "description": "Enable or disable the rule with a severity level."
+            },
+            {
+              "$ref": "#/definitions/enforceVariableUseConfig",
+              "description": "Enable the rule with detailed configuration."
+            }
+          ],
+          "default": "off"
+        }
+      }
+    },
+    "lsp": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "LSP server configuration.",
+      "properties": {
+        "logFile": {
+          "type": "string",
+          "description": "Path to a file where LSP server logs will be written."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "severityToggle": {
+      "type": "string",
+      "enum": ["error", "on", "warn", "off"],
+      "description": "\"error\" / \"on\": report as error (non-zero exit). \"warn\": report as warning. \"off\": disable."
+    },
+    "valueKind": {
+      "$ref": "./value-kinds.schema.json"
+    },
+    "enforceVariableUseConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "$ref": "#/definitions/severityToggle",
+          "description": "Severity level for this rule.",
+          "default": "error"
+        },
+        "types": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/valueKind" },
+          "description": "Value kinds that must be expressed as CSS variables rather than inline literals.",
+          "default": []
+        },
+        "allowedFunctions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "CSS functions whose arguments are exempt from this rule.",
+          "default": ["calc", "min", "max", "clamp", "env"]
+        },
+        "allowedValues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Literal values that are always allowed regardless of type.",
+          "default": [
+            "inherit",
+            "initial",
+            "unset",
+            "revert",
+            "revert-layer",
+            "currentColor",
+            "transparent"
+          ]
+        },
+        "allowedProperties": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A property name to exempt entirely from the rule."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["propertyName", "allowedKinds"],
+                "properties": {
+                  "propertyName": {
+                    "type": "string",
+                    "description": "The CSS property name to partially exempt."
+                  },
+                  "allowedKinds": {
+                    "type": "array",
+                    "items": { "$ref": "#/definitions/valueKind" },
+                    "description": "Value kinds that are allowed as inline literals for this property."
+                  }
+                }
+              }
+            ]
+          },
+          "description": "CSS properties that are exempt from the rule, either fully (string) or for specific value kinds (object).",
+          "default": []
+        }
+      }
+    }
+  }
+}

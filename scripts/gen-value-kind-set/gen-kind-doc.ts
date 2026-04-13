@@ -1,5 +1,20 @@
 import type { KindData } from "./kind-data.ts";
 
+export function generateValueKindSchema({ allKinds }: Pick<KindData, "allKinds">): string {
+  // length-percentage is a composite alias (Length | Percentage) not present in allKinds
+  const kinds = [...allKinds, "length-percentage"].sort((a, b) => a.localeCompare(b));
+
+  const schema = {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    title: "CSS Variable Kit - Value Kind",
+    description:
+      "A CSS value kind. Valid values for `types` and `allowedKinds` in the enforce-variable-use rule config.",
+    type: "string",
+    enum: kinds,
+  };
+  return JSON.stringify(schema, null, 2) + "\n";
+}
+
 function invertMap(map: Record<string, string[]>): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   for (const [key, kinds] of Object.entries(map)) {
