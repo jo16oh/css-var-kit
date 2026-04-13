@@ -62,7 +62,6 @@ fn updates_diagnostics_on_background_file_change_via_did_change() {
         "expected --spacing-md diagnostic before file change, got: {messages:?}"
     );
 
-    // Simulate editing variables.css: add --spacing-md via didChange
     let variables_uri = client.file_uri("variables.css");
     let new_variables_text = ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n";
     client.change_document(&variables_uri, 2, new_variables_text);
@@ -98,7 +97,6 @@ fn updates_diagnostics_on_background_file_change_via_watched_files() {
         "expected --spacing-md diagnostic before file change, got: {messages:?}"
     );
 
-    // Notify via workspace/didChangeWatchedFiles (as an editor would for external changes)
     fs::write(
         tmp.path().join("variables.css"),
         ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n",
@@ -121,8 +119,6 @@ fn updates_diagnostics_on_background_file_change_via_watched_files() {
     client.shutdown();
 }
 
-/// Server-side file watcher: diagnostics update without any client notification,
-/// triggered purely by the notify crate detecting disk changes.
 #[test]
 fn updates_diagnostics_on_background_file_change_via_server_watcher() {
     let tmp_dir = copy_fixture_to_tempdir("default");
@@ -140,8 +136,6 @@ fn updates_diagnostics_on_background_file_change_via_server_watcher() {
         "expected --spacing-md diagnostic before file change, got: {messages:?}"
     );
 
-    // Modify variables.css on disk without sending any LSP notification.
-    // The server-side file watcher (notify crate) should detect this and re-publish.
     fs::write(
         tmp_dir.path().join("variables.css"),
         ":root {\n    --primary-color: #3490dc;\n    --secondary-color: #ffed4a;\n    --font-size-base: 16px;\n    --spacing-md: 1rem;\n}\n",
@@ -167,7 +161,6 @@ fn writes_log_file_when_configured() {
     let tmp = copy_fixture_to_tempdir("default");
     let log_file = tmp.path().join("cvk-lsp.log");
 
-    // Add logFile to cvk.json
     fs::write(
         tmp.path().join("cvk.json"),
         format!(r#"{{ "lsp": {{ "logFile": "{}" }} }}"#, log_file.display()),
@@ -214,7 +207,7 @@ fn completes_color_variables_for_color_property() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // line 1: "    color: var(--primary-color);" — cursor inside the value
+    // line 1: "    color: var(--primary-color);"
     let response = client.request_completion(&uri, 1, 12);
     client.shutdown();
 
@@ -249,7 +242,7 @@ fn completes_length_variables_for_font_size_property() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // line 3: "    font-size: var(--font-size-base);" — cursor inside the value
+    // line 3: "    font-size: var(--font-size-base);"
     let response = client.request_completion(&uri, 3, 16);
     client.shutdown();
 
@@ -276,7 +269,6 @@ fn completion_text_edit_replaces_typed_prefix() {
     client.initialize();
 
     let uri = client.file_uri("components/button.css");
-    // "    color: --" — user typed "--" outside var()
     let text = ".test {\n    color: --\n}\n";
     client.open_document(&uri, text);
     let _ = client.collect_diagnostics();
@@ -322,7 +314,7 @@ fn completion_filters_by_compound_value_prefix() {
     client.open_document(&uri, text);
     let _ = client.collect_diagnostics();
 
-    // cursor after "-" on "    border: 1px solid -"
+    // cursor after "-" on "    border: 1px solid -" (col 23)
     let response = client.request_completion(&uri, 1, 23);
     client.shutdown();
 
@@ -387,7 +379,7 @@ fn completion_filters_inside_function_argument() {
     client.open_document(&uri, text);
     let _ = client.collect_diagnostics();
 
-    // cursor after "-" on "    transform: translate(-"
+    // cursor after "-" on "    transform: translate(-" (col 26)
     let response = client.request_completion(&uri, 1, 26);
     client.shutdown();
 
@@ -417,7 +409,7 @@ fn completion_inside_var_inserts_variable_name_only() {
     client.open_document(&uri, text);
     let _ = client.collect_diagnostics();
 
-    // cursor after "-" on "    color: var(-"
+    // cursor after "-" on "    color: var(-" (col 16)
     let response = client.request_completion(&uri, 1, 16);
     client.shutdown();
 
@@ -445,8 +437,7 @@ fn completion_inside_var_inserts_variable_name_only() {
         Some("--primary-color"),
         "newText inside var() should be variable name only, not wrapped in var()"
     );
-    // "    color: var(-" → var( ends at col 15, "-" at col 15, cursor at col 16
-    // replace range should cover the typed "-" (col 15..16)
+    // "    color: var(-" → "-" at col 15, cursor at col 16; replace range covers col 15..16
     assert_eq!(text_edit["range"]["start"]["character"], 15);
     assert_eq!(text_edit["range"]["end"]["character"], 16);
 }
@@ -462,7 +453,7 @@ fn completion_not_triggered_outside_property_value() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // Request completion at line 0 (.button {), which is a selector, not a value
+    // line 0: ".button {" — selector, not a value
     let response = client.request_completion(&uri, 0, 5);
     client.shutdown();
 
@@ -484,8 +475,7 @@ fn goto_definition_jumps_to_variable_declaration() {
     client.open_document(&button_uri, &text);
     let _ = client.collect_diagnostics();
 
-    // line 1: "    color: var(--primary-color);"
-    // cursor on "--primary-color" (col 19)
+    // line 1: "    color: var(--primary-color);" — cursor on "--primary-color" (col 19)
     let response = client.request_definition(&button_uri, 1, 19);
     client.shutdown();
 
@@ -548,7 +538,7 @@ fn goto_definition_returns_null_outside_variable() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // line 0: ".button {" — cursor on selector, not a variable
+    // line 0: ".button {" — cursor on selector (col 3)
     let response = client.request_definition(&uri, 0, 3);
     client.shutdown();
 
@@ -575,7 +565,7 @@ fn rename_symbol_renames_definitions_and_usages() {
     client.open_document(&vars_uri, &vars_text);
     let _ = client.collect_diagnostics();
 
-    // cursor on "--primary-color" in button.css line 1: "    color: var(--primary-color);"
+    // line 1: "    color: var(--primary-color);" — cursor on "--primary-color" (col 19)
     let response = client.request_rename(&button_uri, 1, 19, "--brand-color");
     client.shutdown();
 
@@ -584,7 +574,6 @@ fn rename_symbol_renames_definitions_and_usages() {
 
     let changes = result["changes"].as_object().expect("expected changes map");
 
-    // definitions in variables.css (lines 1 and 7)
     let vars_edits: Vec<&serde_json::Value> = changes
         .iter()
         .filter(|(uri, _)| uri.ends_with("/variables.css"))
@@ -596,7 +585,6 @@ fn rename_symbol_renames_definitions_and_usages() {
         "expected 2 definition edits: {vars_edits:?}"
     );
 
-    // usage in button.css (line 1)
     let button_edits: Vec<&serde_json::Value> = changes
         .iter()
         .filter(|(uri, _)| uri.ends_with("/button.css"))
@@ -625,7 +613,7 @@ fn rename_symbol_auto_prepends_dashes() {
     client.open_document(&vars_uri, &vars_text);
     let _ = client.collect_diagnostics();
 
-    // cursor on "--secondary-color" definition at line 2
+    // cursor on "--secondary-color" definition at line 2 (col 6)
     let response = client.request_rename(&vars_uri, 2, 6, "accent-color");
     client.shutdown();
 
@@ -656,7 +644,7 @@ fn rename_returns_null_outside_variable() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // cursor on ".button" selector, not a variable
+    // line 0: ".button {" — cursor on selector (col 3)
     let response = client.request_rename(&uri, 0, 3, "--new-name");
     client.shutdown();
 
@@ -678,8 +666,7 @@ fn prepare_rename_succeeds_on_variable() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // line 1: "    color: var(--primary-color);"
-    // cursor on "--primary-color" in var() (col 19)
+    // line 1: "    color: var(--primary-color);" — cursor on "--primary-color" (col 19)
     let response = client.request_prepare_rename(&uri, 1, 19);
     client.shutdown();
 
@@ -689,7 +676,7 @@ fn prepare_rename_succeeds_on_variable() {
         "expected prepare rename result, got null"
     );
 
-    // range should cover exactly "--primary-color" (cols 15..30)
+    // range should cover exactly "--primary-color" (cols 13..28)
     assert_eq!(result["range"]["start"]["line"], 1);
     assert_eq!(result["range"]["start"]["character"], 13);
     assert_eq!(result["range"]["end"]["line"], 1);
@@ -708,7 +695,7 @@ fn prepare_rename_returns_null_outside_variable() {
     client.open_document(&uri, &text);
     let _ = client.collect_diagnostics();
 
-    // cursor on selector
+    // line 0: ".button {" — cursor on selector (col 3)
     let response = client.request_prepare_rename(&uri, 0, 3);
     client.shutdown();
 
@@ -724,7 +711,6 @@ fn initialization_options_applied_when_no_config_file() {
     let fixture_dir = Path::new(common::FIXTURES).join("no-config");
     let mut client = LspClient::spawn(&fixture_dir);
 
-    // Disable rules via initializationOptions
     client.initialize_with_options(Some(serde_json::json!({
         "rules": {
             "no-undefined-variable-use": "off",
@@ -752,7 +738,6 @@ fn initialization_options_ignored_when_config_file_exists() {
 
     let mut client = LspClient::spawn(tmp.path());
 
-    // Try to disable no-undefined-variable-use, but cvk.json exists so this should be ignored.
     client.initialize_with_options(Some(serde_json::json!({
         "rules": {
             "no-undefined-variable-use": "off"
@@ -792,7 +777,6 @@ fn excluded_file_produces_no_diagnostics_on_open() {
     let diagnostics = client.collect_diagnostics();
     client.shutdown();
 
-    // button.css is excluded — no diagnostics notification should be published for it
     let button_diagnostics: Vec<_> = diagnostics
         .iter()
         .filter(|p| p.uri.ends_with("components/button.css"))
@@ -803,7 +787,6 @@ fn excluded_file_produces_no_diagnostics_on_open() {
         "excluded file should produce no diagnostics, got: {button_diagnostics:?}"
     );
 
-    // card.css is not excluded — it still has errors (--radius-lg, --spacing-md)
     let card_diagnostics: Vec<_> = diagnostics
         .iter()
         .filter(|p| p.uri.ends_with("components/card.css"))
@@ -817,74 +800,63 @@ fn excluded_file_produces_no_diagnostics_on_open() {
     );
 }
 
-/// config reload via client-side watcher: disabling a rule in cvk.json and notifying via
-/// workspace/didChangeWatchedFiles should make the server reload and re-publish diagnostics.
 #[test]
 fn config_reload_updates_rules_via_watched_files() {
     let tmp = copy_fixture_to_tempdir("default");
+
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"rules": {"no-undefined-variable-use": "off", "no-variable-type-mismatch": "off"}}"#,
+    )
+    .unwrap();
+
     let mut client = LspClient::spawn(tmp.path());
     client.initialize();
 
     let button_uri = client.file_uri("components/button.css");
     let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
     client.open_document(&button_uri, &button_text);
+    let _ = client.collect_diagnostics();
 
-    let diagnostics = client.collect_diagnostics();
-    let messages = collect_messages_for(&diagnostics, "components/button.css");
-    assert!(
-        messages.iter().any(|m| m.contains("--spacing-md")),
-        "expected --spacing-md diagnostic before config reload, got: {messages:?}"
-    );
-
-    fs::write(
-        tmp.path().join("cvk.json"),
-        r#"{"rules": {"no-undefined-variable-use": "off"}}"#,
-    )
-    .unwrap();
+    fs::write(tmp.path().join("cvk.json"), "{}").unwrap();
     let config_uri = client.file_uri("cvk.json");
     client.notify_watched_files_changed(&[&config_uri]);
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");
     assert!(
-        messages.is_empty(),
-        "diagnostics should be empty after disabling rule via config reload, got: {messages:?}"
+        messages.iter().any(|m| m.contains("--spacing-md")),
+        "expected --spacing-md diagnostic after enabling rule via config reload, got: {messages:?}"
     );
 
     client.shutdown();
 }
 
-/// config reload via server-side watcher: writing cvk.json to disk without any LSP notification
-/// should also trigger a reload and re-publish updated diagnostics.
 #[test]
 fn config_reload_updates_rules_via_server_watcher() {
     let tmp = copy_fixture_to_tempdir("default");
+
+    fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"rules": {"no-undefined-variable-use": "off", "no-variable-type-mismatch": "off"}}"#,
+    )
+    .unwrap();
+
     let mut client = LspClient::spawn(tmp.path());
     client.initialize();
 
     let button_uri = client.file_uri("components/button.css");
     let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
     client.open_document(&button_uri, &button_text);
+    let _ = client.collect_diagnostics();
+
+    fs::write(tmp.path().join("cvk.json"), "{}").unwrap();
 
     let diagnostics = client.collect_diagnostics();
     let messages = collect_messages_for(&diagnostics, "components/button.css");
     assert!(
         messages.iter().any(|m| m.contains("--spacing-md")),
-        "expected --spacing-md diagnostic before config reload, got: {messages:?}"
-    );
-
-    // Modify cvk.json on disk only — the server-side watcher (notify crate) should detect this.
-    fs::write(
-        tmp.path().join("cvk.json"),
-        r#"{"rules": {"no-undefined-variable-use": "off"}}"#,
-    )
-    .unwrap();
-
-    let diagnostics = client.collect_diagnostics();
-    let messages = collect_messages_for(&diagnostics, "components/button.css");
-    assert!(
-        messages.is_empty(),
-        "diagnostics should be empty after disabling rule via server watcher reload, got: {messages:?}"
+        "expected --spacing-md diagnostic after enabling rule via server watcher reload, got: {messages:?}"
     );
 
     client.shutdown();

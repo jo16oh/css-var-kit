@@ -48,10 +48,10 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let mut init_params: InitializeParams =
         serde_json::from_value(connection.initialize(capabilities_json)?)?;
 
-    let init_options = init_params
+    let init_options: Option<RawConfig> = init_params
         .initialization_options
         .take()
-        .and_then(|v| serde_json::from_value::<RawConfig>(v).ok());
+        .and_then(|v| serde_json::from_value(v).ok());
 
     let root_dir = init_params
         .workspace_folders
@@ -60,7 +60,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         .and_then(|folder| uri_to_path(&folder.uri))
         .unwrap_or_else(|| cwd.to_path_buf());
 
-    let config = Config::load_for_lsp(&root_dir, init_options)?;
+    let config = Config::load_for_lsp(&root_dir, init_options.clone())?;
 
     let logger = if log {
         let l = Logger::new(config.lsp_log_file.as_deref());
@@ -92,6 +92,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         connection: &connection,
         config,
         lsp_root_dir: root_dir,
+        init_options,
         open_documents: HashMap::new(),
         source_cache,
         watcher_rx,
@@ -114,6 +115,7 @@ struct Server<'a> {
     connection: &'a Connection,
     config: Config,
     lsp_root_dir: PathBuf,
+    init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
     source_cache: HashMap<PathBuf, String>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
@@ -290,7 +292,7 @@ impl Server<'_> {
     }
 
     fn reload_config(&mut self) -> Result<(), Box<dyn Error>> {
-        match Config::load_for_lsp(&self.lsp_root_dir, None) {
+        match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
             Ok(new_config) => {
                 self.config = new_config;
                 self.source_cache = load_all_sources(&self.config);

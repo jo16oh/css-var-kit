@@ -8,7 +8,7 @@ use crate::config::file::SeverityToggle;
 use crate::rules::Severity;
 use crate::type_checker::value_kind::{ValueKindSet, lookup_kind_by_name};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub enum RawEnforceVariableUse {
     #[default]
     Off,
@@ -55,7 +55,7 @@ impl RawEnforceVariableUse {
         }
     }
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawEnforceVariableUseConfig {
     #[serde(default = "default_severity")]
@@ -86,7 +86,7 @@ fn default_severity() -> SeverityToggle {
     SeverityToggle::Error
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum RawAllowedProperty {
     Name(String),
