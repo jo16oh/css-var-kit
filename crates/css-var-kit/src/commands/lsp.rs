@@ -48,10 +48,10 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let mut init_params: InitializeParams =
         serde_json::from_value(connection.initialize(capabilities_json)?)?;
 
-    let init_options = init_params
+    let init_options: Option<RawConfig> = init_params
         .initialization_options
         .take()
-        .and_then(|v| serde_json::from_value::<RawConfig>(v).ok());
+        .and_then(|v| serde_json::from_value(v).ok());
 
     let root_dir = init_params
         .workspace_folders
@@ -60,7 +60,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         .and_then(|folder| uri_to_path(&folder.uri))
         .unwrap_or_else(|| cwd.to_path_buf());
 
-    let config = Config::load_for_lsp(&root_dir, init_options)?;
+    let config = Config::load_for_lsp(&root_dir, init_options.clone())?;
 
     let logger = if log {
         let l = Logger::new(config.lsp_log_file.as_deref());
@@ -90,7 +90,9 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
 
     let mut server = Server {
         connection: &connection,
-        config: &config,
+        config,
+        lsp_root_dir: root_dir,
+        init_options,
         open_documents: HashMap::new(),
         source_cache,
         watcher_rx,
@@ -111,7 +113,9 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
 
 struct Server<'a> {
     connection: &'a Connection,
-    config: &'a Config,
+    config: Config,
+    lsp_root_dir: PathBuf,
+    init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
     source_cache: HashMap<PathBuf, String>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
@@ -144,8 +148,15 @@ impl Server<'_> {
                             "server watcher: file change detected ({} files)",
                             paths.len()
                         ));
-                        self.update_source_cache_from_disk(&paths);
-                        self.publish_diagnostics()?;
+                        let has_config_change = paths.iter().any(|p| is_config_file(p));
+                        let source_paths: Vec<PathBuf> =
+                            paths.into_iter().filter(|p| !is_config_file(p)).collect();
+                        if has_config_change {
+                            self.reload_config()?;
+                        } else if !source_paths.is_empty() {
+                            self.update_source_cache_from_disk(&source_paths);
+                            self.publish_diagnostics()?;
+                        }
                     }
                 }
             }
@@ -198,8 +209,17 @@ impl Server<'_> {
                     "workspace/didChangeWatchedFiles: {} files",
                     changed_paths.len()
                 ));
-                self.update_source_cache_from_disk(&changed_paths);
-                self.publish_diagnostics()?;
+                let has_config_change = changed_paths.iter().any(|p| is_config_file(p));
+                let source_paths: Vec<PathBuf> = changed_paths
+                    .into_iter()
+                    .filter(|p| !is_config_file(p))
+                    .collect();
+                if has_config_change {
+                    self.reload_config()?;
+                } else if !source_paths.is_empty() {
+                    self.update_source_cache_from_disk(&source_paths);
+                    self.publish_diagnostics()?;
+                }
             }
             DidCloseTextDocument::METHOD => {
                 let params: lsp_types::DidCloseTextDocumentParams =
@@ -271,6 +291,21 @@ impl Server<'_> {
         }
     }
 
+    fn reload_config(&mut self) -> Result<(), Box<dyn Error>> {
+        match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
+            Ok(new_config) => {
+                self.config = new_config;
+                self.source_cache = load_all_sources(&self.config);
+                self.log("config reloaded");
+                self.publish_diagnostics()?;
+            }
+            Err(e) => {
+                self.log(&format!("config reload failed: {e}"));
+            }
+        }
+        Ok(())
+    }
+
     fn send_notification<N: lsp_types::notification::Notification>(
         &self,
         params: N::Params,
@@ -283,6 +318,13 @@ impl Server<'_> {
             )))?;
         Ok(())
     }
+}
+
+fn is_config_file(path: &Path) -> bool {
+    matches!(
+        path.file_name().and_then(|n| n.to_str()),
+        Some("cvk.json" | "cvk.jsonc")
+    )
 }
 
 fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {

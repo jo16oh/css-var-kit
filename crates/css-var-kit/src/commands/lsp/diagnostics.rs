@@ -25,7 +25,7 @@ impl Server<'_> {
             .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
-        let diagnostics = lint::check(&parse_results, self.config);
+        let diagnostics = lint::check(&parse_results, &self.config);
 
         self.log(&format!(
             "publishDiagnostics: {} files, {} diagnostics total",

@@ -8,7 +8,7 @@ use super::ConfigError;
 use crate::rules::Severity;
 use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawConfig {
     #[serde(default = "default_root_dir")]
@@ -77,7 +77,7 @@ impl RawConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct RawRules {
     #[serde(default = "default_error")]
