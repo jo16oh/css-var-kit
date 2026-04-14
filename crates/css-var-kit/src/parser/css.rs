@@ -14,6 +14,22 @@ pub struct PropertyIdent<'src> {
     pub column: u32,
 }
 
+impl<'src> PropertyIdent<'src> {
+    fn new(raw: &'src str, offset: usize, line: u32, column: u32) -> Self {
+        let unescaped: Cow<'_, str> = unescape_css_ident(raw);
+        let property_id = PropertyId::from(CowArcStr::from(unescaped.clone()));
+
+        Self {
+            raw,
+            unescaped,
+            property_id,
+            offset,
+            line,
+            column,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyValue<'a> {
     pub raw: &'a str,
@@ -394,19 +410,15 @@ fn parse_impl<'a>(
 
                     let ignore_comments = std::mem::take(&mut pending_ignores);
                     let raw_name = &css[name_start..name_end];
-                    let unescaped = unescape_css_ident(raw_name);
-                    let property_id = PropertyId::from(CowArcStr::from(unescaped.clone()));
                     properties.push(Property {
                         file_path,
                         source,
-                        name: PropertyIdent {
-                            raw: raw_name,
-                            property_id,
-                            unescaped,
-                            offset: name_start + byte_offset,
-                            line: name_line,
-                            column: name_col,
-                        },
+                        name: PropertyIdent::new(
+                            raw_name,
+                            name_start + byte_offset,
+                            name_line,
+                            name_col,
+                        ),
                         value: PropertyValue {
                             raw: raw_value,
                             offset: value_start + byte_offset,
