@@ -478,7 +478,7 @@ fn looks_like_property_start(bytes: &[u8]) -> bool {
     j < bytes.len() && bytes[j] == b':'
 }
 
-pub fn unescape_css_ident<'a>(raw: &'a str) -> Cow<'a, str> {
+fn unescape_css_ident<'a>(raw: &'a str) -> Cow<'a, str> {
     if !raw.contains('\\') {
         return Cow::Borrowed(raw);
     }
