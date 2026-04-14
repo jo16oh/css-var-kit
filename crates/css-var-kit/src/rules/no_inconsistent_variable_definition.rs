@@ -94,7 +94,7 @@ fn check_variable_definitions<'src>(
                 rule_name: RULE_NAME,
                 message: format!(
                     "inconsistent variable definition: `{}` has value `{}` which conflicts with expected type <{}>",
-                    prop.name.raw, prop.value.raw, baseline,
+                    prop.ident.raw, prop.value.raw, baseline,
                 ),
                 severity,
             }

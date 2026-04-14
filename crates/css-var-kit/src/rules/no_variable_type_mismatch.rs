@@ -41,9 +41,9 @@ fn check_type_mismatch<'src>(
     usages
         .iter()
         .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))
-        .filter(|prop| !prop.name.raw.starts_with("--"))
+        .filter(|prop| !prop.ident.raw.starts_with("--"))
         .filter_map(|prop| {
-            let result = check_property_type(&prop.name.unescaped, prop.value.raw, vars);
+            let result = check_property_type(&prop.ident.unescaped, prop.value.raw, vars);
             match result {
                 Ok(_) => None,
                 Err(TypeCheckError::VariableNotFound(_)) => None,

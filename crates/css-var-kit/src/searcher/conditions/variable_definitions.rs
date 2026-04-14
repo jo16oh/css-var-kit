@@ -25,7 +25,7 @@ impl VariableDefinitions {
 
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.name.raw.starts_with("--")
+        prop.ident.raw.starts_with("--")
             && (self.definition_files.matches(prop.file_path)
                 || self.include.matches(prop.file_path))
     }
@@ -40,7 +40,7 @@ impl<'src> PropMapFor<'src, '_, VariableDefinitions> {
                 if token_list.0.is_empty() {
                     return None;
                 }
-                Some((prop.name.raw, token_list.clone()))
+                Some((prop.ident.raw, token_list.clone()))
             })
             .collect()
     }
@@ -65,7 +65,7 @@ mod tests {
         Property {
             file_path: Path::new("test.css"),
             source: "",
-            name: PropertyIdent {
+            ident: PropertyIdent {
                 raw: name,
                 unescaped: name.into(),
                 property_id: PropertyId::from(name),

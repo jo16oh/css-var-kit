@@ -82,7 +82,7 @@ impl Server<'_> {
         let items: Vec<CompletionItem> = var_defs
             .iter()
             .filter(|(_prop_id, props)| {
-                let name = props[0].name.raw;
+                let name = props[0].ident.raw;
                 let test_value = build_test_value(&ctx, name);
                 !matches!(
                     check_property_type(&ctx.property_name, &test_value, &vars),
@@ -90,7 +90,7 @@ impl Server<'_> {
                 )
             })
             .map(|(_prop_id, props)| {
-                let name = props[0].name.raw;
+                let name = props[0].ident.raw;
                 let detail = props.last().map(|p| p.value.raw.to_owned());
                 let new_text = if ctx.inside_var {
                     name.to_owned()

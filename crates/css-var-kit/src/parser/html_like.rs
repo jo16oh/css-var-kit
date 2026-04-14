@@ -363,7 +363,7 @@ mod tests {
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
-        assert_eq!(props[0].name.line, 2);
+        assert_eq!(props[0].ident.line, 2);
     }
 
     #[test]
@@ -374,8 +374,8 @@ mod tests {
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
-        assert_eq!(props[0].name.line, 0);
-        assert_eq!(props[0].name.column, 12); // 7 + 5 = 12
+        assert_eq!(props[0].ident.line, 0);
+        assert_eq!(props[0].ident.column, 12); // 7 + 5 = 12
     }
 
     #[test]
@@ -398,7 +398,7 @@ mod tests {
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
-        assert_eq!(props[0].name.line, 2);
+        assert_eq!(props[0].ident.line, 2);
     }
 
     #[test]

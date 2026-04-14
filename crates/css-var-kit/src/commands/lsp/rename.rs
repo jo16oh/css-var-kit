@@ -113,8 +113,8 @@ impl Server<'_> {
                 let file_uri = path_to_uri(&abs_path);
                 let edit = make_text_edit(
                     prop.source,
-                    prop.name.line,
-                    prop.name.column,
+                    prop.ident.line,
+                    prop.ident.column,
                     old_name.len() as u32,
                     &new_name,
                 );

@@ -130,7 +130,7 @@ impl<'src> SearchResult<'src> {
             let mut indices = PropMapIndices::new();
             for (i, prop) in entry.props.iter().enumerate() {
                 indices
-                    .entry(prop.name.property_id.clone())
+                    .entry(prop.ident.property_id.clone())
                     .or_default()
                     .push(i);
             }
@@ -221,7 +221,7 @@ mod tests {
     struct NameEquals(&'static str);
     impl SearchCondition for NameEquals {
         fn matches(&self, prop: &CssProperty) -> bool {
-            prop.name.raw == self.0
+            prop.ident.raw == self.0
         }
     }
 
@@ -235,7 +235,7 @@ mod tests {
     struct IsVariable;
     impl SearchCondition for IsVariable {
         fn matches(&self, prop: &CssProperty) -> bool {
-            prop.name.raw.starts_with("--")
+            prop.ident.raw.starts_with("--")
         }
     }
 
@@ -251,9 +251,9 @@ mod tests {
         let result = search_result.get_result_for(All);
 
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0].name.raw, "color");
-        assert_eq!(result[1].name.raw, "font-size");
-        assert_eq!(result[2].name.raw, "margin");
+        assert_eq!(result[0].ident.raw, "color");
+        assert_eq!(result[1].ident.raw, "font-size");
+        assert_eq!(result[2].ident.raw, "margin");
     }
 
     #[test]
@@ -298,8 +298,8 @@ mod tests {
         let result = search_result.get_result_for(ValueEquals("red"));
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].name.raw, "color");
-        assert_eq!(result[1].name.raw, "background");
+        assert_eq!(result[0].ident.raw, "color");
+        assert_eq!(result[1].ident.raw, "background");
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
 
         let by_value = search_result.get_result_for(ValueEquals("16px"));
         assert_eq!(by_value.len(), 1);
-        assert_eq!(by_value[0].name.raw, "font-size");
+        assert_eq!(by_value[0].ident.raw, "font-size");
     }
 
     #[test]
@@ -360,9 +360,9 @@ mod tests {
         let result = search_result.get_result_for(IsVariable);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].name.raw, "--primary");
+        assert_eq!(result[0].ident.raw, "--primary");
         assert_eq!(result[0].value.raw, "#ff0000");
-        assert_eq!(result[1].name.raw, "--secondary");
+        assert_eq!(result[1].ident.raw, "--secondary");
         assert_eq!(result[1].value.raw, "#00ff00");
     }
 

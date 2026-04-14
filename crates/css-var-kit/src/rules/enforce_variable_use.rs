@@ -46,7 +46,7 @@ impl Rule for EnforceVariableUse {
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
             .flat_map(|p| {
-                let allowed_kinds = self.allowed_property_kinds(&p.name.unescaped);
+                let allowed_kinds = self.allowed_property_kinds(&p.ident.unescaped);
                 let enforced_types = self.types & !allowed_kinds;
                 if enforced_types.is_empty() {
                     return vec![];

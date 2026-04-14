@@ -5,6 +5,6 @@ pub struct NonCustomProperties;
 
 impl SearchCondition for NonCustomProperties {
     fn matches(&self, prop: &CssProperty) -> bool {
-        !prop.name.raw.starts_with("--")
+        !prop.ident.raw.starts_with("--")
     }
 }

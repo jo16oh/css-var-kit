@@ -64,19 +64,19 @@ impl Server<'_> {
             .map(|prop| {
                 let abs_path = self.config.root_dir.join(prop.file_path);
                 let start = Position {
-                    line: prop.name.line,
+                    line: prop.ident.line,
                     character: byte_col_to_utf16_in_source(
                         prop.source,
-                        prop.name.line,
-                        prop.name.column,
+                        prop.ident.line,
+                        prop.ident.column,
                     ),
                 };
                 let end = Position {
-                    line: prop.name.line,
+                    line: prop.ident.line,
                     character: byte_col_to_utf16_in_source(
                         prop.source,
-                        prop.name.line,
-                        prop.name.column + prop.name.raw.len() as u32,
+                        prop.ident.line,
+                        prop.ident.column + prop.ident.raw.len() as u32,
                     ),
                 };
                 Location {
