@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
@@ -24,6 +25,7 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
+use crate::owned::OwnedStr;
 use logger::Logger;
 use uri::uri_to_path;
 
@@ -117,7 +119,7 @@ struct Server<'a> {
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
-    source_cache: HashMap<PathBuf, String>,
+    source_cache: HashMap<Rc<PathBuf>, OwnedStr>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -327,11 +329,11 @@ fn is_config_file(path: &Path) -> bool {
     )
 }
 
-fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
+fn load_all_sources(config: &Config) -> HashMap<Rc<PathBuf>, OwnedStr> {
     let lint_sources = lint::collect_source_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
@@ -339,18 +341,18 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
             if config.include.is_negated(&rel_path) {
                 return None;
             }
-            Some((rel_path, content))
+            Some((Rc::new(rel_path), content))
         });
 
     let include_sources = lint::collect_include_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
                 .to_path_buf();
-            Some((rel_path, content))
+            Some((Rc::new(rel_path), content))
         });
 
     lint_sources.chain(include_sources).collect()
