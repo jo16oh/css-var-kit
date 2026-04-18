@@ -23,12 +23,14 @@ fn has_dashed_ident(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn matches_value(value: &str) -> bool {
         let css = format!(".a {{ color: {}; }}", value);
-        let result = parser::css::parse(&css, Path::new("test.css"));
+        let result = parser::css::parse(OwnedStr::from(css), Rc::new(PathBuf::from("test.css")));
         let cond = VariableUsages;
         cond.matches(&result.properties[0])
     }
