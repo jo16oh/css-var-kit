@@ -25,8 +25,8 @@ impl VariableDefinitions {
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
         prop.ident.raw.starts_with("--")
-            && (self.definition_files.matches(&**prop.file_path)
-                || self.include.matches(&**prop.file_path))
+            && (self.definition_files.matches(prop.file_path.as_ref())
+                || self.include.matches(prop.file_path.as_ref()))
     }
 }
 

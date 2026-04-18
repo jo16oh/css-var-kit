@@ -57,7 +57,7 @@ pub fn run(config: &Config) {
     let diagnostics = check(parse_results, config);
     let diagnostics: Vec<_> = diagnostics
         .into_iter()
-        .filter(|d| !config.include.matches(&**d.file_path))
+        .filter(|d| !config.include.matches(d.file_path.as_ref()))
         .collect();
 
     if diagnostics.is_empty() {
@@ -129,7 +129,7 @@ fn collect_include_recursive(
             collect_include_recursive(root, &path, include, files);
         } else if is_supported_extension(&path) {
             if let Ok(rel) = path.strip_prefix(root) {
-                if include.matches(rel) {
+                if include.matches(&rel) {
                     files.push(path);
                 }
             }
