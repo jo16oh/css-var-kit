@@ -33,6 +33,14 @@ impl From<String> for OwnedStr {
     }
 }
 
+impl PartialEq for OwnedStr {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+
+impl Eq for OwnedStr {}
+
 impl Deref for OwnedStr {
     type Target = str;
     fn deref(&self) -> &Self::Target {
