@@ -51,7 +51,7 @@ pub fn run(config: &Config) {
 
     let parse_results: Vec<_> = sources
         .into_iter()
-        .flat_map(|(path, content)| parse_file(content, path.as_path()))
+        .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
     let diagnostics = check(parse_results, config);
@@ -168,12 +168,12 @@ fn collect_source_files_recursive(
     }
 }
 
-pub fn parse_file(source: OwnedStr, path: &Path) -> Vec<ParseResult> {
+pub fn parse_file(source: &OwnedStr, path: &Path) -> Vec<ParseResult> {
     let file_path = Rc::new(path.to_path_buf());
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
-            parser::html_like::parse_html_like(source, file_path)
+            parser::html_like::parse_html_like(source, &file_path)
         }
-        _ => vec![parser::css::parse(source, file_path)],
+        _ => vec![parser::css::parse(source, &file_path)],
     }
 }

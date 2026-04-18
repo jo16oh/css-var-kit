@@ -1,7 +1,5 @@
 use std::{cell::OnceCell, path::PathBuf, rc::Rc};
 
-use lightningcss::properties::custom::TokenList;
-
 use crate::owned::{OwnedPropId, OwnedStr, OwnedTokenList};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -51,9 +49,8 @@ pub struct Property {
 
 impl Property {
     pub fn token_list(&self) -> &OwnedTokenList {
-        self.token_list.get_or_init(|| {
-            OwnedTokenList::parse(&self.value.raw).unwrap_or(OwnedTokenList::default())
-        })
+        self.token_list
+            .get_or_init(|| OwnedTokenList::parse(&self.value.raw).unwrap_or_default())
     }
 }
 
@@ -300,8 +297,8 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn parse(css: OwnedStr, file_path: Rc<PathBuf>) -> ParseResult {
-    parse_impl(css.clone(), css, file_path, 0, 0, 0, 0)
+pub fn parse(css: &OwnedStr, file_path: &Rc<PathBuf>) -> ParseResult {
+    parse_impl(css, css, file_path, 0, 0, 0, 0)
 }
 
 /// Used when parsing `<style>` blocks from HTML-like files.
@@ -309,9 +306,9 @@ pub fn parse(css: OwnedStr, file_path: Rc<PathBuf>) -> ParseResult {
 /// `line_offset`/`column_offset` are the absolute start position of the CSS content.
 /// `byte_offset` is added to `Property.name.offset` and `Property.value.offset`.
 pub fn parse_with_offset(
-    css: OwnedStr,
-    file_path: Rc<PathBuf>,
-    full_source: OwnedStr,
+    css: &OwnedStr,
+    file_path: &Rc<PathBuf>,
+    full_source: &OwnedStr,
     line_offset: u32,
     column_offset: u32,
     byte_offset: usize,
@@ -328,15 +325,15 @@ pub fn parse_with_offset(
 }
 
 fn parse_impl(
-    css: OwnedStr,
-    source: OwnedStr,
-    file_path: Rc<PathBuf>,
+    css: &OwnedStr,
+    source: &OwnedStr,
+    file_path: &Rc<PathBuf>,
     initial_brace_depth: i32,
     line_offset: u32,
     column_offset: u32,
     byte_offset: usize,
 ) -> ParseResult {
-    let mut s = Scanner::new_with_offset(&css, line_offset, column_offset);
+    let mut s = Scanner::new_with_offset(css, line_offset, column_offset);
     let mut properties = Vec::new();
     let mut pending_ignores: Vec<OwnedStr> = Vec::new();
     let mut last_comment_end_line: u32 = 0;
@@ -356,7 +353,7 @@ fn parse_impl(
                 if !pending_ignores.is_empty() && comment_start_line > last_comment_end_line + 1 {
                     pending_ignores.clear();
                 }
-                let content = s.scan_comment(&css);
+                let content = s.scan_comment(css);
                 last_comment_end_line = s.line;
                 if content.starts_with("cvk-ignore") {
                     pending_ignores.push(content);
@@ -448,7 +445,7 @@ fn parse_impl(
     }
 
     ParseResult {
-        file_path,
+        file_path: file_path.clone(),
         properties,
     }
 }
@@ -555,7 +552,7 @@ mod tests {
     const TEST_PATH: &str = "test.css";
 
     fn test_parse(css: &str) -> ParseResult {
-        parse(OwnedStr::from(css), Rc::new(PathBuf::from(TEST_PATH)))
+        parse(&OwnedStr::from(css), &Rc::new(PathBuf::from(TEST_PATH)))
     }
 
     fn map_owned_str(vec: Vec<&str>) -> Vec<OwnedStr> {
@@ -1166,12 +1163,12 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(&*result.properties[1].ident.raw.as_ref() as &str, "color");
+        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
     }
 
     #[test]
     fn unescape_css_ident_no_escape() {
-        assert!(matches!(unescape_css_ident("color"), None));
+        assert!(unescape_css_ident("color").is_none());
     }
 
     #[test]

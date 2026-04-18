@@ -175,8 +175,10 @@ impl Server<'_> {
                     params.text_document.uri.as_str()
                 ));
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    self.source_cache
-                        .insert(rel_path, params.text_document.text.clone());
+                    self.source_cache.insert(
+                        Rc::new(rel_path),
+                        OwnedStr::from(&params.text_document.text),
+                    );
                 }
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
@@ -192,7 +194,8 @@ impl Server<'_> {
                 ));
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                        self.source_cache.insert(rel_path, change.text.clone());
+                        self.source_cache
+                            .insert(Rc::new(rel_path), OwnedStr::from(&change.text));
                     }
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
@@ -234,7 +237,7 @@ impl Server<'_> {
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
-                            self.source_cache.insert(rel_path, content);
+                            self.source_cache.insert(Rc::new(rel_path), content.into());
                         }
                         Err(_) => {
                             self.source_cache.remove(&rel_path);
@@ -269,7 +272,7 @@ impl Server<'_> {
 
             match fs::read_to_string(abs_path) {
                 Ok(content) => {
-                    self.source_cache.insert(rel_path, content);
+                    self.source_cache.insert(Rc::new(rel_path), content.into());
                 }
                 Err(_) => {
                     self.source_cache.remove(&rel_path);

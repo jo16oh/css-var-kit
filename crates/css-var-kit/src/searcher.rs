@@ -170,8 +170,8 @@ mod tests {
 
     fn test_parse(css: &str) -> crate::parser::css::ParseResult {
         parser::css::parse(
-            OwnedStr::from(css),
-            Rc::new(PathBuf::from("test.css".to_string())),
+            &OwnedStr::from(css),
+            &Rc::new(PathBuf::from("test.css".to_string())),
         )
     }
 

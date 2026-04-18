@@ -46,7 +46,7 @@ impl Rule for EnforceVariableUse {
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
             .flat_map(|p| {
-                let allowed_kinds = self.allowed_property_kinds(&p.ident.property_id.as_str());
+                let allowed_kinds = self.allowed_property_kinds(p.ident.property_id.as_str());
                 let enforced_types = self.types & !allowed_kinds;
                 if enforced_types.is_empty() {
                     return vec![];
@@ -303,8 +303,8 @@ mod tests {
     ) {
         let rule = EnforceVariableUse::from_config(config);
         let parse_results = vec![parser::css::parse(
-            OwnedStr::from(css),
-            Rc::new(PathBuf::from("test.css")),
+            &OwnedStr::from(css),
+            &Rc::new(PathBuf::from("test.css")),
         )];
         let searcher = rule
             .register_conditions(SearcherBuilder::new(parse_results))

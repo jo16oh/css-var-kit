@@ -115,8 +115,8 @@ mod tests {
 
     fn assert_messages(css: &str, expected: &[&str]) {
         let parse_results = vec![parser::css::parse(
-            OwnedStr::from(css),
-            Rc::new(PathBuf::from("test.css")),
+            &OwnedStr::from(css),
+            &Rc::new(PathBuf::from("test.css")),
         )];
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,

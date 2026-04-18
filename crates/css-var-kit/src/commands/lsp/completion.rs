@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::path::Path;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::request::{Completion, GotoDefinition, PrepareRenameRequest, Rename};
@@ -49,18 +48,13 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
-        let sources: Vec<(&Path, &str)> = self
+        let parse_results: Vec<_> = self
             .source_cache
             .iter()
-            .map(|(path, content)| (path.as_path(), content.as_str()))
+            .flat_map(|(path, content)| lint::parse_file(content, path.as_path()))
             .collect();
 
-        let parse_results: Vec<_> = sources
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(&parse_results)
+        let search_result = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::new(
                 self.config.definition_files.clone(),
                 self.config.include.clone(),
@@ -82,7 +76,7 @@ impl Server<'_> {
         let items: Vec<CompletionItem> = var_defs
             .iter()
             .filter(|(_prop_id, props)| {
-                let name = props[0].ident.raw;
+                let name = &*props[0].ident.raw;
                 let test_value = build_test_value(&ctx, name);
                 !matches!(
                     check_property_type(&ctx.property_name, &test_value, &vars),
@@ -90,8 +84,8 @@ impl Server<'_> {
                 )
             })
             .map(|(_prop_id, props)| {
-                let name = props[0].ident.raw;
-                let detail = props.last().map(|p| p.value.raw.to_owned());
+                let name = &*props[0].ident.raw;
+                let detail = props.last().map(|p| p.value.raw.to_string());
                 let new_text = if ctx.inside_var {
                     name.to_owned()
                 } else {

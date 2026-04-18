@@ -249,14 +249,14 @@ fn is_ident_char(b: u8) -> bool {
 /// Extracts all `<style>` blocks and passes each to the CSS parser.
 /// `Property.source` is set to the full file source, and `line`/`column`
 /// are absolute positions within the file.
-pub fn parse_html_like(source: OwnedStr, file_path: Rc<PathBuf>) -> Vec<ParseResult> {
+pub fn parse_html_like(source: &OwnedStr, file_path: &Rc<PathBuf>) -> Vec<ParseResult> {
     extract_style_blocks(source.clone())
         .into_iter()
         .map(move |block| {
             css::parse_with_offset(
-                block.content,
-                file_path.clone(),
-                source.clone(),
+                &block.content,
+                file_path,
+                source,
                 block.line_offset,
                 block.column_offset,
                 block.byte_offset,
@@ -361,7 +361,7 @@ mod tests {
         // line 3: </style>
         let source =
             OwnedStr::from("<template></template>\n<style>\n.a { --color: red; }\n</style>");
-        let results = parse_html_like(source, path());
+        let results = parse_html_like(&source, &path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
@@ -372,7 +372,7 @@ mod tests {
     fn property_column_is_absolute_single_line() {
         // `--color` starts at column 12: `<style>` (7) + `.a { ` (5) = 12
         let source = OwnedStr::from("<style>.a { --color: red; }</style>");
-        let results = parse_html_like(source, path());
+        let results = parse_html_like(&source, &path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);
@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn source_is_full_html_file() {
         let source = OwnedStr::from("<style>.a { --x: 1px; }</style>");
-        let results = parse_html_like(source.clone(), path());
+        let results = parse_html_like(&source, &path());
         assert_eq!(results[0].properties[0].source, source);
     }
 
@@ -397,7 +397,7 @@ mod tests {
         // line 3: </style>
         let source =
             OwnedStr::from("<template></template>\r\n<style>\r\n.a { --color: red; }\r\n</style>");
-        let results = parse_html_like(source, path());
+        let results = parse_html_like(&source, &path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
         assert_eq!(props.len(), 1);

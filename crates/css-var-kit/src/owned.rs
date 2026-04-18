@@ -55,6 +55,12 @@ impl From<String> for OwnedStr {
     }
 }
 
+impl From<&String> for OwnedStr {
+    fn from(s: &String) -> Self {
+        Self::from(Rc::<str>::from(s.as_str()))
+    }
+}
+
 impl PartialEq for OwnedStr {
     fn eq(&self, other: &Self) -> bool {
         **self == **other
@@ -126,7 +132,7 @@ impl From<String> for OwnedPropId {
 }
 
 impl OwnedPropId {
-    pub fn inner(&self) -> &PropertyId {
+    pub fn inner(&'_ self) -> &'_ PropertyId<'_> {
         &self.yoke.get().0
     }
 
@@ -168,13 +174,13 @@ impl OwnedTokenList {
         let cart = str.backing_rc().clone();
         Yoke::try_attach_to_cart(cart, |s| {
             TokenList::parse_string_with_options(s, ParserOptions::default())
-                .map(|t| YokeableTokenList(t))
+                .map(YokeableTokenList)
                 .map_err(|e| TokenListParseError(e.to_string()))
         })
         .map(Self)
     }
 
-    pub fn inner(&self) -> &TokenList {
+    pub fn inner(&'_ self) -> &'_ TokenList<'_> {
         &self.0.get().0
     }
 }

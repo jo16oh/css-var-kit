@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::path::Path;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position, Range};
@@ -7,6 +6,7 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 use super::Server;
 use super::uri::path_to_uri;
 use crate::commands::lint;
+use crate::owned::OwnedPropId;
 use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -35,18 +35,13 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
-        let sources: Vec<(&Path, &str)> = self
+        let parse_results: Vec<_> = self
             .source_cache
             .iter()
-            .map(|(path, content)| (path.as_path(), content.as_str()))
+            .flat_map(|(path, content)| lint::parse_file(content, path.as_path()))
             .collect();
 
-        let parse_results: Vec<_> = sources
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(&parse_results)
+        let search_result = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::new(
                 self.config.definition_files.clone(),
                 self.config.include.clone(),
@@ -55,18 +50,18 @@ impl Server<'_> {
             .search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
-        let prop_id = lightningcss::properties::PropertyId::from(var_name.as_str());
+        let prop_id = OwnedPropId::from(var_name.clone());
 
         let props = var_defs.get(&prop_id)?;
 
         let locations: Vec<Location> = props
             .iter()
             .map(|prop| {
-                let abs_path = self.config.root_dir.join(prop.file_path);
+                let abs_path = self.config.root_dir.join(&**prop.file_path);
                 let start = Position {
                     line: prop.ident.line,
                     character: byte_col_to_utf16_in_source(
-                        prop.source,
+                        &prop.source,
                         prop.ident.line,
                         prop.ident.column,
                     ),
@@ -74,7 +69,7 @@ impl Server<'_> {
                 let end = Position {
                     line: prop.ident.line,
                     character: byte_col_to_utf16_in_source(
-                        prop.source,
+                        &prop.source,
                         prop.ident.line,
                         prop.ident.column + prop.ident.raw.len() as u32,
                     ),

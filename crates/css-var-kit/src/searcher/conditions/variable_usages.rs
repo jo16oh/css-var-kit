@@ -5,7 +5,7 @@ pub struct VariableUsages;
 
 impl SearchCondition for VariableUsages {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw)
+        prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw.as_ref())
     }
 }
 
@@ -30,7 +30,7 @@ mod tests {
 
     fn matches_value(value: &str) -> bool {
         let css = format!(".a {{ color: {}; }}", value);
-        let result = parser::css::parse(OwnedStr::from(css), Rc::new(PathBuf::from("test.css")));
+        let result = parser::css::parse(&OwnedStr::from(css), &Rc::new(PathBuf::from("test.css")));
         let cond = VariableUsages;
         cond.matches(&result.properties[0])
     }

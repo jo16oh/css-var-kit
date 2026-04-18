@@ -58,7 +58,7 @@ mod tests {
     use crate::searcher::SearcherBuilder;
 
     fn test_parse(css: &str) -> ParseResult {
-        parser::css::parse(OwnedStr::from(css), Rc::new(PathBuf::from("test.css")))
+        parser::css::parse(&OwnedStr::from(css), &Rc::new(PathBuf::from("test.css")))
     }
 
     #[test]
