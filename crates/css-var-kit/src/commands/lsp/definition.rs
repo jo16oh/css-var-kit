@@ -5,7 +5,6 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 
 use super::Server;
 use super::uri::path_to_uri;
-use crate::commands::lint;
 use crate::owned::OwnedPropId;
 use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
@@ -35,13 +34,7 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
-        let parse_results: Vec<_> = self
-            .source_cache
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(parse_results)
+        let search_result = SearcherBuilder::new(self.parse_results())
             .add_condition(VariableDefinitions::new(
                 self.config.definition_files.clone(),
                 self.config.include.clone(),

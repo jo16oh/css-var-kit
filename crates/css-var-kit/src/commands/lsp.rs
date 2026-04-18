@@ -26,6 +26,7 @@ use lsp_types::{
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
 use crate::owned::OwnedStr;
+use crate::parser::css::ParseResult;
 use logger::Logger;
 use uri::uri_to_path;
 
@@ -89,6 +90,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     };
 
     let source_cache = load_all_sources(&config);
+    let parse_cache = build_parse_cache(&source_cache);
 
     let mut server = Server {
         connection: &connection,
@@ -97,6 +99,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         init_options,
         open_documents: HashMap::new(),
         source_cache,
+        parse_cache,
         watcher_rx,
         logger: logger.as_ref(),
     };
@@ -120,6 +123,7 @@ struct Server<'a> {
     init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
+    parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -175,10 +179,10 @@ impl Server<'_> {
                     params.text_document.uri.as_str()
                 ));
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    self.source_cache.insert(
-                        Rc::from(rel_path),
-                        OwnedStr::from(&params.text_document.text),
-                    );
+                    let key = Rc::<Path>::from(rel_path);
+                    let source = OwnedStr::from(&params.text_document.text);
+                    self.update_parse_cache(&key, &source);
+                    self.source_cache.insert(key, source);
                 }
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
@@ -194,8 +198,10 @@ impl Server<'_> {
                 ));
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                        self.source_cache
-                            .insert(Rc::from(rel_path), OwnedStr::from(&change.text));
+                        let key = Rc::<Path>::from(rel_path);
+                        let source = OwnedStr::from(&change.text);
+                        self.update_parse_cache(&key, &source);
+                        self.source_cache.insert(key, source);
                     }
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
@@ -237,9 +243,13 @@ impl Server<'_> {
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
-                            self.source_cache.insert(Rc::from(rel_path), content.into());
+                            let key = Rc::<Path>::from(rel_path);
+                            let source = OwnedStr::from(content);
+                            self.update_parse_cache(&key, &source);
+                            self.source_cache.insert(key, source);
                         }
                         Err(_) => {
+                            self.parse_cache.remove(rel_path.as_path());
                             self.source_cache.remove(rel_path.as_path());
                         }
                     }
@@ -272,13 +282,26 @@ impl Server<'_> {
 
             match fs::read_to_string(abs_path) {
                 Ok(content) => {
-                    self.source_cache.insert(Rc::from(rel_path), content.into());
+                    let key = Rc::<Path>::from(rel_path);
+                    let source = OwnedStr::from(content);
+                    self.update_parse_cache(&key, &source);
+                    self.source_cache.insert(key, source);
                 }
                 Err(_) => {
+                    self.parse_cache.remove(rel_path.as_path());
                     self.source_cache.remove(rel_path.as_path());
                 }
             }
         }
+    }
+
+    fn update_parse_cache(&mut self, path: &Rc<Path>, source: &OwnedStr) {
+        self.parse_cache
+            .insert(path.clone(), lint::parse_file(source, path));
+    }
+
+    fn parse_results(&self) -> Vec<ParseResult> {
+        self.parse_cache.values().flatten().cloned().collect()
     }
 
     fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {
@@ -301,6 +324,7 @@ impl Server<'_> {
             Ok(new_config) => {
                 self.config = new_config;
                 self.source_cache = load_all_sources(&self.config);
+                self.parse_cache = build_parse_cache(&self.source_cache);
                 self.log("config reloaded");
                 self.publish_diagnostics()?;
             }
@@ -330,6 +354,15 @@ fn is_config_file(path: &Path) -> bool {
         path.file_name().and_then(|n| n.to_str()),
         Some("cvk.json" | "cvk.jsonc")
     )
+}
+
+fn build_parse_cache(
+    source_cache: &HashMap<Rc<Path>, OwnedStr>,
+) -> HashMap<Rc<Path>, Vec<ParseResult>> {
+    source_cache
+        .iter()
+        .map(|(path, content)| (path.clone(), lint::parse_file(content, path)))
+        .collect()
 }
 
 fn load_all_sources(config: &Config) -> HashMap<Rc<Path>, OwnedStr> {

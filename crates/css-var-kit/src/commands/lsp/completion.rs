@@ -8,7 +8,6 @@ use lsp_types::{
 };
 
 use super::Server;
-use crate::commands::lint;
 use crate::position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -48,13 +47,7 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
-        let parse_results: Vec<_> = self
-            .source_cache
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(parse_results)
+        let search_result = SearcherBuilder::new(self.parse_results())
             .add_condition(VariableDefinitions::new(
                 self.config.definition_files.clone(),
                 self.config.include.clone(),

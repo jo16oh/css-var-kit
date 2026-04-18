@@ -9,7 +9,6 @@ use lsp_types::{
 use super::Server;
 use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cursor};
 use super::uri::path_to_uri;
-use crate::commands::lint;
 use crate::owned::OwnedPropId;
 use crate::parser::css::Property;
 use crate::position::offset_to_position;
@@ -82,13 +81,7 @@ impl Server<'_> {
             format!("--{new_name}")
         };
 
-        let parse_results: Vec<_> = self
-            .source_cache
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(parse_results)
+        let search_result = SearcherBuilder::new(self.parse_results())
             .add_condition(VariableDefinitions::new(
                 self.config.definition_files.clone(),
                 self.config.include.clone(),

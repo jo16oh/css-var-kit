@@ -9,29 +9,24 @@ use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnostics
 use super::Server;
 use crate::commands::lint;
 use crate::commands::lsp::uri::path_to_uri;
-use crate::owned::OwnedStr;
 use crate::position::byte_col_to_utf16_in_source;
 use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {
     pub fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        let sources: Vec<(Rc<Path>, OwnedStr)> = self
+        let source_paths: Vec<Rc<Path>> = self
             .source_cache
-            .iter()
-            .filter(|(path, _)| !self.config.include.is_negated(path))
-            .map(|(path, content)| (path.clone(), content.clone()))
+            .keys()
+            .filter(|path| !self.config.include.is_negated(path))
+            .cloned()
             .collect();
 
-        let parse_results: Vec<_> = sources
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
+        let parse_results = self.parse_results();
         let diagnostics = lint::check(parse_results, &self.config);
 
         self.log(&format!(
             "publishDiagnostics: {} files, {} diagnostics total",
-            sources.len(),
+            source_paths.len(),
             diagnostics.len()
         ));
 
@@ -43,7 +38,7 @@ impl Server<'_> {
                 .push(to_lsp_diagnostic(d));
         }
 
-        for (path, _) in &sources {
+        for path in &source_paths {
             let lsp_diagnostics = by_file.remove(path).unwrap_or_default();
             let abs_path = self.config.root_dir.join(path.as_ref());
             let uri = path_to_uri(&abs_path);
