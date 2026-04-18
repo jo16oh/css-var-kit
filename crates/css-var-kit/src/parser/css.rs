@@ -1077,35 +1077,38 @@ mod tests {
 
     // CSS escape sequence tests
 
-    // #[test]
-    // fn hex_escape_in_property_name() {
-    //     // col\6fr → color (0x6f = 'o')
-    //     let css = ".a { col\\6fr: red; }";
-    //     let result = test_parse(css);
-    //     assert_eq!(result.properties.len(), 1);
-    //     assert_eq!(result.properties[0].ident.raw, "col\\6fr");
-    //     assert_eq!(&*result.properties[0].ident.unescaped, "color");
-    // }
+    #[test]
+    fn hex_escape_in_property_name() {
+        // col\6fr → color (0x6f = 'o')
+        let css = ".a { col\\6fr: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "col\\6fr");
+        assert_eq!(result.properties[0].ident.property_id.as_str(), "color");
+    }
 
-    // #[test]
-    // fn hex_escape_with_trailing_space() {
-    //     // col\\6f r → color (trailing space consumed by escape)
-    //     let css = ".a { col\\6f r: red; }";
-    //     let result = test_parse(css);
-    //     assert_eq!(result.properties.len(), 1);
-    //     assert_eq!(&*result.properties[0].ident.unescaped, "color");
-    // }
+    #[test]
+    fn hex_escape_with_trailing_space() {
+        // col\\6f r → color (trailing space consumed by escape)
+        let css = ".a { col\\6f r: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.property_id.as_str(), "color");
+    }
 
-    // #[test]
-    // fn literal_escape_in_property_name() {
-    //     // \.a is a selector escape, test in property context:
-    //     // --my\-var → --my-var
-    //     let css = ".a { --my\\-var: red; }";
-    //     let result = test_parse(css);
-    //     assert_eq!(result.properties.len(), 1);
-    //     assert_eq!(result.properties[0].ident.raw, "--my\\-var");
-    //     assert_eq!(&*result.properties[0].ident.unescaped, "--my-var");
-    // }
+    #[test]
+    fn literal_escape_in_property_name() {
+        // \.a is a selector escape, test in property context:
+        // --my\-var → --my-var
+        let css = ".a { --my\\-var: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ident.raw.as_ref() as &str,
+            "--my\\-var"
+        );
+        assert_eq!(result.properties[0].ident.property_id.as_str(), "--my-var");
+    }
 
     #[test]
     fn escaped_property_matches_property_id() {
@@ -1118,35 +1121,15 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn escaped_custom_property_matches_property_id() {
-    //     let css = ".a { --my\\-color: red; }";
-    //     let result = test_parse(css);
-    //     assert_eq!(
-    //         result.properties[0].ident.property_id,
-    //         PropertyId::from("--my-color")
-    //     );
-    // }
-
-    // #[test]
-    // fn no_escape_leaves_unescaped_borrowed() {
-    //     let css = ".a { color: red; }";
-    //     let result = test_parse(css);
-    //     assert!(matches!(
-    //         result.properties[0].ident.unescaped,
-    //         Cow::Borrowed(_)
-    //     ));
-    // }
-
-    // #[test]
-    // fn escape_produces_owned_unescaped() {
-    //     let css = ".a { col\\6fr: red; }";
-    //     let result = test_parse(css);
-    //     assert!(matches!(
-    //         result.properties[0].ident.unescaped,
-    //         Cow::Owned(_)
-    //     ));
-    // }
+    #[test]
+    fn escaped_custom_property_matches_property_id() {
+        let css = ".a { --my\\-color: red; }";
+        let result = test_parse(css);
+        assert_eq!(
+            result.properties[0].ident.property_id.inner(),
+            &PropertyId::from("--my-color")
+        );
+    }
 
     #[test]
     fn non_ascii_identifier() {
