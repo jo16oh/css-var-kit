@@ -1,8 +1,6 @@
 use std::{cell::OnceCell, path::PathBuf, rc::Rc};
 
-use lightningcss::{
-    properties::custom::TokenList, stylesheet::ParserOptions, traits::ParseWithOptions,
-};
+use lightningcss::properties::custom::TokenList;
 
 use crate::owned::{OwnedPropId, OwnedStr, OwnedTokenList};
 
@@ -438,6 +436,7 @@ fn parse_impl(
                             column: value_col,
                         },
                         ignore_comments,
+                        token_list: OnceCell::new(),
                     });
                 }
                 // If no ':', it's not a property (e.g. a selector), just continue
