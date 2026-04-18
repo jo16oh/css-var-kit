@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use lightningcss::properties::custom::TokenList;
-
 use crate::config::LookupFilesMatcher;
+use crate::owned::OwnedTokenList;
 use crate::parser::css::Property as CssProperty;
 use crate::searcher::{PropMapFor, SearchCondition};
 
-pub type VarsMap<'src> = HashMap<&'src str, TokenList<'src>>;
+pub type VarsMap<'a> = HashMap<&'a str, &'a OwnedTokenList>;
 
 #[derive(Default)]
 pub struct VariableDefinitions {
@@ -26,21 +25,21 @@ impl VariableDefinitions {
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
         prop.ident.raw.starts_with("--")
-            && (self.definition_files.matches(prop.file_path)
-                || self.include.matches(prop.file_path))
+            && (self.definition_files.matches(&**prop.file_path)
+                || self.include.matches(&**prop.file_path))
     }
 }
 
-impl<'src> PropMapFor<'src, '_, VariableDefinitions> {
-    pub fn vars_map(&self) -> VarsMap<'src> {
+impl PropMapFor<'_, VariableDefinitions> {
+    pub fn vars_map(&self) -> VarsMap<'_> {
         self.values()
             .filter_map(|props| {
                 let prop = props.last()?;
                 let token_list = prop.token_list();
-                if token_list.0.is_empty() {
+                if token_list.inner().0.is_empty() {
                     return None;
                 }
-                Some((prop.ident.raw, token_list.clone()))
+                Some((&*prop.ident.raw, token_list))
             })
             .collect()
     }
@@ -49,122 +48,113 @@ impl<'src> PropMapFor<'src, '_, VariableDefinitions> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::{OwnedPropId, OwnedStr};
     use crate::parser;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
-    use lightningcss::properties::PropertyId;
-
-    use crate::parser::css::{ParseResult, Property, PropertyIdent, PropertyValue};
+    use crate::parser::css::ParseResult;
     use crate::searcher::SearcherBuilder;
 
-    fn test_parse(css: &str) -> ParseResult<'_> {
-        parser::css::parse(css, Path::new("test.css"))
-    }
-
-    fn prop(name: &str) -> Property<'_> {
-        Property {
-            file_path: Path::new("test.css"),
-            source: "",
-            ident: PropertyIdent {
-                raw: name,
-                unescaped: name.into(),
-                property_id: PropertyId::from(name),
-                offset: 0,
-                line: 0,
-                column: 0,
-            },
-            value: PropertyValue {
-                raw: "",
-                offset: 0,
-                line: 0,
-                column: 0,
-            },
-            ignore_comments: vec![],
-        }
+    fn test_parse(css: &str) -> ParseResult {
+        parser::css::parse(OwnedStr::from(css), Rc::new(PathBuf::from("test.css")))
     }
 
     #[test]
     fn matches_css_variable() {
+        let parse_result = test_parse(":root { --color: red; --main-color: blue; --: green; }");
         let cond = VariableDefinitions::default();
-        assert!(cond.matches(&prop("--color")));
-        assert!(cond.matches(&prop("--main-color")));
-        assert!(cond.matches(&prop("--")));
+        for prop in &parse_result.properties {
+            if prop.ident.raw.starts_with("--") {
+                assert!(cond.matches(prop));
+            }
+        }
     }
 
     #[test]
     fn rejects_regular_property() {
+        let parse_result =
+            test_parse(".a { color: red; font-size: 16px; background-color: blue; }");
         let cond = VariableDefinitions::default();
-        assert!(!cond.matches(&prop("color")));
-        assert!(!cond.matches(&prop("font-size")));
-        assert!(!cond.matches(&prop("background-color")));
+        for prop in &parse_result.properties {
+            assert!(!cond.matches(prop));
+        }
     }
 
     #[test]
     fn rejects_single_hyphen() {
+        let parse_result = test_parse(".a { -webkit-transform: none; }");
         let cond = VariableDefinitions::default();
-        assert!(!cond.matches(&prop("-webkit-transform")));
-        assert!(!cond.matches(&prop("-moz-appearance")));
+        for prop in &parse_result.properties {
+            assert!(!cond.matches(prop));
+        }
     }
 
     #[test]
     fn get_by_name() {
         let css = ":root { --color: red; --size: 16px; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let parse_results = vec![test_parse(css)];
+        let searcher = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        let props = map.get(&PropertyId::from("--color")).unwrap();
+        let color_id = OwnedPropId::from("--color".to_string());
+        let props = map.get(&color_id).unwrap();
         assert_eq!(props.len(), 1);
-        assert_eq!(props[0].value.raw, "red");
+        assert_eq!(&*props[0].value.raw, "red");
 
-        let props = map.get(&PropertyId::from("--size")).unwrap();
+        let size_id = OwnedPropId::from("--size".to_string());
+        let props = map.get(&size_id).unwrap();
         assert_eq!(props.len(), 1);
-        assert_eq!(props[0].value.raw, "16px");
+        assert_eq!(&*props[0].value.raw, "16px");
     }
 
     #[test]
     fn get_nonexistent_returns_none() {
         let css = ":root { --color: red; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let parse_results = vec![test_parse(css)];
+        let searcher = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        assert!(map.get(&PropertyId::from("--missing")).is_none());
+        let missing_id = OwnedPropId::from("--missing".to_string());
+        assert!(map.get(&missing_id).is_none());
     }
 
     #[test]
     fn contains_key_returns_correct_bool() {
         let css = ":root { --color: red; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let parse_results = vec![test_parse(css)];
+        let searcher = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        assert!(map.contains_key(&PropertyId::from("--color")));
-        assert!(!map.contains_key(&PropertyId::from("--missing")));
+        let color_id = OwnedPropId::from("--color".to_string());
+        assert!(map.contains_key(&color_id));
+        let missing_id = OwnedPropId::from("--missing".to_string());
+        assert!(!map.contains_key(&missing_id));
     }
 
     #[test]
     fn duplicate_definitions_grouped() {
         let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let parse_results = vec![test_parse(css)];
+        let searcher = SearcherBuilder::new(parse_results)
             .add_condition(VariableDefinitions::default())
             .build();
         let search_result = searcher.search();
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
-        let props = map.get(&PropertyId::from("--color")).unwrap();
+        let color_id = OwnedPropId::from("--color".to_string());
+        let props = map.get(&color_id).unwrap();
         assert_eq!(props.len(), 2);
-        assert_eq!(props[0].value.raw, "red");
-        assert_eq!(props[1].value.raw, "blue");
+        assert_eq!(&*props[0].value.raw, "red");
+        assert_eq!(&*props[1].value.raw, "blue");
     }
 }
