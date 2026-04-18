@@ -9,13 +9,13 @@ entry = "cargo fmt --all"
 types = ["rust"]
 pass_filenames = false
 
-# [[repos.hooks]]
-# id = "cargo-clippy"
-# name = "cargo clippy"
-# language = "system"
-# entry = "cargo clippy --all-targets -- -D warnings"
-# types = ["rust"]
-# pass_filenames = false
+[[repos.hooks]]
+id = "cargo-clippy"
+name = "cargo clippy"
+language = "system"
+entry = "cargo clippy --all-targets -- -D warnings"
+types = ["rust"]
+pass_filenames = false
 
 [[repos.hooks]]
 id = "oxfmt"
