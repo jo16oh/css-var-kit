@@ -2,6 +2,7 @@ mod cli;
 mod commands;
 mod config;
 mod diagnostic_renderer;
+mod owned;
 mod parser;
 mod position;
 mod rules;

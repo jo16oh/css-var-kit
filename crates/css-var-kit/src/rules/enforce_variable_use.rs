@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
-use crate::searcher::Property;
 use crate::searcher::SearchResult;
 use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
@@ -36,22 +36,22 @@ impl EnforceVariableUse {
 }
 
 impl Rule for EnforceVariableUse {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
         searcher.add_condition(NonCustomProperties)
     }
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
+    fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let props = search_result.get_result_for(NonCustomProperties);
         props
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
             .flat_map(|p| {
-                let allowed_kinds = self.allowed_property_kinds(&p.name.unescaped);
+                let allowed_kinds = self.allowed_property_kinds(p.ident.property_id.as_str());
                 let enforced_types = self.types & !allowed_kinds;
                 if enforced_types.is_empty() {
                     return vec![];
                 }
-                self.check_tokens(p.value.raw, p, enforced_types)
+                self.check_tokens(&p.value.raw, p, enforced_types)
             })
             .collect()
     }
@@ -65,23 +65,18 @@ impl EnforceVariableUse {
             .unwrap_or(ValueKindSet::empty())
     }
 
-    fn check_tokens<'src>(
-        &self,
-        raw: &str,
-        prop: &Property<'src>,
-        types: ValueKindSet,
-    ) -> Vec<Diagnostic<'src>> {
+    fn check_tokens(&self, raw: &str, prop: &Property, types: ValueKindSet) -> Vec<Diagnostic> {
         let mut input = ParserInput::new(raw);
         let mut parser = Parser::new(&mut input);
         self.check_tokens_inner(&mut parser, prop, types)
     }
 
-    fn check_tokens_inner<'src>(
+    fn check_tokens_inner(
         &self,
         parser: &mut Parser<'_, '_>,
-        prop: &Property<'src>,
+        prop: &Property,
         types: ValueKindSet,
-    ) -> Vec<Diagnostic<'src>> {
+    ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
         loop {
@@ -137,13 +132,13 @@ impl EnforceVariableUse {
         diagnostics
     }
 
-    fn check_token<'src>(
+    fn check_token(
         &self,
         token: &Token<'_>,
         token_raw: &str,
-        prop: &Property<'src>,
+        prop: &Property,
         types: ValueKindSet,
-    ) -> Option<Diagnostic<'src>> {
+    ) -> Option<Diagnostic> {
         match token {
             Token::Hash(_) | Token::IDHash(_) => types
                 .intersects(ValueKindSet::COLOR)
@@ -227,17 +222,17 @@ impl EnforceVariableUse {
     }
 }
 
-fn make_diagnostic<'src>(
-    prop: &Property<'src>,
+fn make_diagnostic(
+    prop: &Property,
     token_raw: &str,
     severity: Severity,
     kind_name: &str,
-) -> Diagnostic<'src> {
+) -> Diagnostic {
     let token_byte_offset =
         (token_raw.as_ptr() as usize).wrapping_sub(prop.value.raw.as_ptr() as usize);
     Diagnostic {
-        file_path: prop.file_path,
-        source: prop.source,
+        file_path: prop.file_path.clone(),
+        source: prop.source.clone(),
         line: prop.value.line,
         column: prop.value.column + token_byte_offset as u32,
         span_length: Some(token_raw.len() as u32),
@@ -249,13 +244,15 @@ fn make_diagnostic<'src>(
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     use super::config::{
         EnforceVariableUseConfig, RawAllowedProperty, RawEnforceVariableUseConfig,
     };
     use super::*;
     use crate::config::file::SeverityToggle;
+    use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
 
@@ -305,9 +302,12 @@ mod tests {
         expected: &[&str],
     ) {
         let rule = EnforceVariableUse::from_config(config);
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            &OwnedStr::from(css),
+            &Rc::from(PathBuf::from("test.css")),
+        )];
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
         let diagnostics = rule.check(&search_result);

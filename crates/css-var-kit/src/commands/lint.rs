@@ -1,9 +1,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::rc::Rc;
 
 use crate::config::{Config, LookupFilesMatcher};
+use crate::owned::OwnedStr;
 use crate::parser;
+use crate::parser::css::ParseResult;
 use crate::rules::{Diagnostic, Severity};
 use crate::searcher::SearcherBuilder;
 
@@ -17,10 +20,10 @@ pub fn run(config: &Config) {
         return;
     }
 
-    let mut sources: Vec<(PathBuf, String)> = css_files
+    let mut sources: Vec<(PathBuf, OwnedStr)> = css_files
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(config.root_dir.as_path())
                 .unwrap_or(&path)
@@ -32,10 +35,10 @@ pub fn run(config: &Config) {
         })
         .collect();
 
-    let include_sources: Vec<(PathBuf, String)> = include_files
+    let include_sources: Vec<(PathBuf, OwnedStr)> = include_files
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(config.root_dir.as_path())
                 .unwrap_or(&path)
@@ -47,14 +50,14 @@ pub fn run(config: &Config) {
     sources.extend(include_sources);
 
     let parse_results: Vec<_> = sources
-        .iter()
-        .flat_map(|(path, content)| parse_file(content.as_str(), path.as_path()))
+        .into_iter()
+        .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
-    let diagnostics = check(&parse_results, config);
+    let diagnostics = check(parse_results, config);
     let diagnostics: Vec<_> = diagnostics
         .into_iter()
-        .filter(|d| !config.include.matches(d.file_path))
+        .filter(|d| !config.include.matches(&d.file_path))
         .collect();
 
     if diagnostics.is_empty() {
@@ -73,10 +76,7 @@ pub fn run(config: &Config) {
     }
 }
 
-pub fn check<'src>(
-    parse_results: &'src [parser::css::ParseResult<'src>],
-    config: &Config,
-) -> Vec<Diagnostic<'src>> {
+pub fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
     let compiled_rules = config.rules.compile(config);
 
     let mut searcher = SearcherBuilder::new(parse_results);
@@ -129,7 +129,7 @@ fn collect_include_recursive(
             collect_include_recursive(root, &path, include, files);
         } else if is_supported_extension(&path) {
             if let Ok(rel) = path.strip_prefix(root) {
-                if include.matches(rel) {
+                if include.matches(&rel) {
                     files.push(path);
                 }
             }
@@ -168,14 +168,12 @@ fn collect_source_files_recursive(
     }
 }
 
-pub fn parse_file<'src>(
-    content: &'src str,
-    path: &'src Path,
-) -> Vec<parser::css::ParseResult<'src>> {
+pub fn parse_file(source: &OwnedStr, path: &Path) -> Vec<ParseResult> {
+    let file_path: Rc<Path> = Rc::from(path);
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
-            parser::html_like::parse_html_like(content, path)
+            parser::html_like::parse_html_like(source, &file_path)
         }
-        _ => vec![parser::css::parse(content, path)],
+        _ => vec![parser::css::parse(source, &file_path)],
     }
 }

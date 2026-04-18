@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
@@ -24,6 +25,7 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
+use crate::owned::OwnedStr;
 use logger::Logger;
 use uri::uri_to_path;
 
@@ -117,7 +119,7 @@ struct Server<'a> {
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
-    source_cache: HashMap<PathBuf, String>,
+    source_cache: HashMap<Rc<Path>, OwnedStr>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -173,8 +175,10 @@ impl Server<'_> {
                     params.text_document.uri.as_str()
                 ));
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    self.source_cache
-                        .insert(rel_path, params.text_document.text.clone());
+                    self.source_cache.insert(
+                        Rc::from(rel_path),
+                        OwnedStr::from(&params.text_document.text),
+                    );
                 }
                 self.open_documents
                     .insert(params.text_document.uri, params.text_document.text);
@@ -190,7 +194,8 @@ impl Server<'_> {
                 ));
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                        self.source_cache.insert(rel_path, change.text.clone());
+                        self.source_cache
+                            .insert(Rc::from(rel_path), OwnedStr::from(&change.text));
                     }
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
@@ -232,10 +237,10 @@ impl Server<'_> {
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
-                            self.source_cache.insert(rel_path, content);
+                            self.source_cache.insert(Rc::from(rel_path), content.into());
                         }
                         Err(_) => {
-                            self.source_cache.remove(&rel_path);
+                            self.source_cache.remove(rel_path.as_path());
                         }
                     }
                 }
@@ -267,10 +272,10 @@ impl Server<'_> {
 
             match fs::read_to_string(abs_path) {
                 Ok(content) => {
-                    self.source_cache.insert(rel_path, content);
+                    self.source_cache.insert(Rc::from(rel_path), content.into());
                 }
                 Err(_) => {
-                    self.source_cache.remove(&rel_path);
+                    self.source_cache.remove(rel_path.as_path());
                 }
             }
         }
@@ -327,11 +332,11 @@ fn is_config_file(path: &Path) -> bool {
     )
 }
 
-fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
+fn load_all_sources(config: &Config) -> HashMap<Rc<Path>, OwnedStr> {
     let lint_sources = lint::collect_source_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
@@ -339,18 +344,18 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
             if config.include.is_negated(&rel_path) {
                 return None;
             }
-            Some((rel_path, content))
+            Some((Rc::<Path>::from(rel_path), content))
         });
 
     let include_sources = lint::collect_include_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
                 .to_path_buf();
-            Some((rel_path, content))
+            Some((Rc::from(rel_path), content))
         });
 
     lint_sources.chain(include_sources).collect()

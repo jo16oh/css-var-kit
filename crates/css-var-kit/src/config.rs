@@ -114,7 +114,7 @@ impl LookupFilesMatcher {
         last_negated
     }
 
-    pub fn matches(&self, path: &Path) -> bool {
+    pub fn matches<P: AsRef<Path>>(&self, path: &P) -> bool {
         let mut matched = false;
         for pattern in &self.patterns {
             if pattern.matcher.is_match(path) {

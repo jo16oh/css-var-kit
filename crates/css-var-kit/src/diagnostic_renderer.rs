@@ -7,10 +7,10 @@ use crate::rules::{Diagnostic, Severity};
 
 const HEADER_WIDTH: usize = 80;
 
-pub fn render(diagnostic: &Diagnostic<'_>) -> String {
+pub fn render(diagnostic: &Diagnostic) -> String {
     let mut out = String::new();
     let display_column =
-        byte_column_to_display_width(diagnostic.source, diagnostic.line, diagnostic.column);
+        byte_column_to_display_width(&diagnostic.source, diagnostic.line, diagnostic.column);
     let lines: Vec<&str> = diagnostic.source.lines().collect();
 
     render_header(&mut out, diagnostic, display_column);
@@ -20,7 +20,7 @@ pub fn render(diagnostic: &Diagnostic<'_>) -> String {
     out
 }
 
-fn render_header(out: &mut String, d: &Diagnostic<'_>, display_column: u32) {
+fn render_header(out: &mut String, d: &Diagnostic, display_column: u32) {
     let location = format!(
         "{}:{}:{}",
         d.file_path.display(),
@@ -34,7 +34,7 @@ fn render_header(out: &mut String, d: &Diagnostic<'_>, display_column: u32) {
     let _ = writeln!(out, "{}", severity_paint(d.severity, &line).bold());
 }
 
-fn render_message(out: &mut String, d: &Diagnostic<'_>) {
+fn render_message(out: &mut String, d: &Diagnostic) {
     let icon = match d.severity {
         Severity::Error => severity_paint(d.severity, "✖"),
         Severity::Warning => severity_paint(d.severity, "⚠"),
@@ -44,7 +44,7 @@ fn render_message(out: &mut String, d: &Diagnostic<'_>) {
     let _ = writeln!(out);
 }
 
-fn render_snippet(out: &mut String, d: &Diagnostic<'_>, lines: &[&str], display_column: u32) {
+fn render_snippet(out: &mut String, d: &Diagnostic, lines: &[&str], display_column: u32) {
     let target = d.line as usize;
     let start = target.saturating_sub(2);
     let end = (target + 2).min(lines.len());
@@ -164,17 +164,14 @@ fn byte_column_to_display_width(source: &str, line: u32, byte_column: u32) -> u3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use crate::owned::OwnedStr;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
-    fn make_diagnostic<'a>(
-        source: &'a str,
-        line: u32,
-        column: u32,
-        severity: Severity,
-    ) -> Diagnostic<'a> {
+    fn make_diagnostic(source: &str, line: u32, column: u32, severity: Severity) -> Diagnostic {
         Diagnostic {
-            file_path: Path::new("test.css"),
-            source,
+            file_path: Rc::from(PathBuf::from("test.css")),
+            source: OwnedStr::from(source),
             line,
             span_length: None,
             column,

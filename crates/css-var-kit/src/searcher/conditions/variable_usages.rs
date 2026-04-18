@@ -5,7 +5,7 @@ pub struct VariableUsages;
 
 impl SearchCondition for VariableUsages {
     fn matches(&self, prop: &CssProperty) -> bool {
-        prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw)
+        prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw.as_ref())
     }
 }
 
@@ -23,12 +23,14 @@ fn has_dashed_ident(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn matches_value(value: &str) -> bool {
         let css = format!(".a {{ color: {}; }}", value);
-        let result = parser::css::parse(&css, Path::new("test.css"));
+        let result = parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
         let cond = VariableUsages;
         cond.matches(&result.properties[0])
     }
