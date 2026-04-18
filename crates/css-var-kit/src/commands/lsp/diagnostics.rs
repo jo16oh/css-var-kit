@@ -21,8 +21,8 @@ impl Server<'_> {
             .cloned()
             .collect();
 
-        let parse_results = self.parse_results();
-        let diagnostics = lint::check(parse_results, &self.config);
+        let search_result = self.search_cache.search();
+        let diagnostics = lint::check_search_result(&search_result, &self.config);
 
         self.log(&format!(
             "publishDiagnostics: {} files, {} diagnostics total",

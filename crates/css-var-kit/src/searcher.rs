@@ -3,6 +3,8 @@ use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::path::Path;
+use std::rc::Rc;
 
 use crate::{
     owned::OwnedPropId,
@@ -68,6 +70,84 @@ impl Searcher {
                     }
                 }
             }
+        }
+
+        SearchResult { results }
+    }
+}
+
+pub struct SearchCache {
+    conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
+    per_file: HashMap<Rc<Path>, HashMap<TypeId, Vec<Property>>>,
+}
+
+impl SearchCache {
+    pub fn new() -> Self {
+        Self {
+            conditions: HashMap::new(),
+            per_file: HashMap::new(),
+        }
+    }
+
+    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> Self {
+        self.conditions.insert(TypeId::of::<T>(), Box::new(cond));
+        self
+    }
+
+    pub fn update_file(&mut self, path: &Rc<Path>, parse_results: &[ParseResult]) {
+        let mut file_results: HashMap<TypeId, Vec<Property>> = self
+            .conditions
+            .keys()
+            .map(|&type_id| (type_id, Vec::new()))
+            .collect();
+
+        for parse_result in parse_results {
+            for prop in &parse_result.properties {
+                for (type_id, cond) in &self.conditions {
+                    if cond.matches(prop) {
+                        file_results.get_mut(type_id).unwrap().push(prop.clone());
+                    }
+                }
+            }
+        }
+
+        self.per_file.insert(path.clone(), file_results);
+    }
+
+    pub fn remove_file(&mut self, path: &Path) {
+        self.per_file.remove(path);
+    }
+
+    pub fn search(&self) -> SearchResult {
+        let mut results: HashMap<TypeId, SearchConditionResult> = self
+            .conditions
+            .keys()
+            .map(|&type_id| {
+                let props: Vec<Property> = self
+                    .per_file
+                    .values()
+                    .filter_map(|file_results| file_results.get(&type_id))
+                    .flatten()
+                    .cloned()
+                    .collect();
+                (
+                    type_id,
+                    SearchConditionResult {
+                        props,
+                        prop_map: OnceCell::new(),
+                    },
+                )
+            })
+            .collect();
+
+        // Ensure all condition types are present even if per_file is empty
+        for type_id in self.conditions.keys() {
+            results
+                .entry(*type_id)
+                .or_insert_with(|| SearchConditionResult {
+                    props: Vec::new(),
+                    prop_map: OnceCell::new(),
+                });
         }
 
         SearchResult { results }

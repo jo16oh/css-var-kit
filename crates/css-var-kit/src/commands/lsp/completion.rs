@@ -9,7 +9,6 @@ use lsp_types::{
 
 use super::Server;
 use crate::position::{byte_offset_to_utf16, utf16_to_byte_offset};
-use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::type_checker::{TypeCheckError, check_property_type};
 
@@ -47,13 +46,7 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
-        let search_result = SearcherBuilder::new(self.parse_results())
-            .add_condition(VariableDefinitions::new(
-                self.config.definition_files.clone(),
-                self.config.include.clone(),
-            ))
-            .build()
-            .search();
+        let search_result = self.search_cache.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = var_defs.vars_map();

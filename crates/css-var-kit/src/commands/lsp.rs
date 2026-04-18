@@ -27,6 +27,10 @@ use crate::commands::lint;
 use crate::config::{Config, RawConfig};
 use crate::owned::OwnedStr;
 use crate::parser::css::ParseResult;
+use crate::searcher::SearchCache;
+use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_usages::VariableUsages;
 use logger::Logger;
 use uri::uri_to_path;
 
@@ -91,6 +95,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
 
     let source_cache = load_all_sources(&config);
     let parse_cache = build_parse_cache(&source_cache);
+    let search_cache = build_search_cache(&parse_cache, &config);
 
     let mut server = Server {
         connection: &connection,
@@ -100,6 +105,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         open_documents: HashMap::new(),
         source_cache,
         parse_cache,
+        search_cache,
         watcher_rx,
         logger: logger.as_ref(),
     };
@@ -124,6 +130,7 @@ struct Server<'a> {
     open_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
     parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
+    search_cache: SearchCache,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -181,7 +188,7 @@ impl Server<'_> {
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     let key = Rc::<Path>::from(rel_path);
                     let source = OwnedStr::from(&params.text_document.text);
-                    self.update_parse_cache(&key, &source);
+                    self.update_caches(&key, &source);
                     self.source_cache.insert(key, source);
                 }
                 self.open_documents
@@ -200,7 +207,7 @@ impl Server<'_> {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                         let key = Rc::<Path>::from(rel_path);
                         let source = OwnedStr::from(&change.text);
-                        self.update_parse_cache(&key, &source);
+                        self.update_caches(&key, &source);
                         self.source_cache.insert(key, source);
                     }
                     self.open_documents
@@ -245,11 +252,11 @@ impl Server<'_> {
                         Ok(content) => {
                             let key = Rc::<Path>::from(rel_path);
                             let source = OwnedStr::from(content);
-                            self.update_parse_cache(&key, &source);
+                            self.update_caches(&key, &source);
                             self.source_cache.insert(key, source);
                         }
                         Err(_) => {
-                            self.parse_cache.remove(rel_path.as_path());
+                            self.remove_from_caches(rel_path.as_path());
                             self.source_cache.remove(rel_path.as_path());
                         }
                     }
@@ -284,24 +291,26 @@ impl Server<'_> {
                 Ok(content) => {
                     let key = Rc::<Path>::from(rel_path);
                     let source = OwnedStr::from(content);
-                    self.update_parse_cache(&key, &source);
+                    self.update_caches(&key, &source);
                     self.source_cache.insert(key, source);
                 }
                 Err(_) => {
-                    self.parse_cache.remove(rel_path.as_path());
+                    self.remove_from_caches(rel_path.as_path());
                     self.source_cache.remove(rel_path.as_path());
                 }
             }
         }
     }
 
-    fn update_parse_cache(&mut self, path: &Rc<Path>, source: &OwnedStr) {
-        self.parse_cache
-            .insert(path.clone(), lint::parse_file(source, path));
+    fn update_caches(&mut self, path: &Rc<Path>, source: &OwnedStr) {
+        let parse_results = lint::parse_file(source, path);
+        self.search_cache.update_file(path, &parse_results);
+        self.parse_cache.insert(path.clone(), parse_results);
     }
 
-    fn parse_results(&self) -> Vec<ParseResult> {
-        self.parse_cache.values().flatten().cloned().collect()
+    fn remove_from_caches(&mut self, path: &Path) {
+        self.search_cache.remove_file(path);
+        self.parse_cache.remove(path);
     }
 
     fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {
@@ -325,6 +334,7 @@ impl Server<'_> {
                 self.config = new_config;
                 self.source_cache = load_all_sources(&self.config);
                 self.parse_cache = build_parse_cache(&self.source_cache);
+                self.search_cache = build_search_cache(&self.parse_cache, &self.config);
                 self.log("config reloaded");
                 self.publish_diagnostics()?;
             }
@@ -354,6 +364,25 @@ fn is_config_file(path: &Path) -> bool {
         path.file_name().and_then(|n| n.to_str()),
         Some("cvk.json" | "cvk.jsonc")
     )
+}
+
+fn build_search_cache(
+    parse_cache: &HashMap<Rc<Path>, Vec<ParseResult>>,
+    config: &Config,
+) -> SearchCache {
+    let mut cache = SearchCache::new()
+        .add_condition(VariableDefinitions::new(
+            config.definition_files.clone(),
+            config.include.clone(),
+        ))
+        .add_condition(VariableUsages)
+        .add_condition(NonCustomProperties);
+
+    for (path, parse_results) in parse_cache {
+        cache.update_file(path, parse_results);
+    }
+
+    cache
 }
 
 fn build_parse_cache(

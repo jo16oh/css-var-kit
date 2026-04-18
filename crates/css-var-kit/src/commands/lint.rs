@@ -8,7 +8,7 @@ use crate::owned::OwnedStr;
 use crate::parser;
 use crate::parser::css::ParseResult;
 use crate::rules::{Diagnostic, Severity};
-use crate::searcher::SearcherBuilder;
+use crate::searcher::{SearchResult, SearcherBuilder};
 
 const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
@@ -85,10 +85,15 @@ pub fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic
     }
 
     let search_result = searcher.build().search();
+    check_search_result(&search_result, config)
+}
+
+pub fn check_search_result(search_result: &SearchResult, config: &Config) -> Vec<Diagnostic> {
+    let compiled_rules = config.rules.compile(config);
 
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for rule in &compiled_rules {
-        diagnostics.extend(rule.check(&search_result));
+        diagnostics.extend(rule.check(search_result));
     }
 
     diagnostics

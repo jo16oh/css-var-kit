@@ -13,7 +13,6 @@ use crate::owned::OwnedPropId;
 use crate::parser::css::Property;
 use crate::position::offset_to_position;
 use crate::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
-use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 
@@ -81,14 +80,7 @@ impl Server<'_> {
             format!("--{new_name}")
         };
 
-        let search_result = SearcherBuilder::new(self.parse_results())
-            .add_condition(VariableDefinitions::new(
-                self.config.definition_files.clone(),
-                self.config.include.clone(),
-            ))
-            .add_condition(VariableUsages)
-            .build()
-            .search();
+        let search_result = self.search_cache.search();
 
         #[allow(clippy::mutable_key_type)]
         let mut changes: HashMap<Uri, Vec<TextEdit>> = HashMap::new();

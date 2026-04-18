@@ -6,8 +6,8 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 use super::Server;
 use super::uri::path_to_uri;
 use crate::owned::OwnedPropId;
+
 use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
-use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 
 impl Server<'_> {
@@ -34,13 +34,7 @@ impl Server<'_> {
         let source = self.open_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
-        let search_result = SearcherBuilder::new(self.parse_results())
-            .add_condition(VariableDefinitions::new(
-                self.config.definition_files.clone(),
-                self.config.include.clone(),
-            ))
-            .build()
-            .search();
+        let search_result = self.search_cache.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let prop_id = OwnedPropId::from(var_name.clone());
