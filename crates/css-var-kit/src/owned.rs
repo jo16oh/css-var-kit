@@ -175,7 +175,7 @@ impl Default for OwnedTokenList {
 
 impl OwnedTokenList {
     pub fn parse(str: &OwnedStr) -> Result<Self, TokenListParseError> {
-        let cart = str.backing_rc().clone();
+        let cart: Rc<str> = Rc::from(&**str);
         Yoke::try_attach_to_cart(cart, |s| {
             TokenList::parse_string_with_options(s, ParserOptions::default())
                 .map(YokeableTokenList)
