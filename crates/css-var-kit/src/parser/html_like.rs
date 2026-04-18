@@ -289,7 +289,7 @@ mod tests {
         let source = OwnedStr::from("<style>.a { --color: red; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].content.as_ref() as &str, ".a { --color: red; }");
+        assert_eq!(blocks[0].content.as_str(), ".a { --color: red; }");
         assert_eq!(blocks[0].line_offset, 0);
         assert_eq!(blocks[0].column_offset, 7); // len("<style>") == 7
     }
@@ -477,7 +477,7 @@ mod tests {
         let source = OwnedStr::from("<style>.a { --x: 1px; }</STYLE>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].content.as_ref() as &str, ".a { --x: 1px; }");
+        assert_eq!(blocks[0].content.as_str(), ".a { --x: 1px; }");
     }
 
     #[test]

@@ -234,9 +234,9 @@ mod tests {
         let result = search_result.get_result_for(All);
 
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result[1].ident.raw.as_ref() as &str, "font-size");
-        assert_eq!(result[2].ident.raw.as_ref() as &str, "margin");
+        assert_eq!(result[0].ident.raw.as_str(), "color");
+        assert_eq!(result[1].ident.raw.as_str(), "font-size");
+        assert_eq!(result[2].ident.raw.as_str(), "margin");
     }
 
     #[test]
@@ -265,8 +265,8 @@ mod tests {
         let result = search_result.get_result_for(NameEquals::from("color"));
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result[1].value.raw.as_ref() as &str, "blue");
+        assert_eq!(result[0].value.raw.as_str(), "red");
+        assert_eq!(result[1].value.raw.as_str(), "blue");
     }
 
     #[test]
@@ -281,8 +281,8 @@ mod tests {
         let result = search_result.get_result_for(ValueEquals::from("red"));
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result[1].ident.raw.as_ref() as &str, "background");
+        assert_eq!(result[0].ident.raw.as_str(), "color");
+        assert_eq!(result[1].ident.raw.as_str(), "background");
     }
 
     #[test]
@@ -298,11 +298,11 @@ mod tests {
 
         let by_name = search_result.get_result_for(NameEquals::from("color"));
         assert_eq!(by_name.len(), 1);
-        assert_eq!(by_name[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(by_name[0].value.raw.as_str(), "red");
 
         let by_value = search_result.get_result_for(ValueEquals::from("16px"));
         assert_eq!(by_value.len(), 1);
-        assert_eq!(by_value[0].ident.raw.as_ref() as &str, "font-size");
+        assert_eq!(by_value[0].ident.raw.as_str(), "font-size");
     }
 
     #[test]
@@ -343,10 +343,10 @@ mod tests {
         let result = search_result.get_result_for(IsVariable);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].ident.raw.as_ref() as &str, "--primary");
-        assert_eq!(result[0].value.raw.as_ref() as &str, "#ff0000");
-        assert_eq!(result[1].ident.raw.as_ref() as &str, "--secondary");
-        assert_eq!(result[1].value.raw.as_ref() as &str, "#00ff00");
+        assert_eq!(result[0].ident.raw.as_str(), "--primary");
+        assert_eq!(result[0].value.raw.as_str(), "#ff0000");
+        assert_eq!(result[1].ident.raw.as_str(), "--secondary");
+        assert_eq!(result[1].value.raw.as_str(), "#00ff00");
     }
 
     #[test]
@@ -361,8 +361,8 @@ mod tests {
         let result = search_result.get_result_for(NameEquals::from("color"));
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result[1].value.raw.as_ref() as &str, "blue");
+        assert_eq!(result[0].value.raw.as_str(), "red");
+        assert_eq!(result[1].value.raw.as_str(), "blue");
     }
 
     #[test]

@@ -35,6 +35,10 @@ impl OwnedStr {
     pub fn slice(&self, range: std::ops::Range<usize>) -> Self {
         self.map(|s| &s[range])
     }
+
+    pub fn as_str(&self) -> &str {
+        self.0.get().0
+    }
 }
 
 impl From<Rc<str>> for OwnedStr {

@@ -566,11 +566,8 @@ mod tests {
         let css = ":root {\n    --main-color: red;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(
-            result.properties[0].ident.raw.as_ref() as &str,
-            "--main-color"
-        );
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--main-color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
         assert_eq!(result.properties[0].ident.line, 1);
     }
 
@@ -579,10 +576,10 @@ mod tests {
         let css = ":root {\n    --color: red;\n    --size: 16px;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "--size");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "16px");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
     }
 
     #[test]
@@ -590,10 +587,10 @@ mod tests {
         let css = ":root { --a: 1; --b: 2; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--a");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "1");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "--b");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "2");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--a");
+        assert_eq!(result.properties[0].value.raw.as_str(), "1");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--b");
+        assert_eq!(result.properties[1].value.raw.as_str(), "2");
     }
 
     #[test]
@@ -601,7 +598,7 @@ mod tests {
         let css = ":root {\n    --color: red";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -609,10 +606,10 @@ mod tests {
         let css = ".btn { color: red; font-size: 16px; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "font-size");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "16px");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "font-size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
     }
 
     #[test]
@@ -620,11 +617,8 @@ mod tests {
         let css = ".btn { color: var(--main-color); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(
-            result.properties[0].value.raw.as_ref() as &str,
-            "var(--main-color)"
-        );
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--main-color)");
     }
 
     #[test]
@@ -632,10 +626,10 @@ mod tests {
         let css = ":root { --c: red; }\n.a { color: var(--c); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--c");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "var(--c)");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--c");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--c)");
     }
 
     #[test]
@@ -643,10 +637,10 @@ mod tests {
         let css = ".a::before { content: \"hello\"; color: var(--c); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "content");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "\"hello\"");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "var(--c)");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
+        assert_eq!(result.properties[0].value.raw.as_str(), "\"hello\"");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--c)");
     }
 
     #[test]
@@ -654,8 +648,8 @@ mod tests {
         let css = ".a { /* --not-a-var */ color: var(--c); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "var(--c)");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--c)");
     }
 
     #[test]
@@ -663,7 +657,7 @@ mod tests {
         let css = ":root {\n    --color: red /* main color */;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -671,7 +665,7 @@ mod tests {
         let css = ":root {\n    --color: red /* main color */\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -679,10 +673,10 @@ mod tests {
         let css = ":root {\n    --a: red\n    --b: blue;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--a");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "--b");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "blue");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--a");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--b");
+        assert_eq!(result.properties[1].value.raw.as_str(), "blue");
     }
 
     #[test]
@@ -690,10 +684,10 @@ mod tests {
         let css = ".a {\n    --color: red\n    font-size: 16px;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "font-size");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "16px");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "font-size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
     }
 
     #[test]
@@ -702,10 +696,10 @@ mod tests {
         let css = ":root {\r    --a: red\r    --b: blue;\r}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--a");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "--b");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "blue");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--a");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--b");
+        assert_eq!(result.properties[1].value.raw.as_str(), "blue");
     }
 
     #[test]
@@ -713,8 +707,8 @@ mod tests {
         let css = "/*\n  --not-a-var: red;\n*/\n.a { color: var(--c); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "var(--c)");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--c)");
     }
 
     #[test]
@@ -722,12 +716,9 @@ mod tests {
         let css = ".a {\n    background: linear-gradient(\n        red,\n        blue\n    );\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "background");
         assert_eq!(
-            result.properties[0].ident.raw.as_ref() as &str,
-            "background"
-        );
-        assert_eq!(
-            result.properties[0].value.raw.as_ref() as &str,
+            result.properties[0].value.raw.as_str(),
             "linear-gradient(\n        red,\n        blue\n    )"
         );
     }
@@ -737,9 +728,9 @@ mod tests {
         let css = ".a { color: rgb(calc(100 + 50), 0, 0); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
         assert_eq!(
-            result.properties[0].value.raw.as_ref() as &str,
+            result.properties[0].value.raw.as_str(),
             "rgb(calc(100 + 50), 0, 0)"
         );
     }
@@ -806,10 +797,10 @@ mod tests {
         let css = ".a { content: \"a;b\"; color: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "content");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "\"a;b\"");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
+        assert_eq!(result.properties[0].value.raw.as_str(), "\"a;b\"");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[1].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -817,13 +808,10 @@ mod tests {
         let css = ".a { content: \"}\"; color: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(
-            result.properties[0].ident.raw.as_ref() as &str as &str,
-            "content"
-        );
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "\"}\"");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
+        assert_eq!(result.properties[0].value.raw.as_str(), "\"}\"");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[1].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -831,9 +819,9 @@ mod tests {
         let css = r#".a { content: "he said \"hello\""; }"#;
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "content");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
         assert_eq!(
-            result.properties[0].value.raw.as_ref() as &str,
+            result.properties[0].value.raw.as_str(),
             r#""he said \"hello\"""#
         );
     }
@@ -843,8 +831,8 @@ mod tests {
         let css = ".a { content: \"hello";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "content");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "\"hello");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
+        assert_eq!(result.properties[0].value.raw.as_str(), "\"hello");
     }
 
     #[test]
@@ -852,8 +840,8 @@ mod tests {
         let css = ".a { color: red; } /* never closed";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -861,7 +849,7 @@ mod tests {
         let css = ".a { color: red /* unclosed";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -869,10 +857,10 @@ mod tests {
         let css = ".a { --empty: ; --next: blue; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--empty");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "--next");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "blue");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--empty");
+        assert_eq!(result.properties[0].value.raw.as_str(), "");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--next");
+        assert_eq!(result.properties[1].value.raw.as_str(), "blue");
     }
 
     #[test]
@@ -880,10 +868,10 @@ mod tests {
         let css = ".a{color:red;font-size:16px}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "font-size");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "16px");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "font-size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
     }
 
     #[test]
@@ -891,10 +879,10 @@ mod tests {
         let css = ".a { .b { color: red; } font-size: 16px; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "font-size");
-        assert_eq!(result.properties[1].value.raw.as_ref() as &str, "16px");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "font-size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
     }
 
     #[test]
@@ -902,8 +890,8 @@ mod tests {
         let css = ".a { content: \"test\\";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "content");
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "\"test\\");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "content");
+        assert_eq!(result.properties[0].value.raw.as_str(), "\"test\\");
     }
 
     #[test]
@@ -911,7 +899,7 @@ mod tests {
         let css = ".a { color: red }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -919,11 +907,8 @@ mod tests {
         let css = "@property --my-color {\n  syntax: \"<color>\";\n  inherits: false;\n  initial-value: red;\n}\n.a { color: var(--my-color); }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
-        assert_eq!(
-            result.properties[0].value.raw.as_ref() as &str,
-            "var(--my-color)"
-        );
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--my-color)");
     }
 
     #[test]
@@ -931,8 +916,8 @@ mod tests {
         let css = ".before { margin: 0; }\n@property --x {\n  syntax: \"*\";\n  inherits: true;\n}\n.after { padding: 0; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "margin");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "padding");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "margin");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "padding");
     }
 
     #[test]
@@ -940,7 +925,7 @@ mod tests {
         let css = "@import url(\"reset.css\");\n.a { color: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "color");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
     }
 
     #[test]
@@ -1083,7 +1068,7 @@ mod tests {
         let css = ".a { col\\6fr: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "col\\6fr");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "col\\6fr");
         assert_eq!(result.properties[0].ident.property_id.as_str(), "color");
     }
 
@@ -1103,10 +1088,7 @@ mod tests {
         let css = ".a { --my\\-var: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(
-            result.properties[0].ident.raw.as_ref() as &str,
-            "--my\\-var"
-        );
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--my\\-var");
         assert_eq!(result.properties[0].ident.property_id.as_str(), "--my-var");
     }
 
@@ -1136,7 +1118,7 @@ mod tests {
         let css = ".a { --あいろ: red; }";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_ref() as &str, "--あいろ");
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--あいろ");
     }
 
     #[test]
@@ -1145,7 +1127,7 @@ mod tests {
         let css = ".a {\n  color: red\n  col\\6fr: blue;\n}";
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
-        assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
         assert_eq!(result.properties[1].ident.property_id.as_str(), "color");
     }
 
