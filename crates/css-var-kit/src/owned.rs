@@ -70,6 +70,12 @@ impl Deref for OwnedStr {
     }
 }
 
+impl std::fmt::Display for OwnedStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self)
+    }
+}
+
 #[derive(Yokeable, Debug, Clone)]
 struct YokeablePropId<'a>(PropertyId<'a>);
 
