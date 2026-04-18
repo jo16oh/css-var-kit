@@ -1,6 +1,10 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{cell::OnceCell, path::PathBuf, rc::Rc};
 
-use crate::owned::{OwnedPropId, OwnedStr};
+use lightningcss::{
+    properties::custom::TokenList, stylesheet::ParserOptions, traits::ParseWithOptions,
+};
+
+use crate::owned::{OwnedPropId, OwnedStr, OwnedTokenList};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyIdent {
@@ -44,6 +48,15 @@ pub struct Property {
     pub ident: PropertyIdent,
     pub value: PropertyValue,
     pub ignore_comments: Vec<OwnedStr>,
+    pub token_list: OnceCell<OwnedTokenList>,
+}
+
+impl Property {
+    pub fn token_list(&self) -> &OwnedTokenList {
+        self.token_list.get_or_init(|| {
+            OwnedTokenList::parse(&self.value.raw).unwrap_or(OwnedTokenList::default())
+        })
+    }
 }
 
 #[derive(Debug, PartialEq)]

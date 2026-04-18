@@ -1,10 +1,18 @@
 #![allow(dead_code)]
 
 use lightningcss::properties::PropertyId;
+use lightningcss::properties::custom::TokenList;
+use lightningcss::stylesheet::ParserOptions;
+use lightningcss::traits::ParseWithOptions;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
+use thiserror::Error;
 use yoke::{Yoke, Yokeable};
+
+#[derive(Debug, Error)]
+#[error("failed to parse token list: {0}")]
+pub struct TokenListParseError(String);
 
 #[derive(Yokeable, Debug, Clone)]
 struct YokeableStr<'a>(&'a str);
@@ -105,8 +113,48 @@ impl OwnedPropId {
     pub fn inner(&self) -> &PropertyId<'_> {
         &self.0.get().0
     }
+}
 
-    pub fn as_str(&self) -> &str {
-        self.0.backing_cart().as_ref()
+#[derive(Yokeable, Debug, Clone)]
+struct YokeableTokenList<'a>(TokenList<'a>);
+
+#[derive(Debug, Clone)]
+pub struct OwnedTokenList(Yoke<YokeableTokenList<'static>, Rc<str>>);
+
+impl PartialEq for OwnedTokenList {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner() == other.inner()
+    }
+}
+
+impl Eq for OwnedTokenList {}
+
+impl Hash for OwnedTokenList {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inner().hash(state);
+    }
+}
+
+impl Default for OwnedTokenList {
+    fn default() -> Self {
+        Self(Yoke::attach_to_cart(Rc::from(""), |_| {
+            YokeableTokenList(TokenList(vec![]))
+        }))
+    }
+}
+
+impl OwnedTokenList {
+    pub fn parse(str: &OwnedStr) -> Result<Self, TokenListParseError> {
+        let cart = str.backing_rc().clone();
+        Yoke::try_attach_to_cart(cart, |s| {
+            TokenList::parse_string_with_options(s, ParserOptions::default())
+                .map(|t| YokeableTokenList(t))
+                .map_err(|e| TokenListParseError(e.to_string()))
+        })
+        .map(Self)
+    }
+
+    pub fn inner(&self) -> &TokenList {
+        &self.0.get().0
     }
 }
