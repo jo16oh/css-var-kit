@@ -1,9 +1,11 @@
-use std::path::Path;
+use std::{path::PathBuf, rc::Rc};
+
+use crate::owned::OwnedStr;
 
 use super::css::{self, ParseResult};
 
-struct StyleBlock<'src> {
-    content: &'src str,
+struct StyleBlock {
+    content: OwnedStr,
     line_offset: u32,
     // Column offset of the first content line only; resets to 0 after the first newline.
     column_offset: u32,
@@ -17,7 +19,7 @@ fn is_lang_supported(lang: &str) -> bool {
 /// Extracts `<style>` blocks from an HTML-like source.
 /// Blocks with `lang="less"`, `lang="stylus"`, etc. are skipped;
 /// no `lang`, `lang="css"`, and `lang="scss"` are accepted.
-fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
+fn extract_style_blocks(source: OwnedStr) -> Vec<StyleBlock> {
     let bytes = source.as_bytes();
     let len = bytes.len();
     let mut pos = 0;
@@ -119,7 +121,7 @@ fn extract_style_blocks(source: &str) -> Vec<StyleBlock<'_>> {
             let end = find_close_style_tag(bytes, pos);
             if end > content_start {
                 blocks.push(StyleBlock {
-                    content: &source[content_start..end],
+                    content: source.slice(content_start..end),
                     line_offset: content_line,
                     column_offset: content_col,
                     byte_offset: content_start,
@@ -247,14 +249,14 @@ fn is_ident_char(b: u8) -> bool {
 /// Extracts all `<style>` blocks and passes each to the CSS parser.
 /// `Property.source` is set to the full file source, and `line`/`column`
 /// are absolute positions within the file.
-pub fn parse_html_like<'src>(source: &'src str, file_path: &'src Path) -> Vec<ParseResult<'src>> {
-    extract_style_blocks(source)
+pub fn parse_html_like(source: OwnedStr, file_path: Rc<PathBuf>) -> Vec<ParseResult> {
+    extract_style_blocks(source.clone())
         .into_iter()
-        .map(|block| {
+        .map(move |block| {
             css::parse_with_offset(
                 block.content,
-                file_path,
-                source,
+                file_path.clone(),
+                source.clone(),
                 block.line_offset,
                 block.column_offset,
                 block.byte_offset,
@@ -265,17 +267,15 @@ pub fn parse_html_like<'src>(source: &'src str, file_path: &'src Path) -> Vec<Pa
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use super::*;
 
-    fn path() -> &'static Path {
-        Path::new("test.vue")
+    fn path() -> Rc<PathBuf> {
+        Rc::new(PathBuf::from("test.vue"))
     }
 
     #[test]
     fn extracts_simple_style_block() {
-        let source = "<style>\n.a { --color: red; }\n</style>";
+        let source = OwnedStr::from("<style>\n.a { --color: red; }\n</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].content.trim(), ".a { --color: red; }");
@@ -286,17 +286,17 @@ mod tests {
 
     #[test]
     fn single_line_style_block_has_column_offset() {
-        let source = "<style>.a { --color: red; }</style>";
+        let source = OwnedStr::from("<style>.a { --color: red; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].content, ".a { --color: red; }");
+        assert_eq!(blocks[0].content.as_ref() as &str, ".a { --color: red; }");
         assert_eq!(blocks[0].line_offset, 0);
         assert_eq!(blocks[0].column_offset, 7); // len("<style>") == 7
     }
 
     #[test]
     fn column_offset_with_preceding_html() {
-        let source = "<p>x</p><style>.a { --x: 1; }</style>";
+        let source = OwnedStr::from("<p>x</p><style>.a { --x: 1; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
         // `<p>x</p>` (8) + `<style>` (7) = 15 chars consumed before content start
@@ -305,49 +305,50 @@ mod tests {
 
     #[test]
     fn skips_less_lang() {
-        let source = r#"<style lang="less">.a { @x: 1; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="less">.a { @x: 1; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
 
     #[test]
     fn skips_stylus_lang() {
-        let source = r#"<style lang="stylus">.a\n  color red\n</style>"#;
+        let source = OwnedStr::from(r#"<style lang="stylus">.a\n  color red\n</style>"#);
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
 
     #[test]
     fn allows_css_lang() {
-        let source = r#"<style lang="css">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="css">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn allows_scss_lang() {
-        let source = r#"<style lang="scss">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="scss">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn allows_no_lang() {
-        let source = "<style>.a { --x: 1px; }</style>";
+        let source = OwnedStr::from("<style>.a { --x: 1px; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn extracts_multiple_blocks() {
-        let source = "<style>.a { --x: 1px; }</style>\n<style>.b { --y: 2px; }</style>";
+        let source =
+            OwnedStr::from("<style>.a { --x: 1px; }</style>\n<style>.b { --y: 2px; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 2);
     }
 
     #[test]
     fn ignores_style_tag_prefix_like_styles() {
-        let source = "<styles>.a { --x: 1px; }</styles>";
+        let source = OwnedStr::from("<styles>.a { --x: 1px; }</styles>");
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
@@ -358,7 +359,8 @@ mod tests {
         // line 1: <style>
         // line 2: .a { --color: red; }
         // line 3: </style>
-        let source = "<template></template>\n<style>\n.a { --color: red; }\n</style>";
+        let source =
+            OwnedStr::from("<template></template>\n<style>\n.a { --color: red; }\n</style>");
         let results = parse_html_like(source, path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
@@ -369,7 +371,7 @@ mod tests {
     #[test]
     fn property_column_is_absolute_single_line() {
         // `--color` starts at column 12: `<style>` (7) + `.a { ` (5) = 12
-        let source = "<style>.a { --color: red; }</style>";
+        let source = OwnedStr::from("<style>.a { --color: red; }</style>");
         let results = parse_html_like(source, path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
@@ -380,8 +382,8 @@ mod tests {
 
     #[test]
     fn source_is_full_html_file() {
-        let source = "<style>.a { --x: 1px; }</style>";
-        let results = parse_html_like(source, path());
+        let source = OwnedStr::from("<style>.a { --x: 1px; }</style>");
+        let results = parse_html_like(source.clone(), path());
         assert_eq!(results[0].properties[0].source, source);
     }
 
@@ -393,7 +395,8 @@ mod tests {
         // line 1: <style>
         // line 2: .a { --color: red; }
         // line 3: </style>
-        let source = "<template></template>\r\n<style>\r\n.a { --color: red; }\r\n</style>";
+        let source =
+            OwnedStr::from("<template></template>\r\n<style>\r\n.a { --color: red; }\r\n</style>");
         let results = parse_html_like(source, path());
         assert_eq!(results.len(), 1);
         let props = &results[0].properties;
@@ -404,7 +407,7 @@ mod tests {
     #[test]
     fn crlf_block_offset_is_correct() {
         // The content_line of the style block itself should reflect correct CRLF counting.
-        let source = "<p></p>\r\n<style>\r\n.a { --x: 1; }\r\n</style>";
+        let source = OwnedStr::from("<p></p>\r\n<style>\r\n.a { --x: 1; }\r\n</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
         // "<p></p>\r\n" — CRLF counts as one newline, so <style> is on line 1.
@@ -415,78 +418,78 @@ mod tests {
 
     #[test]
     fn lang_uppercase_css_is_accepted() {
-        let source = r#"<style lang="CSS">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="CSS">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn lang_uppercase_scss_is_accepted() {
-        let source = r#"<style lang="SCSS">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="SCSS">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn lang_mixed_case_is_accepted() {
-        let source = r#"<style lang="Css">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="Css">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn lang_single_quote_is_accepted() {
-        let source = "<style lang='css'>.a { --x: 1px; }</style>";
+        let source = OwnedStr::from("<style lang='css'>.a { --x: 1px; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn lang_attr_after_other_attrs() {
-        let source = r#"<style scoped lang="css">.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style scoped lang="css">.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn lang_attr_before_other_attrs() {
-        let source = r#"<style lang="css" scoped>.a { --x: 1px; }</style>"#;
+        let source = OwnedStr::from(r#"<style lang="css" scoped>.a { --x: 1px; }</style>"#);
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn self_closing_style_tag_produces_no_block() {
-        let source = "<style/>";
+        let source = OwnedStr::from("<style/>");
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
 
     #[test]
     fn unclosed_style_tag_produces_no_block() {
-        let source = "<style>.a { --x: 1; }";
+        let source = OwnedStr::from("<style>.a { --x: 1; }");
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
 
     #[test]
     fn closing_tag_is_case_insensitive() {
-        let source = "<style>.a { --x: 1px; }</STYLE>";
+        let source = OwnedStr::from("<style>.a { --x: 1px; }</STYLE>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].content, ".a { --x: 1px; }");
+        assert_eq!(blocks[0].content.as_ref() as &str, ".a { --x: 1px; }");
     }
 
     #[test]
     fn lang_attr_with_spaces_around_equals() {
-        let source = "<style lang = \"css\">.a { --x: 1px; }</style>";
+        let source = OwnedStr::from("<style lang = \"css\">.a { --x: 1px; }</style>");
         let blocks = extract_style_blocks(source);
         assert_eq!(blocks.len(), 1);
     }
 
     #[test]
     fn empty_style_block_produces_no_block() {
-        let source = "<style></style>";
+        let source = OwnedStr::from("<style></style>");
         let blocks = extract_style_blocks(source);
         assert!(blocks.is_empty());
     }
