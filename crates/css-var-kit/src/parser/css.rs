@@ -1163,7 +1163,7 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 2);
         assert_eq!(result.properties[0].value.raw.as_ref() as &str, "red");
-        assert_eq!(result.properties[1].ident.raw.as_ref() as &str, "color");
+        assert_eq!(result.properties[1].ident.property_id.as_str(), "color");
     }
 
     #[test]
