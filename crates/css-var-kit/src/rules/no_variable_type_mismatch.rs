@@ -26,9 +26,8 @@ impl Rule for NoVariableTypeMismatch {
     }
 
     fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
-        let vars = search_result
-            .get_prop_map_for::<VariableDefinitions>()
-            .vars_map();
+        let prop_map = search_result.get_prop_map_for::<VariableDefinitions>();
+        let vars = prop_map.vars_map();
         let usages = search_result.get_result_for(VariableUsages);
         check_type_mismatch(&vars, &usages, self.severity)
     }

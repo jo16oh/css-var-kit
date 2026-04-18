@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use lightningcss::properties::custom::TokenList;
+
 use crate::config::LookupFilesMatcher;
-use crate::owned::OwnedTokenList;
 use crate::parser::css::Property as CssProperty;
 use crate::searcher::{PropMapFor, SearchCondition};
 
-pub type VarsMap<'a> = HashMap<&'a str, &'a OwnedTokenList>;
+pub type VarsMap<'a> = HashMap<&'a str, TokenList<'a>>;
 
 #[derive(Default)]
 pub struct VariableDefinitions {
@@ -35,8 +36,8 @@ impl PropMapFor<'_, VariableDefinitions> {
         self.values()
             .filter_map(|props| {
                 let prop = props.last()?;
-                let token_list = prop.token_list();
-                if token_list.inner().0.is_empty() {
+                let token_list = prop.token_list().inner().clone();
+                if token_list.0.is_empty() {
                     return None;
                 }
                 Some((&*prop.ident.raw, token_list))
