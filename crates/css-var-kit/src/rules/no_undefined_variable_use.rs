@@ -1,7 +1,7 @@
-use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::config::LookupFilesMatcher;
+use crate::owned::OwnedPropId;
 use crate::parser::css::Property;
 use crate::position::offset_to_position;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
@@ -42,7 +42,7 @@ fn check_undefined(
     usages
         .iter()
         .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))
-        .flat_map(|prop| collect_undefined(prop.token_list(), def_map, prop, severity))
+        .flat_map(|prop| collect_undefined(prop.token_list().inner(), def_map, prop, severity))
         .collect()
 }
 
@@ -73,12 +73,13 @@ fn collect_undefined_inner(
                     column,
                     span_length,
                     next_search_from,
-                } = find_var_position(prop.source, prop.value.offset, search_from, name);
+                } = find_var_position(&prop.source, prop.value.offset, search_from, name);
 
-                if !definitions.contains_key(&PropertyId::from(name)) {
+                let prop_id = OwnedPropId::from(name.to_string());
+                if !definitions.contains_key(&prop_id) {
                     diagnostics.push(Diagnostic {
-                        file_path: prop.file_path,
-                        source: prop.source,
+                        file_path: prop.file_path.clone(),
+                        source: prop.source.clone(),
                         line,
                         column,
                         span_length,
@@ -107,12 +108,13 @@ fn collect_undefined_inner(
                     column,
                     span_length,
                     next_search_from,
-                } = find_var_position(prop.source, prop.value.offset, search_from, name);
+                } = find_var_position(&prop.source, prop.value.offset, search_from, name);
 
-                if !definitions.contains_key(&PropertyId::from(name)) {
+                let prop_id = OwnedPropId::from(name.to_string());
+                if !definitions.contains_key(&prop_id) {
                     diagnostics.push(Diagnostic {
-                        file_path: prop.file_path,
-                        source: prop.source,
+                        file_path: prop.file_path.clone(),
+                        source: prop.source.clone(),
                         line,
                         column,
                         span_length,
@@ -181,18 +183,23 @@ fn find_var_position(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            OwnedStr::from(css),
+            Rc::new(PathBuf::from("test.css")),
+        )];
         let rule = NoUndefinedVariableUse {
             severity: Severity::Warning,
             definition_files: LookupFilesMatcher::default(),
             include: LookupFilesMatcher::default(),
         };
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
 

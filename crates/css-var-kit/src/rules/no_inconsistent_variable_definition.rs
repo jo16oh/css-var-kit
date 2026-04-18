@@ -49,13 +49,14 @@ fn check_variable_definitions(
 
             // Skip check if the value is white-space only
             if token_list
+                .inner()
                 .0
                 .iter()
                 .any(|t| !matches!(t, TokenOrValue::Token(Token::WhiteSpace(_))))
             {
-                let kinds = match resolve_variables(token_list, vars) {
+                let kinds = match resolve_variables(token_list.inner(), vars) {
                     Ok(resolved) => kind_of(&resolved),
-                    Err(_) => kind_of(p.value.raw),
+                    Err(_) => kind_of(&p.value.raw),
                 };
                 let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
 
@@ -87,8 +88,8 @@ fn check_variable_definitions(
         .filter(|(_, (_, kinds, _))| !baseline.is_consistent_with(kinds))
         .map(|(_, (prop, _, _))| {
             Diagnostic {
-                file_path: prop.file_path,
-                source: prop.source,
+                file_path: prop.file_path.clone(),
+                source: prop.source.clone(),
                 line: prop.value.line,
                 column: prop.value.column,
                 span_length: None,
@@ -106,19 +107,24 @@ fn check_variable_definitions(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            OwnedStr::from(css),
+            Rc::new(PathBuf::from("test.css")),
+        )];
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,
             definition_files: LookupFilesMatcher::default(),
             include: LookupFilesMatcher::default(),
         };
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
 
