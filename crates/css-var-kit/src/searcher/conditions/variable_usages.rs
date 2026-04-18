@@ -30,7 +30,7 @@ mod tests {
 
     fn matches_value(value: &str) -> bool {
         let css = format!(".a {{ color: {}; }}", value);
-        let result = parser::css::parse(&OwnedStr::from(css), &Rc::new(PathBuf::from("test.css")));
+        let result = parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
         let cond = VariableUsages;
         cond.matches(&result.properties[0])
     }

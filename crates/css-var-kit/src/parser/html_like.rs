@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::Path, rc::Rc};
 
 use crate::owned::OwnedStr;
 
@@ -249,7 +249,7 @@ fn is_ident_char(b: u8) -> bool {
 /// Extracts all `<style>` blocks and passes each to the CSS parser.
 /// `Property.source` is set to the full file source, and `line`/`column`
 /// are absolute positions within the file.
-pub fn parse_html_like(source: &OwnedStr, file_path: &Rc<PathBuf>) -> Vec<ParseResult> {
+pub fn parse_html_like(source: &OwnedStr, file_path: &Rc<Path>) -> Vec<ParseResult> {
     extract_style_blocks(source.clone())
         .into_iter()
         .map(move |block| {
@@ -267,10 +267,12 @@ pub fn parse_html_like(source: &OwnedStr, file_path: &Rc<PathBuf>) -> Vec<ParseR
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
-    fn path() -> Rc<PathBuf> {
-        Rc::new(PathBuf::from("test.vue"))
+    fn path() -> Rc<Path> {
+        Rc::from(PathBuf::from("test.vue"))
     }
 
     #[test]

@@ -119,7 +119,7 @@ struct Server<'a> {
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
     open_documents: HashMap<Uri, String>,
-    source_cache: HashMap<Rc<PathBuf>, OwnedStr>,
+    source_cache: HashMap<Rc<Path>, OwnedStr>,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -176,7 +176,7 @@ impl Server<'_> {
                 ));
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     self.source_cache.insert(
-                        Rc::new(rel_path),
+                        Rc::from(rel_path),
                         OwnedStr::from(&params.text_document.text),
                     );
                 }
@@ -195,7 +195,7 @@ impl Server<'_> {
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                         self.source_cache
-                            .insert(Rc::new(rel_path), OwnedStr::from(&change.text));
+                            .insert(Rc::from(rel_path), OwnedStr::from(&change.text));
                     }
                     self.open_documents
                         .insert(params.text_document.uri, change.text);
@@ -237,10 +237,10 @@ impl Server<'_> {
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
-                            self.source_cache.insert(Rc::new(rel_path), content.into());
+                            self.source_cache.insert(Rc::from(rel_path), content.into());
                         }
                         Err(_) => {
-                            self.source_cache.remove(&rel_path);
+                            self.source_cache.remove(rel_path.as_path());
                         }
                     }
                 }
@@ -272,10 +272,10 @@ impl Server<'_> {
 
             match fs::read_to_string(abs_path) {
                 Ok(content) => {
-                    self.source_cache.insert(Rc::new(rel_path), content.into());
+                    self.source_cache.insert(Rc::from(rel_path), content.into());
                 }
                 Err(_) => {
-                    self.source_cache.remove(&rel_path);
+                    self.source_cache.remove(rel_path.as_path());
                 }
             }
         }
@@ -332,7 +332,7 @@ fn is_config_file(path: &Path) -> bool {
     )
 }
 
-fn load_all_sources(config: &Config) -> HashMap<Rc<PathBuf>, OwnedStr> {
+fn load_all_sources(config: &Config) -> HashMap<Rc<Path>, OwnedStr> {
     let lint_sources = lint::collect_source_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
@@ -344,7 +344,7 @@ fn load_all_sources(config: &Config) -> HashMap<Rc<PathBuf>, OwnedStr> {
             if config.include.is_negated(&rel_path) {
                 return None;
             }
-            Some((Rc::new(rel_path), content))
+            Some((Rc::<Path>::from(rel_path), content))
         });
 
     let include_sources = lint::collect_include_files(config.root_dir.as_path(), &config.include)
@@ -355,7 +355,7 @@ fn load_all_sources(config: &Config) -> HashMap<Rc<PathBuf>, OwnedStr> {
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
                 .to_path_buf();
-            Some((Rc::new(rel_path), content))
+            Some((Rc::from(rel_path), content))
         });
 
     lint_sources.chain(include_sources).collect()

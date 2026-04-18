@@ -304,7 +304,7 @@ mod tests {
         let rule = EnforceVariableUse::from_config(config);
         let parse_results = vec![parser::css::parse(
             &OwnedStr::from(css),
-            &Rc::new(PathBuf::from("test.css")),
+            &Rc::from(PathBuf::from("test.css")),
         )];
         let searcher = rule
             .register_conditions(SearcherBuilder::new(parse_results))

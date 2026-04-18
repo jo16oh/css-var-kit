@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::Path, rc::Rc};
 
 use crate::{
     owned::OwnedStr,
@@ -29,7 +29,7 @@ pub fn is_ignored(ignore_comments: &[OwnedStr], rule_name: &str) -> bool {
 }
 
 pub struct Diagnostic {
-    pub file_path: Rc<PathBuf>,
+    pub file_path: Rc<Path>,
     pub source: OwnedStr,
     pub line: u32,
     pub column: u32,

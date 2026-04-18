@@ -57,7 +57,7 @@ pub fn run(config: &Config) {
     let diagnostics = check(parse_results, config);
     let diagnostics: Vec<_> = diagnostics
         .into_iter()
-        .filter(|d| !config.include.matches(d.file_path.as_ref()))
+        .filter(|d| !config.include.matches(&d.file_path))
         .collect();
 
     if diagnostics.is_empty() {
@@ -169,7 +169,7 @@ fn collect_source_files_recursive(
 }
 
 pub fn parse_file(source: &OwnedStr, path: &Path) -> Vec<ParseResult> {
-    let file_path = Rc::new(path.to_path_buf());
+    let file_path: Rc<Path> = Rc::from(path);
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
             parser::html_like::parse_html_like(source, &file_path)

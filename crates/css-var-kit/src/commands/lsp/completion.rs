@@ -51,7 +51,7 @@ impl Server<'_> {
         let parse_results: Vec<_> = self
             .source_cache
             .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path.as_path()))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let search_result = SearcherBuilder::new(parse_results)

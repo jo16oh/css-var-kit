@@ -85,7 +85,7 @@ impl Server<'_> {
         let parse_results: Vec<_> = self
             .source_cache
             .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path.as_path()))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let search_result = SearcherBuilder::new(parse_results)
@@ -105,7 +105,7 @@ impl Server<'_> {
 
         if let Some(defs) = def_map.get(&prop_id) {
             for prop in &defs {
-                let abs_path = self.config.root_dir.join(&**prop.file_path);
+                let abs_path = self.config.root_dir.join(&prop.file_path);
                 let file_uri = path_to_uri(&abs_path);
                 let edit = make_text_edit(
                     &prop.source,
@@ -149,7 +149,7 @@ fn collect_usage_edits(
     server: &Server<'_>,
     changes: &mut HashMap<Uri, Vec<TextEdit>>,
 ) {
-    let abs_path = server.config.root_dir.join(&**prop.file_path);
+    let abs_path = server.config.root_dir.join(&prop.file_path);
     let file_uri = path_to_uri(&abs_path);
 
     let mut search_from = 0usize;

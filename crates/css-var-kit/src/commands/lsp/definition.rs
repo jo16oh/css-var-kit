@@ -38,7 +38,7 @@ impl Server<'_> {
         let parse_results: Vec<_> = self
             .source_cache
             .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path.as_path()))
+            .flat_map(|(path, content)| lint::parse_file(content, path))
             .collect();
 
         let search_result = SearcherBuilder::new(parse_results)
@@ -57,7 +57,7 @@ impl Server<'_> {
         let locations: Vec<Location> = props
             .iter()
             .map(|prop| {
-                let abs_path = self.config.root_dir.join(&**prop.file_path);
+                let abs_path = self.config.root_dir.join(&prop.file_path);
                 let start = Position {
                     line: prop.ident.line,
                     character: byte_col_to_utf16_in_source(

@@ -26,8 +26,8 @@ impl VariableDefinitions {
 impl SearchCondition for VariableDefinitions {
     fn matches(&self, prop: &CssProperty) -> bool {
         prop.ident.raw.starts_with("--")
-            && (self.definition_files.matches(prop.file_path.as_ref())
-                || self.include.matches(prop.file_path.as_ref()))
+            && (self.definition_files.matches(&prop.file_path)
+                || self.include.matches(&prop.file_path))
     }
 }
 
@@ -58,7 +58,7 @@ mod tests {
     use crate::searcher::SearcherBuilder;
 
     fn test_parse(css: &str) -> ParseResult {
-        parser::css::parse(&OwnedStr::from(css), &Rc::new(PathBuf::from("test.css")))
+        parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")))
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::path::PathBuf;
+use std::path::Path;
 use std::rc::Rc;
 
 use lsp_types::notification::PublishDiagnostics;
@@ -15,7 +15,7 @@ use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {
     pub fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        let sources: Vec<(Rc<PathBuf>, OwnedStr)> = self
+        let sources: Vec<(Rc<Path>, OwnedStr)> = self
             .source_cache
             .iter()
             .filter(|(path, _)| !self.config.include.is_negated(path))
@@ -35,7 +35,7 @@ impl Server<'_> {
             diagnostics.len()
         ));
 
-        let mut by_file: HashMap<Rc<PathBuf>, Vec<lsp_types::Diagnostic>> = HashMap::new();
+        let mut by_file: HashMap<Rc<Path>, Vec<lsp_types::Diagnostic>> = HashMap::new();
         for d in &diagnostics {
             by_file
                 .entry(d.file_path.clone())
@@ -44,8 +44,7 @@ impl Server<'_> {
         }
 
         for (path, _) in &sources {
-            let path_buf = Rc::new(path.to_path_buf());
-            let lsp_diagnostics = by_file.remove(&path_buf).unwrap_or_default();
+            let lsp_diagnostics = by_file.remove(path).unwrap_or_default();
             let abs_path = self.config.root_dir.join(path.as_ref());
             let uri = path_to_uri(&abs_path);
             self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {

@@ -1,4 +1,4 @@
-use std::{cell::OnceCell, path::PathBuf, rc::Rc};
+use std::{cell::OnceCell, path::Path, rc::Rc};
 
 use crate::owned::{OwnedPropId, OwnedStr, OwnedTokenList};
 
@@ -39,7 +39,7 @@ pub struct PropertyValue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Property {
-    pub file_path: Rc<PathBuf>,
+    pub file_path: Rc<Path>,
     pub source: OwnedStr,
     pub ident: PropertyIdent,
     pub value: PropertyValue,
@@ -56,7 +56,7 @@ impl Property {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParseResult {
-    pub file_path: Rc<PathBuf>,
+    pub file_path: Rc<Path>,
     pub properties: Vec<Property>,
 }
 
@@ -297,7 +297,7 @@ impl<'a> Scanner<'a> {
     }
 }
 
-pub fn parse(css: &OwnedStr, file_path: &Rc<PathBuf>) -> ParseResult {
+pub fn parse(css: &OwnedStr, file_path: &Rc<Path>) -> ParseResult {
     parse_impl(css, css, file_path, 0, 0, 0, 0)
 }
 
@@ -307,7 +307,7 @@ pub fn parse(css: &OwnedStr, file_path: &Rc<PathBuf>) -> ParseResult {
 /// `byte_offset` is added to `Property.name.offset` and `Property.value.offset`.
 pub fn parse_with_offset(
     css: &OwnedStr,
-    file_path: &Rc<PathBuf>,
+    file_path: &Rc<Path>,
     full_source: &OwnedStr,
     line_offset: u32,
     column_offset: u32,
@@ -327,7 +327,7 @@ pub fn parse_with_offset(
 fn parse_impl(
     css: &OwnedStr,
     source: &OwnedStr,
-    file_path: &Rc<PathBuf>,
+    file_path: &Rc<Path>,
     initial_brace_depth: i32,
     line_offset: u32,
     column_offset: u32,
@@ -552,7 +552,7 @@ mod tests {
     const TEST_PATH: &str = "test.css";
 
     fn test_parse(css: &str) -> ParseResult {
-        parse(&OwnedStr::from(css), &Rc::new(PathBuf::from(TEST_PATH)))
+        parse(&OwnedStr::from(css), &Rc::from(PathBuf::from(TEST_PATH)))
     }
 
     fn map_owned_str(vec: Vec<&str>) -> Vec<OwnedStr> {

@@ -170,7 +170,7 @@ mod tests {
 
     fn make_diagnostic(source: &str, line: u32, column: u32, severity: Severity) -> Diagnostic {
         Diagnostic {
-            file_path: Rc::new(PathBuf::from("test.css")),
+            file_path: Rc::from(PathBuf::from("test.css")),
             source: OwnedStr::from(source),
             line,
             span_length: None,
