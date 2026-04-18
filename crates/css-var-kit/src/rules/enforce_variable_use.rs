@@ -46,12 +46,12 @@ impl Rule for EnforceVariableUse {
             .iter()
             .filter(|p| !is_ignored(&p.ignore_comments, RULE_NAME))
             .flat_map(|p| {
-                let allowed_kinds = self.allowed_property_kinds(&p.ident.unescaped);
+                let allowed_kinds = self.allowed_property_kinds(&p.ident.property_id.as_str());
                 let enforced_types = self.types & !allowed_kinds;
                 if enforced_types.is_empty() {
                     return vec![];
                 }
-                self.check_tokens(p.value.raw, p, enforced_types)
+                self.check_tokens(&p.value.raw, p, enforced_types)
             })
             .collect()
     }
@@ -231,8 +231,8 @@ fn make_diagnostic(
     let token_byte_offset =
         (token_raw.as_ptr() as usize).wrapping_sub(prop.value.raw.as_ptr() as usize);
     Diagnostic {
-        file_path: prop.file_path,
-        source: prop.source,
+        file_path: prop.file_path.clone(),
+        source: prop.source.clone(),
         line: prop.value.line,
         column: prop.value.column + token_byte_offset as u32,
         span_length: Some(token_raw.len() as u32),
@@ -244,13 +244,15 @@ fn make_diagnostic(
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     use super::config::{
         EnforceVariableUseConfig, RawAllowedProperty, RawEnforceVariableUseConfig,
     };
     use super::*;
     use crate::config::file::SeverityToggle;
+    use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
 
@@ -300,9 +302,12 @@ mod tests {
         expected: &[&str],
     ) {
         let rule = EnforceVariableUse::from_config(config);
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            OwnedStr::from(css),
+            Rc::new(PathBuf::from("test.css")),
+        )];
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
         let diagnostics = rule.check(&search_result);
