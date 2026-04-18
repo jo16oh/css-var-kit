@@ -1,9 +1,10 @@
 use crate::config::LookupFilesMatcher;
+use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{Property, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
 const RULE_NAME: &str = "no-variable-type-mismatch";
@@ -15,7 +16,7 @@ pub struct NoVariableTypeMismatch {
 }
 
 impl Rule for NoVariableTypeMismatch {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
         searcher
             .add_condition(VariableDefinitions::new(
                 self.definition_files.clone(),
@@ -24,7 +25,7 @@ impl Rule for NoVariableTypeMismatch {
             .add_condition(VariableUsages)
     }
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
+    fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let vars = search_result
             .get_prop_map_for::<VariableDefinitions>()
             .vars_map();
@@ -33,11 +34,7 @@ impl Rule for NoVariableTypeMismatch {
     }
 }
 
-fn check_type_mismatch<'src>(
-    vars: &VarsMap<'src>,
-    usages: &[Property<'src>],
-    severity: Severity,
-) -> Vec<Diagnostic<'src>> {
+fn check_type_mismatch(vars: &VarsMap, usages: &[Property], severity: Severity) -> Vec<Diagnostic> {
     usages
         .iter()
         .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))

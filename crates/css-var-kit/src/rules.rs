@@ -1,6 +1,9 @@
-use std::path::Path;
+use std::{path::PathBuf, rc::Rc};
 
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::{
+    owned::OwnedStr,
+    searcher::{SearchResult, SearcherBuilder},
+};
 
 pub mod enforce_variable_use;
 pub mod no_inconsistent_variable_definition;
@@ -8,9 +11,9 @@ pub mod no_undefined_variable_use;
 pub mod no_variable_type_mismatch;
 
 pub trait Rule {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src>;
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder;
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>>;
+    fn check<'src>(&self, search_result: &SearchResult) -> Vec<Diagnostic>;
 }
 
 pub fn is_ignored(ignore_comments: &[&str], rule_name: &str) -> bool {
@@ -25,9 +28,9 @@ pub fn is_ignored(ignore_comments: &[&str], rule_name: &str) -> bool {
     })
 }
 
-pub struct Diagnostic<'src> {
-    pub file_path: &'src Path,
-    pub source: &'src str,
+pub struct Diagnostic {
+    pub file_path: Rc<PathBuf>,
+    pub source: OwnedStr,
     pub line: u32,
     pub column: u32,
     pub span_length: Option<u32>,
@@ -42,7 +45,7 @@ pub enum Severity {
     Warning,
 }
 
-impl<'src> Diagnostic<'src> {
+impl Diagnostic {
     pub fn print(&self) {
         eprint!("{}", crate::diagnostic_renderer::render(self));
     }

@@ -74,7 +74,7 @@ pub fn run(config: &Config) {
 }
 
 pub fn check<'src>(
-    parse_results: &'src [parser::css::ParseResult<'src>],
+    parse_results: &'src [parser::css::ParseResult],
     config: &Config,
 ) -> Vec<Diagnostic<'src>> {
     let compiled_rules = config.rules.compile(config);
@@ -168,10 +168,7 @@ fn collect_source_files_recursive(
     }
 }
 
-pub fn parse_file<'src>(
-    content: &'src str,
-    path: &'src Path,
-) -> Vec<parser::css::ParseResult<'src>> {
+pub fn parse_file<'src>(content: &'src str, path: &'src Path) -> Vec<parser::css::ParseResult> {
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
             parser::html_like::parse_html_like(content, path)

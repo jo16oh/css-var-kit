@@ -59,7 +59,7 @@ impl Property {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParseResult {
     pub file_path: Rc<PathBuf>,
     pub properties: Vec<Property>,

@@ -15,25 +15,25 @@ pub trait SearchCondition: 'static {
     fn matches(&self, prop: &Property) -> bool;
 }
 
-pub struct SearcherBuilder<'src> {
-    parse_results: &'src [ParseResult],
+pub struct SearcherBuilder {
+    parse_results: Vec<ParseResult>,
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
 }
 
-impl<'src> SearcherBuilder<'src> {
-    pub fn new(parse_results: &'src [ParseResult]) -> Self {
+impl SearcherBuilder {
+    pub fn new(parse_results: Vec<ParseResult>) -> Self {
         Self {
             parse_results,
             conditions: HashMap::new(),
         }
     }
 
-    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> SearcherBuilder<'src> {
+    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> SearcherBuilder {
         self.conditions.insert(TypeId::of::<T>(), Box::new(cond));
         self
     }
 
-    pub fn build(self) -> Searcher<'src> {
+    pub fn build(self) -> Searcher {
         Searcher {
             parse_results: self.parse_results,
             conditions: self.conditions,
@@ -41,12 +41,12 @@ impl<'src> SearcherBuilder<'src> {
     }
 }
 
-pub struct Searcher<'src> {
-    parse_results: &'src [ParseResult],
+pub struct Searcher {
+    parse_results: Vec<ParseResult>,
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
 }
 
-impl<'src> Searcher<'src> {
+impl Searcher {
     pub fn search(&self) -> SearchResult {
         let mut results = HashMap::<TypeId, SearchConditionResult>::new();
 
@@ -60,7 +60,7 @@ impl<'src> Searcher<'src> {
             );
         }
 
-        for parse_result in self.parse_results {
+        for parse_result in &self.parse_results {
             for prop in parse_result.properties.iter() {
                 for (type_id, cond) in self.conditions.iter() {
                     if cond.matches(prop) {
@@ -119,7 +119,7 @@ impl SearchResult {
 
 pub struct SearchResultFor<'result, T: SearchCondition>(&'result [Property], PhantomData<T>);
 
-impl<'src, T: SearchCondition> Deref for SearchResultFor<'_, T> {
+impl<T: SearchCondition> Deref for SearchResultFor<'_, T> {
     type Target = [Property];
 
     fn deref(&self) -> &Self::Target {
@@ -133,7 +133,7 @@ pub struct PropMapFor<'result, T: SearchCondition> {
     _marker: PhantomData<T>,
 }
 
-impl<'src, 'result, T: SearchCondition> PropMapFor<'result, T> {
+impl<'result, T: SearchCondition> PropMapFor<'result, T> {
     pub fn contains_key(&self, key: &OwnedPropId) -> bool {
         self.map.contains_key(key)
     }
@@ -226,7 +226,7 @@ mod tests {
     fn match_all_properties() {
         let css = ".a { color: red; font-size: 16px; margin: 0; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(All)
             .build();
 
@@ -243,7 +243,7 @@ mod tests {
     fn match_none_returns_empty() {
         let css = ".a { color: red; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(None)
             .build();
 
@@ -257,7 +257,7 @@ mod tests {
     fn filter_by_name() {
         let css = ".a { color: red; font-size: 16px; color: blue; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(NameEquals::from("color"))
             .build();
 
@@ -273,7 +273,7 @@ mod tests {
     fn filter_by_value() {
         let css = ".a { color: red; background: red; font-size: 16px; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(ValueEquals::from("red"))
             .build();
 
@@ -289,7 +289,7 @@ mod tests {
     fn multiple_conditions() {
         let css = ".a { color: red; font-size: 16px; background: blue; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(NameEquals::from("color"))
             .add_condition(ValueEquals::from("16px"))
             .build();
@@ -310,7 +310,7 @@ mod tests {
     fn unregistered_condition_panics() {
         let css = ".a { color: red; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results).build();
+        let searcher = SearcherBuilder::new(parse_results.to_vec()).build();
 
         let search_result = searcher.search();
         search_result.get_result_for(All);
@@ -320,7 +320,7 @@ mod tests {
     fn empty_css() {
         let css = ".a { }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(All)
             .build();
 
@@ -335,7 +335,7 @@ mod tests {
         let css = ":root { --primary: #ff0000; --secondary: #00ff00; color: black; }";
         let parse_results = [test_parse(css)];
 
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(IsVariable)
             .build();
 
@@ -353,7 +353,7 @@ mod tests {
     fn multiple_selectors() {
         let css = ".a { color: red; } .b { color: blue; margin: 0; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(NameEquals::from("color"))
             .build();
 
@@ -369,7 +369,7 @@ mod tests {
     fn condition_with_no_matches() {
         let css = ".a { color: red; font-size: 16px; }";
         let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(&parse_results)
+        let searcher = SearcherBuilder::new(parse_results.to_vec())
             .add_condition(NameEquals::from("background"))
             .build();
 

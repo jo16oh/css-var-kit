@@ -1,10 +1,11 @@
 use lightningcss::properties::custom::{Token, TokenOrValue};
 
 use crate::config::LookupFilesMatcher;
+use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
-use crate::searcher::{Property, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::value_kind::{ValueKind, kind_of};
 use crate::variable_resolver::resolve_variables;
 
@@ -17,14 +18,14 @@ pub struct NoInconsistentVariableDefinition {
 }
 
 impl Rule for NoInconsistentVariableDefinition {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
         searcher.add_condition(VariableDefinitions::new(
             self.definition_files.clone(),
             self.include.clone(),
         ))
     }
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
+    fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = def_map.vars_map();
         let severity = self.severity;
@@ -36,11 +37,11 @@ impl Rule for NoInconsistentVariableDefinition {
     }
 }
 
-fn check_variable_definitions<'src>(
-    props: &[&Property<'src>],
-    vars: &VarsMap<'src>,
+fn check_variable_definitions(
+    props: &[&Property],
+    vars: &VarsMap,
     severity: Severity,
-) -> Vec<Diagnostic<'src>> {
+) -> Vec<Diagnostic> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
         .filter_map(|&p| {
