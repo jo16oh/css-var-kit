@@ -6,24 +6,38 @@ use std::ops::Deref;
 use std::rc::Rc;
 use yoke::{Yoke, Yokeable};
 
-#[derive(Yokeable)]
+#[derive(Yokeable, Debug, Clone)]
 struct YokeableStr<'a>(&'a str);
 
+#[derive(Debug, Clone)]
 pub struct OwnedStr(Yoke<YokeableStr<'static>, Rc<str>>);
 
 impl OwnedStr {
-    pub fn sub_slice(rc: Rc<str>, start: usize, end: usize) -> Self {
-        Self(Yoke::attach_to_cart(rc, |s| YokeableStr(&s[start..end])))
-    }
-
     pub fn backing_rc(&self) -> &Rc<str> {
         self.0.backing_cart()
+    }
+
+    pub fn map<F>(&self, f: F) -> Self
+    where
+        F: for<'a> FnOnce(&'a str) -> &'a str,
+    {
+        Self(self.0.clone().map_project(|y, _c| YokeableStr(f(y.0))))
+    }
+
+    pub fn slice(&self, range: std::ops::Range<usize>) -> Self {
+        self.map(|s| &s[range])
     }
 }
 
 impl From<Rc<str>> for OwnedStr {
     fn from(rc: Rc<str>) -> Self {
         Self(Yoke::attach_to_cart(rc, |s| YokeableStr(s)))
+    }
+}
+
+impl From<&str> for OwnedStr {
+    fn from(s: &str) -> Self {
+        Self::from(Rc::<str>::from(s.to_string()))
     }
 }
 
@@ -48,9 +62,10 @@ impl Deref for OwnedStr {
     }
 }
 
-#[derive(Yokeable)]
+#[derive(Yokeable, Debug, Clone)]
 struct YokeablePropId<'a>(PropertyId<'a>);
 
+#[derive(Debug, Clone)]
 pub struct OwnedPropId(Yoke<YokeablePropId<'static>, Rc<str>>);
 
 impl PartialEq for OwnedPropId {
@@ -79,8 +94,8 @@ impl From<&OwnedStr> for OwnedPropId {
     }
 }
 
-impl From<&str> for OwnedPropId {
-    fn from(value: &str) -> Self {
+impl From<String> for OwnedPropId {
+    fn from(value: String) -> Self {
         let owned_str = OwnedStr::from(value.to_string());
         OwnedPropId::from(&owned_str)
     }
