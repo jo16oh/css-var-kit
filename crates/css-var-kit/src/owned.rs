@@ -76,11 +76,16 @@ impl std::fmt::Display for OwnedStr {
     }
 }
 
+use std::ops::Range;
+
 #[derive(Yokeable, Debug, Clone)]
 struct YokeablePropId<'a>(PropertyId<'a>);
 
 #[derive(Debug, Clone)]
-pub struct OwnedPropId(Yoke<YokeablePropId<'static>, Rc<str>>);
+pub struct OwnedPropId {
+    yoke: Yoke<YokeablePropId<'static>, Rc<str>>,
+    range: Range<usize>,
+}
 
 impl PartialEq for OwnedPropId {
     fn eq(&self, other: &Self) -> bool {
@@ -102,9 +107,14 @@ impl From<&OwnedStr> for OwnedPropId {
         let base = rc.as_ptr() as usize;
         let start = (**ident).as_ptr() as usize - base;
         let end = start + ident.len();
-        Self(Yoke::attach_to_cart(rc, move |full| {
-            YokeablePropId(PropertyId::from(&full[start..end]))
-        }))
+        let range = start..end;
+
+        Self {
+            yoke: Yoke::attach_to_cart(rc, move |full| {
+                YokeablePropId(PropertyId::from(&full[start..end]))
+            }),
+            range,
+        }
     }
 }
 
@@ -116,8 +126,12 @@ impl From<String> for OwnedPropId {
 }
 
 impl OwnedPropId {
-    pub fn inner(&self) -> &PropertyId<'_> {
-        &self.0.get().0
+    pub fn inner(&self) -> &PropertyId {
+        &self.yoke.get().0
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.yoke.backing_cart()[self.range.clone()]
     }
 }
 
