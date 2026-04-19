@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -8,7 +9,10 @@ use crate::owned::OwnedStr;
 use crate::parser;
 use crate::parser::css::ParseResult;
 use crate::rules::{Diagnostic, Severity};
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_usages::VariableUsages;
+use crate::searcher::{SearchCache, SearchResult, SearcherBuilder};
 
 const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
@@ -54,7 +58,11 @@ pub fn run(config: &Config) {
         .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
-    let diagnostics = check(parse_results, config);
+    let diagnostics = if config.target_files.is_empty() {
+        check(parse_results, config)
+    } else {
+        check_targeted(parse_results, config)
+    };
     let diagnostics: Vec<_> = diagnostics
         .into_iter()
         .filter(|d| !config.include.matches(&d.file_path))
@@ -74,6 +82,29 @@ pub fn run(config: &Config) {
     {
         process::exit(1);
     }
+}
+
+fn check_targeted(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
+    let target_set: HashSet<Rc<Path>> = config
+        .target_files
+        .iter()
+        .map(|p| Rc::<Path>::from(p.as_path()))
+        .collect();
+
+    let mut cache = SearchCache::new()
+        .add_condition(VariableDefinitions::new(
+            config.definition_files.clone(),
+            config.include.clone(),
+        ))
+        .add_condition(VariableUsages)
+        .add_condition(NonCustomProperties);
+
+    for parse_result in &parse_results {
+        cache.update_file(&parse_result.file_path, std::slice::from_ref(parse_result));
+    }
+
+    let search_result = cache.search_for_files(&target_set);
+    check_search_result(&search_result, config)
 }
 
 pub fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {

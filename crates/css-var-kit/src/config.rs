@@ -46,6 +46,7 @@ pub struct Config {
     pub include: LookupFilesMatcher,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
+    pub target_files: Vec<PathBuf>,
 }
 
 pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
@@ -147,9 +148,7 @@ impl Config {
             None => config_base.join(&raw.root_dir),
         };
 
-        let definition_patterns = if !args.files.is_empty() {
-            args.files.as_slice()
-        } else if let Some(ref df) = raw.definition_files {
+        let definition_patterns = if let Some(ref df) = raw.definition_files {
             df.as_slice()
         } else {
             raw.lookup_files.as_slice()
@@ -159,6 +158,15 @@ impl Config {
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
         let include = compile_include(&raw.include)?;
+
+        let target_files: Vec<PathBuf> = args
+            .files
+            .iter()
+            .map(|f| {
+                let abs = cwd.join(f);
+                abs.strip_prefix(&root_dir).unwrap_or(&abs).to_path_buf()
+            })
+            .collect();
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
@@ -171,6 +179,7 @@ impl Config {
             include,
             rules,
             lsp_log_file,
+            target_files,
         })
     }
 
@@ -204,6 +213,7 @@ impl Config {
             include,
             rules,
             lsp_log_file,
+            target_files: vec![],
         })
     }
 }
