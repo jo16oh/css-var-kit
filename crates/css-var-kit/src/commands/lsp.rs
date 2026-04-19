@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
@@ -24,6 +25,12 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
+use crate::owned::OwnedStr;
+use crate::parser::css::ParseResult;
+use crate::searcher::SearchCache;
+use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_usages::VariableUsages;
 use logger::Logger;
 use uri::uri_to_path;
 
@@ -87,14 +94,18 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     };
 
     let source_cache = load_all_sources(&config);
+    let parse_cache = build_parse_cache(&source_cache);
+    let search_cache = build_search_cache(&parse_cache, &config);
 
     let mut server = Server {
         connection: &connection,
         config,
         lsp_root_dir: root_dir,
         init_options,
-        open_documents: HashMap::new(),
+        opened_documents: HashMap::new(),
         source_cache,
+        parse_cache,
+        search_cache,
         watcher_rx,
         logger: logger.as_ref(),
     };
@@ -116,8 +127,10 @@ struct Server<'a> {
     config: Config,
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
-    open_documents: HashMap<Uri, String>,
-    source_cache: HashMap<PathBuf, String>,
+    opened_documents: HashMap<Uri, String>,
+    source_cache: HashMap<Rc<Path>, OwnedStr>,
+    parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
+    search_cache: SearchCache,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -155,7 +168,7 @@ impl Server<'_> {
                             self.reload_config()?;
                         } else if !source_paths.is_empty() {
                             self.update_source_cache_from_disk(&source_paths);
-                            self.publish_diagnostics()?;
+                            self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
                         }
                     }
                 }
@@ -172,13 +185,26 @@ impl Server<'_> {
                     "textDocument/didOpen: {}",
                     params.text_document.uri.as_str()
                 ));
-                if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    self.source_cache
-                        .insert(rel_path, params.text_document.text.clone());
+                let rel_path = self.uri_to_rel_path(&params.text_document.uri);
+                if let Some(ref rel_path) = rel_path {
+                    let key = Rc::<Path>::from(rel_path.clone());
+                    let source = OwnedStr::from(&params.text_document.text);
+                    self.update_caches(&key, &source);
+                    self.source_cache.insert(key, source);
                 }
-                self.open_documents
+                self.opened_documents
                     .insert(params.text_document.uri, params.text_document.text);
-                self.publish_diagnostics()?;
+                if rel_path
+                    .as_deref()
+                    .is_some_and(|p| self.is_definition_file(p))
+                {
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                } else {
+                    let targets: Vec<Rc<Path>> = rel_path
+                        .map(|p| vec![Rc::<Path>::from(p)])
+                        .unwrap_or_default();
+                    self.publish_diagnostics_for_files(&targets)?;
+                }
             }
             DidChangeTextDocument::METHOD => {
                 let params: lsp_types::DidChangeTextDocumentParams =
@@ -188,14 +214,29 @@ impl Server<'_> {
                     params.text_document.uri.as_str(),
                     params.text_document.version
                 ));
+                let mut changed_rel_path = None;
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                        self.source_cache.insert(rel_path, change.text.clone());
+                        let key = Rc::<Path>::from(rel_path.clone());
+                        let source = OwnedStr::from(&change.text);
+                        self.update_caches(&key, &source);
+                        self.source_cache.insert(key, source);
+                        changed_rel_path = Some(rel_path);
                     }
-                    self.open_documents
+                    self.opened_documents
                         .insert(params.text_document.uri, change.text);
                 }
-                self.publish_diagnostics()?;
+                if changed_rel_path
+                    .as_deref()
+                    .is_some_and(|p| self.is_definition_file(p))
+                {
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                } else {
+                    let targets: Vec<Rc<Path>> = changed_rel_path
+                        .map(|p| vec![Rc::<Path>::from(p)])
+                        .unwrap_or_default();
+                    self.publish_diagnostics_for_files(&targets)?;
+                }
             }
             DidChangeWatchedFiles::METHOD => {
                 let params: lsp_types::DidChangeWatchedFilesParams =
@@ -218,7 +259,7 @@ impl Server<'_> {
                     self.reload_config()?;
                 } else if !source_paths.is_empty() {
                     self.update_source_cache_from_disk(&source_paths);
-                    self.publish_diagnostics()?;
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
                 }
             }
             DidCloseTextDocument::METHOD => {
@@ -228,14 +269,18 @@ impl Server<'_> {
                     "textDocument/didClose: {}",
                     params.text_document.uri.as_str()
                 ));
-                self.open_documents.remove(&params.text_document.uri);
+                self.opened_documents.remove(&params.text_document.uri);
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
-                            self.source_cache.insert(rel_path, content);
+                            let key = Rc::<Path>::from(rel_path);
+                            let source = OwnedStr::from(content);
+                            self.update_caches(&key, &source);
+                            self.source_cache.insert(key, source);
                         }
                         Err(_) => {
-                            self.source_cache.remove(&rel_path);
+                            self.remove_from_caches(rel_path.as_path());
+                            self.source_cache.remove(rel_path.as_path());
                         }
                     }
                 }
@@ -253,7 +298,7 @@ impl Server<'_> {
     fn update_source_cache_from_disk(&mut self, abs_paths: &[PathBuf]) {
         for abs_path in abs_paths {
             let is_open = self
-                .open_documents
+                .opened_documents
                 .keys()
                 .any(|uri| uri_to_path(uri).as_deref() == Some(abs_path.as_path()));
             if is_open {
@@ -267,13 +312,40 @@ impl Server<'_> {
 
             match fs::read_to_string(abs_path) {
                 Ok(content) => {
-                    self.source_cache.insert(rel_path, content);
+                    let key = Rc::<Path>::from(rel_path);
+                    let source = OwnedStr::from(content);
+                    self.update_caches(&key, &source);
+                    self.source_cache.insert(key, source);
                 }
                 Err(_) => {
-                    self.source_cache.remove(&rel_path);
+                    self.remove_from_caches(rel_path.as_path());
+                    self.source_cache.remove(rel_path.as_path());
                 }
             }
         }
+    }
+
+    fn update_caches(&mut self, path: &Rc<Path>, source: &OwnedStr) {
+        let parse_results = lint::parse_file(source, path);
+        self.search_cache.update_file(path, &parse_results);
+        self.parse_cache.insert(path.clone(), parse_results);
+    }
+
+    fn remove_from_caches(&mut self, path: &Path) {
+        self.search_cache.remove_file(path);
+        self.parse_cache.remove(path);
+    }
+
+    fn is_definition_file(&self, rel_path: &Path) -> bool {
+        self.config.definition_files.matches(&rel_path) || self.config.include.matches(&rel_path)
+    }
+
+    fn opened_files_rel_paths(&self) -> Vec<Rc<Path>> {
+        self.opened_documents
+            .keys()
+            .filter_map(|uri| self.uri_to_rel_path(uri))
+            .map(Rc::<Path>::from)
+            .collect()
     }
 
     fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {
@@ -296,8 +368,10 @@ impl Server<'_> {
             Ok(new_config) => {
                 self.config = new_config;
                 self.source_cache = load_all_sources(&self.config);
+                self.parse_cache = build_parse_cache(&self.source_cache);
+                self.search_cache = build_search_cache(&self.parse_cache, &self.config);
                 self.log("config reloaded");
-                self.publish_diagnostics()?;
+                self.publish_all_diagnostics()?;
             }
             Err(e) => {
                 self.log(&format!("config reload failed: {e}"));
@@ -327,11 +401,39 @@ fn is_config_file(path: &Path) -> bool {
     )
 }
 
-fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
+fn build_search_cache(
+    parse_cache: &HashMap<Rc<Path>, Vec<ParseResult>>,
+    config: &Config,
+) -> SearchCache {
+    let mut cache = SearchCache::new()
+        .add_condition(VariableDefinitions::new(
+            config.definition_files.clone(),
+            config.include.clone(),
+        ))
+        .add_condition(VariableUsages)
+        .add_condition(NonCustomProperties);
+
+    for (path, parse_results) in parse_cache {
+        cache.update_file(path, parse_results);
+    }
+
+    cache
+}
+
+fn build_parse_cache(
+    source_cache: &HashMap<Rc<Path>, OwnedStr>,
+) -> HashMap<Rc<Path>, Vec<ParseResult>> {
+    source_cache
+        .iter()
+        .map(|(path, content)| (path.clone(), lint::parse_file(content, path)))
+        .collect()
+}
+
+fn load_all_sources(config: &Config) -> HashMap<Rc<Path>, OwnedStr> {
     let lint_sources = lint::collect_source_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
@@ -339,18 +441,18 @@ fn load_all_sources(config: &Config) -> HashMap<PathBuf, String> {
             if config.include.is_negated(&rel_path) {
                 return None;
             }
-            Some((rel_path, content))
+            Some((Rc::<Path>::from(rel_path), content))
         });
 
     let include_sources = lint::collect_include_files(config.root_dir.as_path(), &config.include)
         .into_iter()
         .filter_map(|path| {
-            let content = fs::read_to_string(&path).ok()?;
+            let content = fs::read_to_string(&path).ok().map(OwnedStr::from)?;
             let rel_path = path
                 .strip_prefix(&config.root_dir)
                 .unwrap_or(&path)
                 .to_path_buf();
-            Some((rel_path, content))
+            Some((Rc::from(rel_path), content))
         });
 
     lint_sources.chain(include_sources).collect()

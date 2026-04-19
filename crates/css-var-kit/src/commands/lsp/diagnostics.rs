@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::Path;
+use std::rc::Rc;
 
 use lsp_types::notification::PublishDiagnostics;
 use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnosticsParams, Range};
@@ -12,38 +13,75 @@ use crate::position::byte_col_to_utf16_in_source;
 use crate::rules::{Diagnostic, Severity};
 
 impl Server<'_> {
-    pub fn publish_diagnostics(&self) -> Result<(), Box<dyn Error>> {
-        let sources: Vec<(&Path, &str)> = self
+    pub fn publish_all_diagnostics(&self) -> Result<(), Box<dyn Error>> {
+        let source_paths: Vec<Rc<Path>> = self
             .source_cache
-            .iter()
-            .filter(|(path, _)| !self.config.include.is_negated(path))
-            .map(|(path, content)| (path.as_path(), content.as_str()))
+            .keys()
+            .filter(|path| !self.config.include.is_negated(path))
+            .cloned()
             .collect();
 
-        let parse_results: Vec<_> = sources
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let diagnostics = lint::check(&parse_results, &self.config);
+        let search_result = self.search_cache.search();
+        let diagnostics = lint::check_search_result(&search_result, &self.config);
 
         self.log(&format!(
-            "publishDiagnostics: {} files, {} diagnostics total",
-            sources.len(),
+            "publishDiagnostics: {} files (all), {} diagnostics total",
+            source_paths.len(),
             diagnostics.len()
         ));
 
-        let mut by_file: HashMap<&Path, Vec<lsp_types::Diagnostic>> = HashMap::new();
+        let mut by_file: HashMap<Rc<Path>, Vec<lsp_types::Diagnostic>> = HashMap::new();
         for d in &diagnostics {
             by_file
-                .entry(d.file_path)
+                .entry(d.file_path.clone())
                 .or_default()
                 .push(to_lsp_diagnostic(d));
         }
 
-        for (path, _) in &sources {
-            let lsp_diagnostics = by_file.remove(*path).unwrap_or_default();
-            let abs_path = self.config.root_dir.join(path);
+        for path in &source_paths {
+            let lsp_diagnostics = by_file.remove(path).unwrap_or_default();
+            let abs_path = self.config.root_dir.join(path.as_ref());
+            let uri = path_to_uri(&abs_path);
+            self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
+                uri,
+                diagnostics: lsp_diagnostics,
+                version: None,
+            })?;
+        }
+
+        Ok(())
+    }
+
+    pub fn publish_diagnostics_for_files(
+        &self,
+        target_paths: &[Rc<Path>],
+    ) -> Result<(), Box<dyn Error>> {
+        let target_set: HashSet<Rc<Path>> = target_paths
+            .iter()
+            .filter(|path| !self.config.include.is_negated(path))
+            .cloned()
+            .collect();
+
+        let search_result = self.search_cache.search_for_files(&target_set);
+        let diagnostics = lint::check_search_result(&search_result, &self.config);
+
+        self.log(&format!(
+            "publishDiagnostics: {} files (targeted), {} diagnostics",
+            target_set.len(),
+            diagnostics.len()
+        ));
+
+        let mut by_file: HashMap<Rc<Path>, Vec<lsp_types::Diagnostic>> = HashMap::new();
+        for d in &diagnostics {
+            by_file
+                .entry(d.file_path.clone())
+                .or_default()
+                .push(to_lsp_diagnostic(d));
+        }
+
+        for path in target_set.iter() {
+            let lsp_diagnostics = by_file.remove(path.as_ref()).unwrap_or_default();
+            let abs_path = self.config.root_dir.join(path.as_ref());
             let uri = path_to_uri(&abs_path);
             self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
                 uri,
@@ -56,16 +94,16 @@ impl Server<'_> {
     }
 }
 
-fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
+fn to_lsp_diagnostic(d: &Diagnostic) -> lsp_types::Diagnostic {
     let start = Position {
         line: d.line,
-        character: byte_col_to_utf16_in_source(d.source, d.line, d.column),
+        character: byte_col_to_utf16_in_source(&d.source, d.line, d.column),
     };
 
     let end = match d.span_length {
         Some(len) => Position {
             line: d.line,
-            character: byte_col_to_utf16_in_source(d.source, d.line, d.column + len),
+            character: byte_col_to_utf16_in_source(&d.source, d.line, d.column + len),
         },
         None => {
             let line_end_col = d
@@ -76,7 +114,7 @@ fn to_lsp_diagnostic(d: &Diagnostic<'_>) -> lsp_types::Diagnostic {
                 .unwrap_or(d.column + 1);
             Position {
                 line: d.line,
-                character: byte_col_to_utf16_in_source(d.source, d.line, line_end_col),
+                character: byte_col_to_utf16_in_source(&d.source, d.line, line_end_col),
             }
         }
     };

@@ -1,10 +1,11 @@
 use lightningcss::properties::custom::{Token, TokenOrValue};
 
 use crate::config::LookupFilesMatcher;
+use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
-use crate::searcher::{Property, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::value_kind::{ValueKind, kind_of};
 use crate::variable_resolver::resolve_variables;
 
@@ -17,14 +18,14 @@ pub struct NoInconsistentVariableDefinition {
 }
 
 impl Rule for NoInconsistentVariableDefinition {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
         searcher.add_condition(VariableDefinitions::new(
             self.definition_files.clone(),
             self.include.clone(),
         ))
     }
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
+    fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = def_map.vars_map();
         let severity = self.severity;
@@ -36,11 +37,11 @@ impl Rule for NoInconsistentVariableDefinition {
     }
 }
 
-fn check_variable_definitions<'src>(
-    props: &[&Property<'src>],
-    vars: &VarsMap<'src>,
+fn check_variable_definitions(
+    props: &[&Property],
+    vars: &VarsMap,
     severity: Severity,
-) -> Vec<Diagnostic<'src>> {
+) -> Vec<Diagnostic> {
     let classified: Vec<(&Property, ValueKind, bool)> = props
         .iter()
         .filter_map(|&p| {
@@ -48,13 +49,14 @@ fn check_variable_definitions<'src>(
 
             // Skip check if the value is white-space only
             if token_list
+                .inner()
                 .0
                 .iter()
                 .any(|t| !matches!(t, TokenOrValue::Token(Token::WhiteSpace(_))))
             {
-                let kinds = match resolve_variables(token_list, vars) {
+                let kinds = match resolve_variables(token_list.inner(), vars) {
                     Ok(resolved) => kind_of(&resolved),
-                    Err(_) => kind_of(p.value.raw),
+                    Err(_) => kind_of(&p.value.raw),
                 };
                 let is_ignored = is_ignored(&p.ignore_comments, RULE_NAME);
 
@@ -86,15 +88,15 @@ fn check_variable_definitions<'src>(
         .filter(|(_, (_, kinds, _))| !baseline.is_consistent_with(kinds))
         .map(|(_, (prop, _, _))| {
             Diagnostic {
-                file_path: prop.file_path,
-                source: prop.source,
+                file_path: prop.file_path.clone(),
+                source: prop.source.clone(),
                 line: prop.value.line,
                 column: prop.value.column,
                 span_length: None,
                 rule_name: RULE_NAME,
                 message: format!(
                     "inconsistent variable definition: `{}` has value `{}` which conflicts with expected type <{}>",
-                    prop.name.raw, prop.value.raw, baseline,
+                    prop.ident.raw, prop.value.raw, baseline,
                 ),
                 severity,
             }
@@ -105,19 +107,24 @@ fn check_variable_definitions<'src>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            &OwnedStr::from(css),
+            &Rc::from(PathBuf::from("test.css")),
+        )];
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,
             definition_files: LookupFilesMatcher::default(),
             include: LookupFilesMatcher::default(),
         };
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
 

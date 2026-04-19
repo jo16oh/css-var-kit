@@ -1,9 +1,10 @@
 use crate::config::LookupFilesMatcher;
+use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{Property, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
 const RULE_NAME: &str = "no-variable-type-mismatch";
@@ -15,7 +16,7 @@ pub struct NoVariableTypeMismatch {
 }
 
 impl Rule for NoVariableTypeMismatch {
-    fn register_conditions<'src>(&self, searcher: SearcherBuilder<'src>) -> SearcherBuilder<'src> {
+    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
         searcher
             .add_condition(VariableDefinitions::new(
                 self.definition_files.clone(),
@@ -24,32 +25,27 @@ impl Rule for NoVariableTypeMismatch {
             .add_condition(VariableUsages)
     }
 
-    fn check<'src>(&self, search_result: &SearchResult<'src>) -> Vec<Diagnostic<'src>> {
-        let vars = search_result
-            .get_prop_map_for::<VariableDefinitions>()
-            .vars_map();
+    fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
+        let prop_map = search_result.get_prop_map_for::<VariableDefinitions>();
+        let vars = prop_map.vars_map();
         let usages = search_result.get_result_for(VariableUsages);
         check_type_mismatch(&vars, &usages, self.severity)
     }
 }
 
-fn check_type_mismatch<'src>(
-    vars: &VarsMap<'src>,
-    usages: &[Property<'src>],
-    severity: Severity,
-) -> Vec<Diagnostic<'src>> {
+fn check_type_mismatch(vars: &VarsMap, usages: &[Property], severity: Severity) -> Vec<Diagnostic> {
     usages
         .iter()
         .filter(|prop| !is_ignored(&prop.ignore_comments, RULE_NAME))
-        .filter(|prop| !prop.name.raw.starts_with("--"))
+        .filter(|prop| !prop.ident.raw.starts_with("--"))
         .filter_map(|prop| {
-            let result = check_property_type(&prop.name.unescaped, prop.value.raw, vars);
+            let result = check_property_type(&prop.ident.raw, &prop.value.raw, vars);
             match result {
                 Ok(_) => None,
                 Err(TypeCheckError::VariableNotFound(_)) => None,
                 Err(e) => Some(Diagnostic {
-                    file_path: prop.file_path,
-                    source: prop.source,
+                    file_path: prop.file_path.clone(),
+                    source: prop.source.clone(),
                     line: prop.value.line,
                     column: prop.value.column,
                     span_length: None,
@@ -65,19 +61,24 @@ fn check_type_mismatch<'src>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::SearcherBuilder;
-    use std::path::Path;
+    use std::path::PathBuf;
+    use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = [parser::css::parse(css, Path::new("test.css"))];
+        let parse_results = vec![parser::css::parse(
+            &OwnedStr::from(css),
+            &Rc::from(PathBuf::from("test.css")),
+        )];
         let rule = NoVariableTypeMismatch {
             severity: Severity::Warning,
             definition_files: LookupFilesMatcher::default(),
             include: LookupFilesMatcher::default(),
         };
         let searcher = rule
-            .register_conditions(SearcherBuilder::new(&parse_results))
+            .register_conditions(SearcherBuilder::new(parse_results))
             .build();
         let search_result = searcher.search();
 

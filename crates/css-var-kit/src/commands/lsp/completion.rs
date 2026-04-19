@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::path::Path;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::request::{Completion, GotoDefinition, PrepareRenameRequest, Rename};
@@ -9,9 +8,7 @@ use lsp_types::{
 };
 
 use super::Server;
-use crate::commands::lint;
 use crate::position::{byte_offset_to_utf16, utf16_to_byte_offset};
-use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::type_checker::{TypeCheckError, check_property_type};
 
@@ -46,27 +43,10 @@ impl Server<'_> {
         let uri = &params.text_document_position.text_document.uri;
         let pos = params.text_document_position.position;
 
-        let source = self.open_documents.get(uri)?;
+        let source = self.opened_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
-        let sources: Vec<(&Path, &str)> = self
-            .source_cache
-            .iter()
-            .map(|(path, content)| (path.as_path(), content.as_str()))
-            .collect();
-
-        let parse_results: Vec<_> = sources
-            .iter()
-            .flat_map(|(path, content)| lint::parse_file(content, path))
-            .collect();
-
-        let search_result = SearcherBuilder::new(&parse_results)
-            .add_condition(VariableDefinitions::new(
-                self.config.definition_files.clone(),
-                self.config.include.clone(),
-            ))
-            .build()
-            .search();
+        let search_result = self.search_cache.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = var_defs.vars_map();
@@ -82,7 +62,7 @@ impl Server<'_> {
         let items: Vec<CompletionItem> = var_defs
             .iter()
             .filter(|(_prop_id, props)| {
-                let name = props[0].name.raw;
+                let name = &*props[0].ident.raw;
                 let test_value = build_test_value(&ctx, name);
                 !matches!(
                     check_property_type(&ctx.property_name, &test_value, &vars),
@@ -90,8 +70,8 @@ impl Server<'_> {
                 )
             })
             .map(|(_prop_id, props)| {
-                let name = props[0].name.raw;
-                let detail = props.last().map(|p| p.value.raw.to_owned());
+                let name = &*props[0].ident.raw;
+                let detail = props.last().map(|p| p.value.raw.to_string());
                 let new_text = if ctx.inside_var {
                     name.to_owned()
                 } else {

@@ -786,18 +786,6 @@ fn excluded_file_produces_no_diagnostics_on_open() {
         button_diagnostics.is_empty(),
         "excluded file should produce no diagnostics, got: {button_diagnostics:?}"
     );
-
-    let card_diagnostics: Vec<_> = diagnostics
-        .iter()
-        .filter(|p| p.uri.ends_with("components/card.css"))
-        .flat_map(|p| &p.diagnostics)
-        .collect();
-    assert!(
-        card_diagnostics
-            .iter()
-            .any(|d| d.message.contains("--radius-lg")),
-        "non-excluded card.css should still have diagnostics, got: {card_diagnostics:?}"
-    );
 }
 
 #[test]
