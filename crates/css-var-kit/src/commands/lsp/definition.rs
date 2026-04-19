@@ -31,7 +31,7 @@ impl Server<'_> {
         let uri = &params.text_document_position_params.text_document.uri;
         let pos = params.text_document_position_params.position;
 
-        let source = self.open_documents.get(uri)?;
+        let source = self.opened_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
         let search_result = self.search_cache.search();

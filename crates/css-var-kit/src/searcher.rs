@@ -1,6 +1,6 @@
 use std::any::TypeId;
 use std::cell::OnceCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::path::Path;
@@ -9,6 +9,7 @@ use std::rc::Rc;
 use crate::{
     owned::OwnedPropId,
     parser::css::{ParseResult, Property},
+    searcher::conditions::variable_definitions::VariableDefinitions,
 };
 
 pub mod conditions;
@@ -150,6 +151,34 @@ impl SearchCache {
                 });
         }
 
+        SearchResult { results }
+    }
+
+    pub fn search_for_files(&self, target_files: &HashSet<Rc<Path>>) -> SearchResult {
+        let def_type_id = TypeId::of::<VariableDefinitions>();
+        let results = self
+            .conditions
+            .keys()
+            .map(|&type_id| {
+                let props: Vec<Property> = self
+                    .per_file
+                    .iter()
+                    .filter(|(path, _)| {
+                        type_id == def_type_id || target_files.contains(path.as_ref())
+                    })
+                    .filter_map(|(_, file_results)| file_results.get(&type_id))
+                    .flatten()
+                    .cloned()
+                    .collect();
+                (
+                    type_id,
+                    SearchConditionResult {
+                        props,
+                        prop_map: OnceCell::new(),
+                    },
+                )
+            })
+            .collect();
         SearchResult { results }
     }
 }

@@ -102,7 +102,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         config,
         lsp_root_dir: root_dir,
         init_options,
-        open_documents: HashMap::new(),
+        opened_documents: HashMap::new(),
         source_cache,
         parse_cache,
         search_cache,
@@ -127,7 +127,7 @@ struct Server<'a> {
     config: Config,
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
-    open_documents: HashMap<Uri, String>,
+    opened_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
     parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
     search_cache: SearchCache,
@@ -168,7 +168,7 @@ impl Server<'_> {
                             self.reload_config()?;
                         } else if !source_paths.is_empty() {
                             self.update_source_cache_from_disk(&source_paths);
-                            self.publish_diagnostics()?;
+                            self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
                         }
                     }
                 }
@@ -185,15 +185,26 @@ impl Server<'_> {
                     "textDocument/didOpen: {}",
                     params.text_document.uri.as_str()
                 ));
-                if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                    let key = Rc::<Path>::from(rel_path);
+                let rel_path = self.uri_to_rel_path(&params.text_document.uri);
+                if let Some(ref rel_path) = rel_path {
+                    let key = Rc::<Path>::from(rel_path.clone());
                     let source = OwnedStr::from(&params.text_document.text);
                     self.update_caches(&key, &source);
                     self.source_cache.insert(key, source);
                 }
-                self.open_documents
+                self.opened_documents
                     .insert(params.text_document.uri, params.text_document.text);
-                self.publish_diagnostics()?;
+                if rel_path
+                    .as_deref()
+                    .is_some_and(|p| self.is_definition_file(p))
+                {
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                } else {
+                    let targets: Vec<Rc<Path>> = rel_path
+                        .map(|p| vec![Rc::<Path>::from(p)])
+                        .unwrap_or_default();
+                    self.publish_diagnostics_for_files(&targets)?;
+                }
             }
             DidChangeTextDocument::METHOD => {
                 let params: lsp_types::DidChangeTextDocumentParams =
@@ -203,17 +214,29 @@ impl Server<'_> {
                     params.text_document.uri.as_str(),
                     params.text_document.version
                 ));
+                let mut changed_rel_path = None;
                 if let Some(change) = params.content_changes.into_iter().last() {
                     if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
-                        let key = Rc::<Path>::from(rel_path);
+                        let key = Rc::<Path>::from(rel_path.clone());
                         let source = OwnedStr::from(&change.text);
                         self.update_caches(&key, &source);
                         self.source_cache.insert(key, source);
+                        changed_rel_path = Some(rel_path);
                     }
-                    self.open_documents
+                    self.opened_documents
                         .insert(params.text_document.uri, change.text);
                 }
-                self.publish_diagnostics()?;
+                if changed_rel_path
+                    .as_deref()
+                    .is_some_and(|p| self.is_definition_file(p))
+                {
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                } else {
+                    let targets: Vec<Rc<Path>> = changed_rel_path
+                        .map(|p| vec![Rc::<Path>::from(p)])
+                        .unwrap_or_default();
+                    self.publish_diagnostics_for_files(&targets)?;
+                }
             }
             DidChangeWatchedFiles::METHOD => {
                 let params: lsp_types::DidChangeWatchedFilesParams =
@@ -236,7 +259,7 @@ impl Server<'_> {
                     self.reload_config()?;
                 } else if !source_paths.is_empty() {
                     self.update_source_cache_from_disk(&source_paths);
-                    self.publish_diagnostics()?;
+                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
                 }
             }
             DidCloseTextDocument::METHOD => {
@@ -246,7 +269,7 @@ impl Server<'_> {
                     "textDocument/didClose: {}",
                     params.text_document.uri.as_str()
                 ));
-                self.open_documents.remove(&params.text_document.uri);
+                self.opened_documents.remove(&params.text_document.uri);
                 if let Some(rel_path) = self.uri_to_rel_path(&params.text_document.uri) {
                     match fs::read_to_string(self.config.root_dir.join(&rel_path)) {
                         Ok(content) => {
@@ -275,7 +298,7 @@ impl Server<'_> {
     fn update_source_cache_from_disk(&mut self, abs_paths: &[PathBuf]) {
         for abs_path in abs_paths {
             let is_open = self
-                .open_documents
+                .opened_documents
                 .keys()
                 .any(|uri| uri_to_path(uri).as_deref() == Some(abs_path.as_path()));
             if is_open {
@@ -313,6 +336,18 @@ impl Server<'_> {
         self.parse_cache.remove(path);
     }
 
+    fn is_definition_file(&self, rel_path: &Path) -> bool {
+        self.config.definition_files.matches(&rel_path) || self.config.include.matches(&rel_path)
+    }
+
+    fn opened_files_rel_paths(&self) -> Vec<Rc<Path>> {
+        self.opened_documents
+            .keys()
+            .filter_map(|uri| self.uri_to_rel_path(uri))
+            .map(Rc::<Path>::from)
+            .collect()
+    }
+
     fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {
         uri_to_path(uri).map(|abs_path| {
             abs_path
@@ -336,7 +371,7 @@ impl Server<'_> {
                 self.parse_cache = build_parse_cache(&self.source_cache);
                 self.search_cache = build_search_cache(&self.parse_cache, &self.config);
                 self.log("config reloaded");
-                self.publish_diagnostics()?;
+                self.publish_all_diagnostics()?;
             }
             Err(e) => {
                 self.log(&format!("config reload failed: {e}"));

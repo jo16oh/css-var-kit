@@ -43,7 +43,7 @@ impl Server<'_> {
         let uri = &params.text_document_position.text_document.uri;
         let pos = params.text_document_position.position;
 
-        let source = self.open_documents.get(uri)?;
+        let source = self.opened_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
         let search_result = self.search_cache.search();

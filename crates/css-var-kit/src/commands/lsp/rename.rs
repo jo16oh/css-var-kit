@@ -46,7 +46,7 @@ impl Server<'_> {
         &self,
         params: &TextDocumentPositionParams,
     ) -> Option<PrepareRenameResponse> {
-        let source = self.open_documents.get(&params.text_document.uri)?;
+        let source = self.opened_documents.get(&params.text_document.uri)?;
         let var = extract_variable_at_cursor(source, &params.position)?;
         let line_str = source.lines().nth(params.position.line as usize)?;
         let start_char = byte_offset_to_utf16(line_str, var.byte_start);
@@ -71,7 +71,7 @@ impl Server<'_> {
         let pos = params.text_document_position.position;
         let new_name = &params.new_name;
 
-        let source = self.open_documents.get(uri)?;
+        let source = self.opened_documents.get(uri)?;
         let old_name = extract_variable_name_at_cursor(source, &pos)?;
 
         let new_name = if new_name.starts_with("--") {
