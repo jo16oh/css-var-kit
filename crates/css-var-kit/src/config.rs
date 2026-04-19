@@ -306,13 +306,14 @@ fn compile_target_files(
 
     let resolved: Vec<String> = args.iter().map(|a| resolve(a)).collect();
     let all_negated = resolved.iter().all(|a| a.starts_with('!'));
-    let patterns: Vec<String> = if all_negated {
-        std::iter::once("**/*.css".to_string())
-            .chain(resolved)
-            .collect()
-    } else {
-        resolved
-    };
+    let mut patterns: Vec<String> = DEFAULT_INCLUDE_PATTERNS
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    if all_negated {
+        patterns.push("**/*.css".to_string());
+    }
+    patterns.extend(resolved);
     LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
 }
 
