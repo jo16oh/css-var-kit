@@ -58,14 +58,14 @@ pub fn run(config: &Config) {
         .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
-    let diagnostics = if config.target_files.is_none() {
-        check(parse_results, config)
-    } else {
+    let diagnostics = if config.has_lint_targets {
         check_targeted(parse_results, config)
+    } else {
+        check(parse_results, config)
     };
     let diagnostics: Vec<_> = diagnostics
         .into_iter()
-        .filter(|d| !config.include.matches(&d.file_path))
+        .filter(|d| config.has_lint_targets || !config.include.matches(&d.file_path))
         .collect();
 
     if diagnostics.is_empty() {
@@ -85,11 +85,10 @@ pub fn run(config: &Config) {
 }
 
 fn check_targeted(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
-    let matcher = config.target_files.as_ref().unwrap();
     let target_set: HashSet<Rc<Path>> = parse_results
         .iter()
         .map(|r| &r.file_path)
-        .filter(|p| matcher.matches(p))
+        .filter(|p| config.include.matches(p))
         .cloned()
         .collect();
 

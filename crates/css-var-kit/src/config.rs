@@ -46,7 +46,7 @@ pub struct Config {
     pub include: LookupFilesMatcher,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
-    pub target_files: Option<LookupFilesMatcher>,
+    pub has_lint_targets: bool,
 }
 
 pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
@@ -157,12 +157,10 @@ impl Config {
         let definition_files = LookupFilesMatcher::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let include = compile_include(&raw.include)?;
-
-        let target_files = if args.files.is_empty() {
-            None
+        let (include, has_lint_targets) = if args.files.is_empty() {
+            (compile_include(&raw.include)?, false)
         } else {
-            Some(compile_target_files(&args.files, cwd, &root_dir)?)
+            (compile_target_files(&args.files, cwd, &root_dir)?, true)
         };
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
@@ -176,7 +174,7 @@ impl Config {
             include,
             rules,
             lsp_log_file,
-            target_files,
+            has_lint_targets,
         })
     }
 
@@ -210,7 +208,7 @@ impl Config {
             include,
             rules,
             lsp_log_file,
-            target_files: None,
+            has_lint_targets: false,
         })
     }
 }

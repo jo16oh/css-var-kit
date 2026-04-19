@@ -63,6 +63,8 @@ Additional glob patterns for definition-only sources (not linted). Supports nega
 
 Default configurations are prepended to user-supplied patterns, so they can be selectively overridden. For example, `"node_modules/my-ui-lib/dist/tokens.css"` adds that file as a definition source despite the `!**/node_modules/**` default.
 
+> When file arguments are passed to `cvk lint`, they override this option.
+
 ### Rule severity
 
 Each rule can be set to one of the following severity levels:
