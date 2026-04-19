@@ -31,11 +31,19 @@ cargo install css-var-kit
 
 ## Commands 🧰
 
-### `cvk lint`
+### `cvk lint [files...]`
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 
 Supports `.css` and `.scss`, plus `<style>` blocks in `.vue`, `.svelte`, `.astro`, and `.html`.
+
+```sh
+# Lint all files in the project
+cvk lint
+
+# Lint specific files only
+cvk lint components/button.css components/card.css
+```
 
 👉 [Configuration & Rules](docs/config.md)
 

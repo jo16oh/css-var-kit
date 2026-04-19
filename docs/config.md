@@ -45,7 +45,7 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
 ### `definitionFiles`
 
-Glob patterns that determine which files are scanned for CSS variable **definitions** and are also **linted**. Defaults to `["**/*.css"]`.
+Glob patterns that determine which files are scanned for CSS variable **definitions**. These files are also **linted** unless specific files are passed to `cvk lint`. Defaults to `["**/*.css"]`.
 
 Supports negation patterns (e.g. `"!**/vendor/**"`). The last matching pattern wins.
 
