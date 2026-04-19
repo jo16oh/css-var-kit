@@ -46,7 +46,7 @@ pub struct Config {
     pub include: LookupFilesMatcher,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
-    pub target_files: Vec<PathBuf>,
+    pub target_files: Option<LookupFilesMatcher>,
 }
 
 pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
@@ -159,14 +159,11 @@ impl Config {
 
         let include = compile_include(&raw.include)?;
 
-        let target_files: Vec<PathBuf> = args
-            .files
-            .iter()
-            .map(|f| {
-                let abs = cwd.join(f);
-                abs.strip_prefix(&root_dir).unwrap_or(&abs).to_path_buf()
-            })
-            .collect();
+        let target_files = if args.files.is_empty() {
+            None
+        } else {
+            Some(compile_target_files(&args.files, cwd, &root_dir)?)
+        };
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
@@ -213,7 +210,7 @@ impl Config {
             include,
             rules,
             lsp_log_file,
-            target_files: vec![],
+            target_files: None,
         })
     }
 }
@@ -283,6 +280,41 @@ fn compile_include(user_patterns: &[String]) -> Result<LookupFilesMatcher, Confi
         .map(|s| s.to_string())
         .chain(user_patterns.iter().cloned())
         .collect();
+    LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
+}
+
+/// Compiles CLI file arguments into a `LookupFilesMatcher`.
+/// Each argument is resolved relative to `cwd` and then converted to a
+/// `root_dir`-relative pattern. When all arguments are negation patterns,
+/// prepends `**/*.css` so negations act as exclusions from the full file set.
+fn compile_target_files(
+    args: &[String],
+    cwd: &Path,
+    root_dir: &Path,
+) -> Result<LookupFilesMatcher, ConfigError> {
+    let resolve = |raw: &str| -> String {
+        let (negated, pat) = match raw.strip_prefix('!') {
+            Some(rest) => (true, rest),
+            None => (false, raw),
+        };
+        let abs = cwd.join(pat);
+        let rel = abs
+            .strip_prefix(root_dir)
+            .unwrap_or(&abs)
+            .to_string_lossy()
+            .into_owned();
+        if negated { format!("!{rel}") } else { rel }
+    };
+
+    let resolved: Vec<String> = args.iter().map(|a| resolve(a)).collect();
+    let all_negated = resolved.iter().all(|a| a.starts_with('!'));
+    let patterns: Vec<String> = if all_negated {
+        std::iter::once("**/*.css".to_string())
+            .chain(resolved)
+            .collect()
+    } else {
+        resolved
+    };
     LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
 }
 

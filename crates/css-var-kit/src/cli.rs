@@ -39,7 +39,7 @@ pub struct LintArgs {
     #[arg(long)]
     pub rule: Vec<String>,
 
-    /// Files to lint (default: all CSS files in the project)
+    /// Glob patterns for files to lint (supports negation with '!')
     pub files: Vec<String>,
 }
 

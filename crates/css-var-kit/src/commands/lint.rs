@@ -58,7 +58,7 @@ pub fn run(config: &Config) {
         .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
-    let diagnostics = if config.target_files.is_empty() {
+    let diagnostics = if config.target_files.is_none() {
         check(parse_results, config)
     } else {
         check_targeted(parse_results, config)
@@ -85,10 +85,12 @@ pub fn run(config: &Config) {
 }
 
 fn check_targeted(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
-    let target_set: HashSet<Rc<Path>> = config
-        .target_files
+    let matcher = config.target_files.as_ref().unwrap();
+    let target_set: HashSet<Rc<Path>> = parse_results
         .iter()
-        .map(|p| Rc::<Path>::from(p.as_path()))
+        .map(|r| &r.file_path)
+        .filter(|p| matcher.matches(p))
+        .cloned()
         .collect();
 
     let mut cache = SearchCache::new()

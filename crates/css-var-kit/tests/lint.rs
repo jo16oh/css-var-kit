@@ -71,3 +71,24 @@ fn path_argument_resolves_relative_to_cwd() {
         .stderr(predicates::str::contains("--border-color"))
         .stderr(predicates::str::contains("--radius-lg").not());
 }
+
+#[test]
+fn path_argument_glob_pattern() {
+    cvk()
+        .args(["lint", "components/**/*.css"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("--border-color"))
+        .stderr(predicates::str::contains("--radius-lg"));
+}
+
+#[test]
+fn path_argument_negation_excludes_file() {
+    // Negation-only args: implicitly lint all files, excluding button.css
+    cvk()
+        .args(["lint", "!components/button.css"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("--radius-lg"))
+        .stderr(predicates::str::contains("--border-color").not());
+}

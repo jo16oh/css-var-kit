@@ -43,6 +43,12 @@ cvk lint
 
 # Lint specific files only
 cvk lint components/button.css components/card.css
+
+# Use glob patterns
+cvk lint "components/**/*.css"
+
+# Exclude files with negation patterns
+cvk lint "!components/legacy/**"
 ```
 
 👉 [Configuration & Rules](docs/config.md)
