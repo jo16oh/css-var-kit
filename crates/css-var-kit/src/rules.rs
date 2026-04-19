@@ -1,9 +1,6 @@
 use std::{path::Path, rc::Rc};
 
-use crate::{
-    owned::OwnedStr,
-    searcher::{SearchResult, SearcherBuilder},
-};
+use crate::{owned::OwnedStr, searcher::SearchResult};
 
 pub mod enforce_variable_use;
 pub mod no_inconsistent_variable_definition;
@@ -11,8 +8,6 @@ pub mod no_undefined_variable_use;
 pub mod no_variable_type_mismatch;
 
 pub trait Rule {
-    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder;
-
     fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic>;
 }
 

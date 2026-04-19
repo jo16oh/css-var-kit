@@ -12,7 +12,7 @@ use crate::rules::{Diagnostic, Severity};
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{SearchCache, SearchResult, SearcherBuilder};
+use crate::searcher::{SearchCache, SearchResult};
 
 const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
@@ -58,15 +58,7 @@ pub fn run(config: &Config) {
         .flat_map(|(path, content)| parse_file(&content, path.as_path()))
         .collect();
 
-    let diagnostics = if config.has_lint_targets {
-        check_targeted(parse_results, config)
-    } else {
-        check(parse_results, config)
-    };
-    let diagnostics: Vec<_> = diagnostics
-        .into_iter()
-        .filter(|d| config.has_lint_targets || !config.include.matches(&d.file_path))
-        .collect();
+    let diagnostics = check(parse_results, config);
 
     if diagnostics.is_empty() {
         return;
@@ -84,11 +76,11 @@ pub fn run(config: &Config) {
     }
 }
 
-fn check_targeted(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
+fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
     let target_set: HashSet<Rc<Path>> = parse_results
         .iter()
         .map(|r| &r.file_path)
-        .filter(|p| config.include.matches(p))
+        .filter(|p| !config.include.has_positive_patterns() || config.include.matches(p))
         .cloned()
         .collect();
 
@@ -108,20 +100,8 @@ fn check_targeted(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagn
     check_search_result(&search_result, config)
 }
 
-pub fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
-    let compiled_rules = config.rules.compile(config);
-
-    let mut searcher = SearcherBuilder::new(parse_results);
-    for rule in &compiled_rules {
-        searcher = rule.register_conditions(searcher);
-    }
-
-    let search_result = searcher.build().search();
-    check_search_result(&search_result, config)
-}
-
 pub fn check_search_result(search_result: &SearchResult, config: &Config) -> Vec<Diagnostic> {
-    let compiled_rules = config.rules.compile(config);
+    let compiled_rules = config.rules.compile();
 
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for rule in &compiled_rules {

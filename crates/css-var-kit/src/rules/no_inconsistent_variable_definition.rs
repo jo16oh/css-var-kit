@@ -1,11 +1,10 @@
 use lightningcss::properties::custom::{Token, TokenOrValue};
 
-use crate::config::LookupFilesMatcher;
 use crate::parser::css::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
+use crate::searcher::SearchResult;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_definitions::VarsMap;
-use crate::searcher::{SearchResult, SearcherBuilder};
 use crate::type_checker::value_kind::{ValueKind, kind_of};
 use crate::variable_resolver::resolve_variables;
 
@@ -13,18 +12,9 @@ const RULE_NAME: &str = "no-inconsistent-variable-definition";
 
 pub struct NoInconsistentVariableDefinition {
     pub severity: Severity,
-    pub definition_files: LookupFilesMatcher,
-    pub include: LookupFilesMatcher,
 }
 
 impl Rule for NoInconsistentVariableDefinition {
-    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
-        searcher.add_condition(VariableDefinitions::new(
-            self.definition_files.clone(),
-            self.include.clone(),
-        ))
-    }
-
     fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = def_map.vars_map();
@@ -107,26 +97,25 @@ fn check_variable_definitions(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::LookupFilesMatcher;
     use crate::owned::OwnedStr;
     use crate::parser;
-    use crate::searcher::SearcherBuilder;
+    use crate::searcher::SearchCache;
     use std::path::PathBuf;
     use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = vec![parser::css::parse(
-            &OwnedStr::from(css),
-            &Rc::from(PathBuf::from("test.css")),
-        )];
+        let parse_result =
+            parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
         let rule = NoInconsistentVariableDefinition {
             severity: Severity::Warning,
-            definition_files: LookupFilesMatcher::default(),
-            include: LookupFilesMatcher::default(),
         };
-        let searcher = rule
-            .register_conditions(SearcherBuilder::new(parse_results))
-            .build();
-        let search_result = searcher.search();
+        let mut cache = SearchCache::new().add_condition(VariableDefinitions::new(
+            LookupFilesMatcher::default(),
+            LookupFilesMatcher::default(),
+        ));
+        cache.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        let search_result = cache.search();
 
         let diagnostics = rule.check(&search_result);
         let mut messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();

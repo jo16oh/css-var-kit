@@ -51,11 +51,11 @@ mod tests {
     use super::*;
     use crate::owned::{OwnedPropId, OwnedStr};
     use crate::parser;
+    use crate::parser::css::ParseResult;
     use std::path::PathBuf;
     use std::rc::Rc;
 
-    use crate::parser::css::ParseResult;
-    use crate::searcher::SearcherBuilder;
+    use crate::searcher::SearchCache;
 
     fn test_parse(css: &str) -> ParseResult {
         parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")))
@@ -91,14 +91,16 @@ mod tests {
         }
     }
 
+    fn search_defs(css: &str) -> crate::searcher::SearchResult {
+        let parse_result = test_parse(css);
+        let mut cache = SearchCache::new().add_condition(VariableDefinitions::default());
+        cache.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        cache.search()
+    }
+
     #[test]
     fn get_by_name() {
-        let css = ":root { --color: red; --size: 16px; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; --size: 16px; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
@@ -114,12 +116,7 @@ mod tests {
 
     #[test]
     fn get_nonexistent_returns_none() {
-        let css = ":root { --color: red; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let missing_id = OwnedPropId::from("--missing".to_string());
@@ -128,12 +125,7 @@ mod tests {
 
     #[test]
     fn contains_key_returns_correct_bool() {
-        let css = ":root { --color: red; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
@@ -144,12 +136,7 @@ mod tests {
 
     #[test]
     fn duplicate_definitions_grouped() {
-        let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; } .dark { --color: blue; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
