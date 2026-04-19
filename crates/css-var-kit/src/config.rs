@@ -157,11 +157,13 @@ impl Config {
         let definition_files = LookupFilesMatcher::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let (include, has_lint_targets) = if args.files.is_empty() {
-            (compile_include(&raw.include)?, false)
+        let has_lint_targets = !args.files.is_empty();
+        let include_patterns = if has_lint_targets {
+            resolve_file_args_to_patterns(&args.files, cwd, &root_dir)
         } else {
-            (compile_target_files(&args.files, cwd, &root_dir)?, true)
+            raw.include
         };
+        let include = compile_include(&include_patterns)?;
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
@@ -281,15 +283,10 @@ fn compile_include(user_patterns: &[String]) -> Result<LookupFilesMatcher, Confi
     LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
 }
 
-/// Compiles CLI file arguments into a `LookupFilesMatcher`.
-/// Each argument is resolved relative to `cwd` and then converted to a
-/// `root_dir`-relative pattern. When all arguments are negation patterns,
-/// prepends `**/*.css` so negations act as exclusions from the full file set.
-fn compile_target_files(
-    args: &[String],
-    cwd: &Path,
-    root_dir: &Path,
-) -> Result<LookupFilesMatcher, ConfigError> {
+/// Resolves CLI file arguments to `root_dir`-relative glob patterns.
+/// When all arguments are negation patterns, prepends `**/*.css` so
+/// negations act as exclusions from the full file set.
+fn resolve_file_args_to_patterns(args: &[String], cwd: &Path, root_dir: &Path) -> Vec<String> {
     let resolve = |raw: &str| -> String {
         let (negated, pat) = match raw.strip_prefix('!') {
             Some(rest) => (true, rest),
@@ -304,17 +301,11 @@ fn compile_target_files(
         if negated { format!("!{rel}") } else { rel }
     };
 
-    let resolved: Vec<String> = args.iter().map(|a| resolve(a)).collect();
-    let all_negated = resolved.iter().all(|a| a.starts_with('!'));
-    let mut patterns: Vec<String> = DEFAULT_INCLUDE_PATTERNS
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    if all_negated {
-        patterns.push("**/*.css".to_string());
+    let mut patterns: Vec<String> = args.iter().map(|a| resolve(a)).collect();
+    if patterns.iter().all(|p| p.starts_with('!')) {
+        patterns.insert(0, "**/*.css".to_string());
     }
-    patterns.extend(resolved);
-    LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
+    patterns
 }
 
 pub fn find_project_root(cwd: &Path) -> PathBuf {
