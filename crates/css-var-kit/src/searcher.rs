@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use crate::{
     owned::OwnedPropId,
-    parser::css::{ParseResult, Property},
+    parser::{ParseResult, Property},
     searcher::conditions::variable_definitions::VariableDefinitions,
 };
 

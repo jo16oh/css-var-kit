@@ -10,7 +10,7 @@ use super::Server;
 use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cursor};
 use super::uri::path_to_uri;
 use crate::owned::OwnedPropId;
-use crate::parser::css::Property;
+use crate::parser::Property;
 use crate::position::offset_to_position;
 use crate::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;

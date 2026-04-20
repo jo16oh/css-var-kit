@@ -7,7 +7,7 @@ use std::rc::Rc;
 use crate::config::{Config, GlobFilter};
 use crate::owned::OwnedStr;
 use crate::parser;
-use crate::parser::css::ParseResult;
+use crate::parser::ParseResult;
 use crate::rules::{Diagnostic, Severity};
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;

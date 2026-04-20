@@ -1,7 +1,7 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
 use crate::owned::OwnedPropId;
-use crate::parser::css::Property;
+use crate::parser::Property;
 use crate::position::offset_to_position;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;

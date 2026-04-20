@@ -2,7 +2,8 @@ use std::{path::Path, rc::Rc};
 
 use crate::owned::OwnedStr;
 
-use super::css::{self, ParseResult};
+use super::css;
+use super::types::ParseResult;
 
 struct StyleBlock {
     content: OwnedStr,

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use lightningcss::printer::PrinterOptions;
-use lightningcss::properties::Property as CssProperty;
+use lightningcss::properties::Property;
 use lightningcss::properties::custom::{
     CustomProperty, CustomPropertyName, Function, TokenList, TokenOrValue, Variable,
 };
@@ -23,7 +23,7 @@ pub fn resolve_variables(
         return Err(ResolveError);
     }
 
-    CssProperty::Custom(CustomProperty {
+    Property::Custom(CustomProperty {
         name: CustomPropertyName::Custom(DashedIdent("--tmp".into())),
         value: resolved,
     })

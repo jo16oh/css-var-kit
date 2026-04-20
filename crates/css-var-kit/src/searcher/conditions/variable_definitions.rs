@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use lightningcss::properties::custom::TokenList;
 
 use crate::config::GlobFilter;
-use crate::parser::css::Property as CssProperty;
+use crate::parser::Property;
 use crate::searcher::{PropMapFor, SearchCondition};
 
 pub type VarsMap<'a> = HashMap<&'a str, TokenList<'a>>;
@@ -24,7 +24,7 @@ impl VariableDefinitions {
 }
 
 impl SearchCondition for VariableDefinitions {
-    fn matches(&self, prop: &CssProperty) -> bool {
+    fn matches(&self, prop: &Property) -> bool {
         prop.ident.raw.starts_with("--")
             && (self.definition_files.matches(&prop.file_path)
                 || self.include.matches(&prop.file_path))
@@ -51,7 +51,7 @@ mod tests {
     use super::*;
     use crate::owned::{OwnedPropId, OwnedStr};
     use crate::parser;
-    use crate::parser::css::ParseResult;
+    use crate::parser::ParseResult;
     use std::path::PathBuf;
     use std::rc::Rc;
 
