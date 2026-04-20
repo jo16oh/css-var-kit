@@ -174,7 +174,7 @@ mod tests {
     use crate::config::LookupFilesMatcher;
     use crate::owned::OwnedStr;
     use crate::parser;
-    use crate::searcher::SearchCache;
+    use crate::searcher::Searcher;
     use std::path::PathBuf;
     use std::rc::Rc;
 
@@ -184,14 +184,14 @@ mod tests {
         let rule = NoUndefinedVariableUse {
             severity: Severity::Warning,
         };
-        let mut cache = SearchCache::new()
+        let mut searcher = Searcher::new()
             .add_condition(VariableDefinitions::new(
                 LookupFilesMatcher::default(),
                 LookupFilesMatcher::default(),
             ))
             .add_condition(VariableUsages);
-        cache.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
-        let search_result = cache.search();
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        let search_result = searcher.search();
 
         let diagnostics = rule.check(&search_result);
         let messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();

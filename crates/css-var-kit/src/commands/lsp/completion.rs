@@ -46,7 +46,7 @@ impl Server<'_> {
         let source = self.opened_documents.get(uri)?;
         let ctx = extract_property_context(source, &pos)?;
 
-        let search_result = self.search_cache.search();
+        let search_result = self.searcher.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let vars = var_defs.vars_map();

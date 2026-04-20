@@ -18,12 +18,12 @@ pub trait SearchCondition: 'static {
     fn matches(&self, prop: &Property) -> bool;
 }
 
-pub struct SearchCache {
+pub struct Searcher {
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
     per_file: HashMap<Rc<Path>, HashMap<TypeId, Vec<Property>>>,
 }
 
-impl SearchCache {
+impl Searcher {
     pub fn new() -> Self {
         Self {
             conditions: HashMap::new(),
@@ -140,7 +140,7 @@ impl SearchResult {
         let entry = self
             .results
             .get(&TypeId::of::<T>())
-            .expect("condition not registered in SearchCache");
+            .expect("condition not registered in Searcher");
         SearchResultFor(&entry.props, PhantomData::<T>)
     }
 
@@ -148,7 +148,7 @@ impl SearchResult {
         let entry = self
             .results
             .get(&TypeId::of::<T>())
-            .expect("condition not registered in SearchCache");
+            .expect("condition not registered in Searcher");
         let map = entry.prop_map.get_or_init(|| {
             let mut indices = PropMapIndices::new();
             for (i, prop) in entry.props.iter().enumerate() {
@@ -219,15 +219,15 @@ mod tests {
 
     use super::*;
 
-    fn search_css(css: &str, cache: SearchCache) -> SearchResult {
+    fn search_css(css: &str, searcher: Searcher) -> SearchResult {
         let parse_result = parser::css::parse(
             &OwnedStr::from(css),
             &Rc::from(PathBuf::from("test.css".to_string())),
         );
         let file_path: Rc<Path> = Rc::from(parse_result.file_path.as_ref());
-        let mut cache = cache;
-        cache.update_file(&file_path, std::slice::from_ref(&parse_result));
-        cache.search()
+        let mut searcher = searcher;
+        searcher.update_file(&file_path, std::slice::from_ref(&parse_result));
+        searcher.search()
     }
 
     struct All;
@@ -281,7 +281,7 @@ mod tests {
     fn match_all_properties() {
         let result = search_css(
             ".a { color: red; font-size: 16px; margin: 0; }",
-            SearchCache::new().add_condition(All),
+            Searcher::new().add_condition(All),
         );
         let props = result.get_result_for(All);
 
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn match_none_returns_empty() {
-        let result = search_css(".a { color: red; }", SearchCache::new().add_condition(None));
+        let result = search_css(".a { color: red; }", Searcher::new().add_condition(None));
         let props = result.get_result_for(None);
         assert!(props.is_empty());
     }
@@ -302,7 +302,7 @@ mod tests {
     fn filter_by_name() {
         let result = search_css(
             ".a { color: red; font-size: 16px; color: blue; }",
-            SearchCache::new().add_condition(NameEquals::from("color")),
+            Searcher::new().add_condition(NameEquals::from("color")),
         );
         let props = result.get_result_for(NameEquals::from("color"));
 
@@ -315,7 +315,7 @@ mod tests {
     fn filter_by_value() {
         let result = search_css(
             ".a { color: red; background: red; font-size: 16px; }",
-            SearchCache::new().add_condition(ValueEquals::from("red")),
+            Searcher::new().add_condition(ValueEquals::from("red")),
         );
         let props = result.get_result_for(ValueEquals::from("red"));
 
@@ -328,7 +328,7 @@ mod tests {
     fn multiple_conditions() {
         let result = search_css(
             ".a { color: red; font-size: 16px; background: blue; }",
-            SearchCache::new()
+            Searcher::new()
                 .add_condition(NameEquals::from("color"))
                 .add_condition(ValueEquals::from("16px")),
         );
@@ -343,15 +343,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "condition not registered in SearchCache")]
+    #[should_panic(expected = "condition not registered in Searcher")]
     fn unregistered_condition_panics() {
-        let result = search_css(".a { color: red; }", SearchCache::new());
+        let result = search_css(".a { color: red; }", Searcher::new());
         result.get_result_for(All);
     }
 
     #[test]
     fn empty_css() {
-        let result = search_css(".a { }", SearchCache::new().add_condition(All));
+        let result = search_css(".a { }", Searcher::new().add_condition(All));
         let props = result.get_result_for(All);
         assert!(props.is_empty());
     }
@@ -360,7 +360,7 @@ mod tests {
     fn css_variables() {
         let result = search_css(
             ":root { --primary: #ff0000; --secondary: #00ff00; color: black; }",
-            SearchCache::new().add_condition(IsVariable),
+            Searcher::new().add_condition(IsVariable),
         );
         let props = result.get_result_for(IsVariable);
 
@@ -375,7 +375,7 @@ mod tests {
     fn multiple_selectors() {
         let result = search_css(
             ".a { color: red; } .b { color: blue; margin: 0; }",
-            SearchCache::new().add_condition(NameEquals::from("color")),
+            Searcher::new().add_condition(NameEquals::from("color")),
         );
         let props = result.get_result_for(NameEquals::from("color"));
 
@@ -388,7 +388,7 @@ mod tests {
     fn condition_with_no_matches() {
         let result = search_css(
             ".a { color: red; font-size: 16px; }",
-            SearchCache::new().add_condition(NameEquals::from("background")),
+            Searcher::new().add_condition(NameEquals::from("background")),
         );
         let props = result.get_result_for(NameEquals::from("background"));
         assert!(props.is_empty());

@@ -80,7 +80,7 @@ impl Server<'_> {
             format!("--{new_name}")
         };
 
-        let search_result = self.search_cache.search();
+        let search_result = self.searcher.search();
 
         #[allow(clippy::mutable_key_type)]
         let mut changes: HashMap<Uri, Vec<TextEdit>> = HashMap::new();

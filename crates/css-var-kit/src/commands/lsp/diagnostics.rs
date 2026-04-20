@@ -21,7 +21,7 @@ impl Server<'_> {
             .cloned()
             .collect();
 
-        let search_result = self.search_cache.search();
+        let search_result = self.searcher.search();
         let diagnostics = lint::check_search_result(&search_result, &self.config);
 
         self.log(&format!(
@@ -62,7 +62,7 @@ impl Server<'_> {
             .cloned()
             .collect();
 
-        let search_result = self.search_cache.search_for_files(&target_set);
+        let search_result = self.searcher.search_for_files(&target_set);
         let diagnostics = lint::check_search_result(&search_result, &self.config);
 
         self.log(&format!(

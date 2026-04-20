@@ -55,7 +55,7 @@ mod tests {
     use std::path::PathBuf;
     use std::rc::Rc;
 
-    use crate::searcher::SearchCache;
+    use crate::searcher::Searcher;
 
     fn test_parse(css: &str) -> ParseResult {
         parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")))
@@ -93,9 +93,9 @@ mod tests {
 
     fn search_defs(css: &str) -> crate::searcher::SearchResult {
         let parse_result = test_parse(css);
-        let mut cache = SearchCache::new().add_condition(VariableDefinitions::default());
-        cache.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
-        cache.search()
+        let mut searcher = Searcher::new().add_condition(VariableDefinitions::default());
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        searcher.search()
     }
 
     #[test]

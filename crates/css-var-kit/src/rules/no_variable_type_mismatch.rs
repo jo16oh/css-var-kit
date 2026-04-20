@@ -52,7 +52,7 @@ mod tests {
     use crate::config::LookupFilesMatcher;
     use crate::owned::OwnedStr;
     use crate::parser;
-    use crate::searcher::SearchCache;
+    use crate::searcher::Searcher;
     use std::path::PathBuf;
     use std::rc::Rc;
 
@@ -62,7 +62,7 @@ mod tests {
         let rule = NoVariableTypeMismatch {
             severity: Severity::Warning,
         };
-        let mut cache = SearchCache::new()
+        let mut cache = Searcher::new()
             .add_condition(VariableDefinitions::new(
                 LookupFilesMatcher::default(),
                 LookupFilesMatcher::default(),

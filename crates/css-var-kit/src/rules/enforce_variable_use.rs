@@ -249,7 +249,7 @@ mod tests {
     use crate::config::file::SeverityToggle;
     use crate::owned::OwnedStr;
     use crate::parser;
-    use crate::searcher::SearchCache;
+    use crate::searcher::Searcher;
 
     fn make_config(types: &[&str]) -> EnforceVariableUseConfig {
         make_config_with_allowed_properties(types, vec![])
@@ -299,9 +299,9 @@ mod tests {
         let rule = EnforceVariableUse::from_config(config);
         let parse_result =
             parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
-        let mut cache = SearchCache::new().add_condition(NonCustomProperties);
-        cache.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
-        let search_result = cache.search();
+        let mut searcher = Searcher::new().add_condition(NonCustomProperties);
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        let search_result = searcher.search();
         let diagnostics = rule.check(&search_result);
         let mut messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();
         messages.sort();

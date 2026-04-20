@@ -34,7 +34,7 @@ impl Server<'_> {
         let source = self.opened_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
-        let search_result = self.search_cache.search();
+        let search_result = self.searcher.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let prop_id = OwnedPropId::from(var_name.clone());
