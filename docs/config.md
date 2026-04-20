@@ -45,7 +45,7 @@ Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 
 ### `definitionFiles`
 
-Glob patterns that determine which files are scanned for CSS variable **definitions** and are also **linted**. Defaults to `["**/*.css"]`.
+Glob patterns that determine which files are scanned for CSS variable **definitions**. These files are also **linted** unless specific files are passed to `cvk lint`. Defaults to `["**/*.css"]`.
 
 Supports negation patterns (e.g. `"!**/vendor/**"`). The last matching pattern wins.
 
@@ -62,6 +62,8 @@ Supports negation patterns (e.g. `"!**/vendor/**"`). The last matching pattern w
 Additional glob patterns for definition-only sources (not linted). Supports negation patterns (`!`) to exclude files from linting and definition collection. The last matching pattern wins.
 
 Default configurations are prepended to user-supplied patterns, so they can be selectively overridden. For example, `"node_modules/my-ui-lib/dist/tokens.css"` adds that file as a definition source despite the `!**/node_modules/**` default.
+
+> When file arguments are passed to `cvk lint`, they override this option.
 
 ### Rule severity
 

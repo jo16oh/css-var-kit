@@ -1,14 +1,18 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 
-use crate::config::{Config, LookupFilesMatcher};
-use crate::owned::OwnedStr;
+use crate::config::{Config, GlobFilter};
+use crate::owned_types::OwnedStr;
 use crate::parser;
-use crate::parser::css::ParseResult;
+use crate::parser::ParseResult;
 use crate::rules::{Diagnostic, Severity};
-use crate::searcher::{SearchResult, SearcherBuilder};
+use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_usages::VariableUsages;
+use crate::searcher::{SearchResult, Searcher};
 
 const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
@@ -55,10 +59,6 @@ pub fn run(config: &Config) {
         .collect();
 
     let diagnostics = check(parse_results, config);
-    let diagnostics: Vec<_> = diagnostics
-        .into_iter()
-        .filter(|d| !config.include.matches(&d.file_path))
-        .collect();
 
     if diagnostics.is_empty() {
         return;
@@ -76,20 +76,32 @@ pub fn run(config: &Config) {
     }
 }
 
-pub fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
-    let compiled_rules = config.rules.compile(config);
+fn check(parse_results: Vec<ParseResult>, config: &Config) -> Vec<Diagnostic> {
+    let target_set: HashSet<Rc<Path>> = parse_results
+        .iter()
+        .map(|r| &r.file_path)
+        .filter(|p| !config.include.has_positive_patterns() || config.include.matches(p))
+        .cloned()
+        .collect();
 
-    let mut searcher = SearcherBuilder::new(parse_results);
-    for rule in &compiled_rules {
-        searcher = rule.register_conditions(searcher);
+    let mut searcher = Searcher::new()
+        .add_condition(VariableDefinitions::new(
+            config.definition_files.clone(),
+            config.include.clone(),
+        ))
+        .add_condition(VariableUsages)
+        .add_condition(NonCustomProperties);
+
+    for parse_result in &parse_results {
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(parse_result));
     }
 
-    let search_result = searcher.build().search();
+    let search_result = searcher.search_for_files(&target_set);
     check_search_result(&search_result, config)
 }
 
 pub fn check_search_result(search_result: &SearchResult, config: &Config) -> Vec<Diagnostic> {
-    let compiled_rules = config.rules.compile(config);
+    let compiled_rules = config.rules.compile();
 
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     for rule in &compiled_rules {
@@ -99,7 +111,7 @@ pub fn check_search_result(search_result: &SearchResult, config: &Config) -> Vec
     diagnostics
 }
 
-pub fn collect_source_files(dir: &Path, include: &LookupFilesMatcher) -> Vec<PathBuf> {
+pub fn collect_source_files(dir: &Path, include: &GlobFilter) -> Vec<PathBuf> {
     let mut files = Vec::new();
     collect_source_files_recursive(dir, dir, include, &mut files);
     files.sort();
@@ -108,7 +120,7 @@ pub fn collect_source_files(dir: &Path, include: &LookupFilesMatcher) -> Vec<Pat
 
 /// Collects files matching positive patterns in `include`, walking the full tree.
 /// Returns an empty list when `include` has no positive patterns (the default).
-pub fn collect_include_files(root: &Path, include: &LookupFilesMatcher) -> Vec<PathBuf> {
+pub fn collect_include_files(root: &Path, include: &GlobFilter) -> Vec<PathBuf> {
     if !include.has_positive_patterns() {
         return vec![];
     }
@@ -121,7 +133,7 @@ pub fn collect_include_files(root: &Path, include: &LookupFilesMatcher) -> Vec<P
 fn collect_include_recursive(
     root: &Path,
     dir: &Path,
-    include: &LookupFilesMatcher,
+    include: &GlobFilter,
     files: &mut Vec<PathBuf>,
 ) {
     let entries = match fs::read_dir(dir) {
@@ -151,7 +163,7 @@ fn is_supported_extension(path: &Path) -> bool {
 fn collect_source_files_recursive(
     root: &Path,
     dir: &Path,
-    include: &LookupFilesMatcher,
+    include: &GlobFilter,
     files: &mut Vec<PathBuf>,
 ) {
     let entries = match fs::read_dir(dir) {

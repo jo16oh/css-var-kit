@@ -1,5 +1,5 @@
 use crate::{
-    config::{Config, ConfigError},
+    config::ConfigError,
     rules::{
         Rule, Severity,
         enforce_variable_use::{EnforceVariableUse, config::EnforceVariableUseConfig},
@@ -58,18 +58,11 @@ impl Rules {
         Ok(())
     }
 
-    pub fn compile(&self, config: &Config) -> Vec<Box<dyn Rule>> {
+    pub fn compile(&self) -> Vec<Box<dyn Rule>> {
         let mut rules: Vec<Box<dyn Rule>> = vec![];
 
-        let definition_files = &config.definition_files;
-        let include = &config.include;
-
         if let Some(severity) = self.no_undefined_variable_use {
-            rules.push(Box::new(NoUndefinedVariableUse {
-                severity,
-                definition_files: definition_files.clone(),
-                include: include.clone(),
-            }));
+            rules.push(Box::new(NoUndefinedVariableUse { severity }));
         }
 
         if let Some(ref config) = self.enforce_variable_use {
@@ -77,19 +70,11 @@ impl Rules {
         }
 
         if let Some(severity) = self.no_variable_type_mismatch {
-            rules.push(Box::new(NoVariableTypeMismatch {
-                severity,
-                definition_files: definition_files.clone(),
-                include: include.clone(),
-            }));
+            rules.push(Box::new(NoVariableTypeMismatch { severity }));
         }
 
         if let Some(severity) = self.no_inconsistent_variable_definition {
-            rules.push(Box::new(NoInconsistentVariableDefinition {
-                severity,
-                definition_files: definition_files.clone(),
-                include: include.clone(),
-            }));
+            rules.push(Box::new(NoInconsistentVariableDefinition { severity }));
         }
 
         rules

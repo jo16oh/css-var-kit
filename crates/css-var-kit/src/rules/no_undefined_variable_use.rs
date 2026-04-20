@@ -1,32 +1,20 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
-use crate::config::LookupFilesMatcher;
-use crate::owned::OwnedPropId;
-use crate::parser::css::Property;
-use crate::position::offset_to_position;
+use crate::owned_types::OwnedPropId;
+use crate::parser::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::searcher::{PropMapFor, SearchResult, SearcherBuilder};
+use crate::searcher::{PropMapFor, SearchResult};
+use crate::text_position::offset_to_position;
 
 const RULE_NAME: &str = "no-undefined-variable-use";
 
 pub struct NoUndefinedVariableUse {
     pub severity: Severity,
-    pub definition_files: LookupFilesMatcher,
-    pub include: LookupFilesMatcher,
 }
 
 impl Rule for NoUndefinedVariableUse {
-    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
-        searcher
-            .add_condition(VariableDefinitions::new(
-                self.definition_files.clone(),
-                self.include.clone(),
-            ))
-            .add_condition(VariableUsages)
-    }
-
     fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let def_map = search_result.get_prop_map_for::<VariableDefinitions>();
         let usages = search_result.get_result_for(VariableUsages);
@@ -183,24 +171,26 @@ fn find_var_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::OwnedStr;
+    use crate::config::GlobFilter;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
+    use crate::searcher::Searcher;
     use std::path::PathBuf;
     use std::rc::Rc;
 
     fn assert_messages(css: &str, expected: &[&str]) {
-        let parse_results = vec![parser::css::parse(
-            &OwnedStr::from(css),
-            &Rc::from(PathBuf::from("test.css")),
-        )];
+        let parse_result =
+            parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
         let rule = NoUndefinedVariableUse {
             severity: Severity::Warning,
-            definition_files: LookupFilesMatcher::default(),
-            include: LookupFilesMatcher::default(),
         };
-        let searcher = rule
-            .register_conditions(SearcherBuilder::new(parse_results))
-            .build();
+        let mut searcher = Searcher::new()
+            .add_condition(VariableDefinitions::new(
+                GlobFilter::default(),
+                GlobFilter::default(),
+            ))
+            .add_condition(VariableUsages);
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
         let search_result = searcher.search();
 
         let diagnostics = rule.check(&search_result);

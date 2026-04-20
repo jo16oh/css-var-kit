@@ -5,10 +5,10 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 
 use super::Server;
 use super::uri::path_to_uri;
-use crate::owned::OwnedPropId;
+use crate::owned_types::OwnedPropId;
 
-use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::text_position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 
 impl Server<'_> {
     pub fn handle_definition_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
@@ -34,7 +34,7 @@ impl Server<'_> {
         let source = self.opened_documents.get(uri)?;
         let var_name = extract_variable_name_at_cursor(source, &pos)?;
 
-        let search_result = self.search_cache.search();
+        let search_result = self.searcher.search();
 
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let prop_id = OwnedPropId::from(var_name.clone());

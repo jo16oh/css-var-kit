@@ -7,8 +7,8 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::{
-    owned::OwnedPropId,
-    parser::css::{ParseResult, Property},
+    owned_types::OwnedPropId,
+    parser::{ParseResult, Property},
     searcher::conditions::variable_definitions::VariableDefinitions,
 };
 
@@ -18,71 +18,12 @@ pub trait SearchCondition: 'static {
     fn matches(&self, prop: &Property) -> bool;
 }
 
-pub struct SearcherBuilder {
-    parse_results: Vec<ParseResult>,
-    conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
-}
-
-impl SearcherBuilder {
-    pub fn new(parse_results: Vec<ParseResult>) -> Self {
-        Self {
-            parse_results,
-            conditions: HashMap::new(),
-        }
-    }
-
-    pub fn add_condition<T: SearchCondition>(mut self, cond: T) -> SearcherBuilder {
-        self.conditions.insert(TypeId::of::<T>(), Box::new(cond));
-        self
-    }
-
-    pub fn build(self) -> Searcher {
-        Searcher {
-            parse_results: self.parse_results,
-            conditions: self.conditions,
-        }
-    }
-}
-
 pub struct Searcher {
-    parse_results: Vec<ParseResult>,
-    conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
-}
-
-impl Searcher {
-    pub fn search(&self) -> SearchResult {
-        let mut results = HashMap::<TypeId, SearchConditionResult>::new();
-
-        for type_id in self.conditions.keys() {
-            results.insert(
-                *type_id,
-                SearchConditionResult {
-                    props: Vec::new(),
-                    prop_map: OnceCell::new(),
-                },
-            );
-        }
-
-        for parse_result in &self.parse_results {
-            for prop in parse_result.properties.iter() {
-                for (type_id, cond) in self.conditions.iter() {
-                    if cond.matches(prop) {
-                        results.get_mut(type_id).unwrap().props.push(prop.clone());
-                    }
-                }
-            }
-        }
-
-        SearchResult { results }
-    }
-}
-
-pub struct SearchCache {
     conditions: HashMap<TypeId, Box<dyn SearchCondition>>,
     per_file: HashMap<Rc<Path>, HashMap<TypeId, Vec<Property>>>,
 }
 
-impl SearchCache {
+impl Searcher {
     pub fn new() -> Self {
         Self {
             conditions: HashMap::new(),
@@ -199,7 +140,7 @@ impl SearchResult {
         let entry = self
             .results
             .get(&TypeId::of::<T>())
-            .expect("condition not registered in SearcherBuilder");
+            .expect("condition not registered in Searcher");
         SearchResultFor(&entry.props, PhantomData::<T>)
     }
 
@@ -207,7 +148,7 @@ impl SearchResult {
         let entry = self
             .results
             .get(&TypeId::of::<T>())
-            .expect("condition not registered in SearcherBuilder");
+            .expect("condition not registered in Searcher");
         let map = entry.prop_map.get_or_init(|| {
             let mut indices = PropMapIndices::new();
             for (i, prop) in entry.props.iter().enumerate() {
@@ -271,17 +212,22 @@ impl<'result, T: SearchCondition> PropMapFor<'result, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, rc::Rc};
+    use std::path::{Path, PathBuf};
+    use std::rc::Rc;
 
-    use crate::{owned::OwnedStr, parser};
+    use crate::{owned_types::OwnedStr, parser};
 
     use super::*;
 
-    fn test_parse(css: &str) -> crate::parser::css::ParseResult {
-        parser::css::parse(
+    fn search_css(css: &str, searcher: Searcher) -> SearchResult {
+        let parse_result = parser::css::parse(
             &OwnedStr::from(css),
             &Rc::from(PathBuf::from("test.css".to_string())),
-        )
+        );
+        let file_path: Rc<Path> = Rc::from(parse_result.file_path.as_ref());
+        let mut searcher = searcher;
+        searcher.update_file(&file_path, std::slice::from_ref(&parse_result));
+        searcher.search()
     }
 
     struct All;
@@ -333,158 +279,118 @@ mod tests {
 
     #[test]
     fn match_all_properties() {
-        let css = ".a { color: red; font-size: 16px; margin: 0; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(All)
-            .build();
+        let result = search_css(
+            ".a { color: red; font-size: 16px; margin: 0; }",
+            Searcher::new().add_condition(All),
+        );
+        let props = result.get_result_for(All);
 
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(All);
-
-        assert_eq!(result.len(), 3);
-        assert_eq!(result[0].ident.raw.as_str(), "color");
-        assert_eq!(result[1].ident.raw.as_str(), "font-size");
-        assert_eq!(result[2].ident.raw.as_str(), "margin");
+        assert_eq!(props.len(), 3);
+        assert_eq!(props[0].ident.raw.as_str(), "color");
+        assert_eq!(props[1].ident.raw.as_str(), "font-size");
+        assert_eq!(props[2].ident.raw.as_str(), "margin");
     }
 
     #[test]
     fn match_none_returns_empty() {
-        let css = ".a { color: red; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(None)
-            .build();
-
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(None);
-
-        assert!(result.is_empty());
+        let result = search_css(".a { color: red; }", Searcher::new().add_condition(None));
+        let props = result.get_result_for(None);
+        assert!(props.is_empty());
     }
 
     #[test]
     fn filter_by_name() {
-        let css = ".a { color: red; font-size: 16px; color: blue; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(NameEquals::from("color"))
-            .build();
+        let result = search_css(
+            ".a { color: red; font-size: 16px; color: blue; }",
+            Searcher::new().add_condition(NameEquals::from("color")),
+        );
+        let props = result.get_result_for(NameEquals::from("color"));
 
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(NameEquals::from("color"));
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].value.raw.as_str(), "red");
-        assert_eq!(result[1].value.raw.as_str(), "blue");
+        assert_eq!(props.len(), 2);
+        assert_eq!(props[0].value.raw.as_str(), "red");
+        assert_eq!(props[1].value.raw.as_str(), "blue");
     }
 
     #[test]
     fn filter_by_value() {
-        let css = ".a { color: red; background: red; font-size: 16px; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(ValueEquals::from("red"))
-            .build();
+        let result = search_css(
+            ".a { color: red; background: red; font-size: 16px; }",
+            Searcher::new().add_condition(ValueEquals::from("red")),
+        );
+        let props = result.get_result_for(ValueEquals::from("red"));
 
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(ValueEquals::from("red"));
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].ident.raw.as_str(), "color");
-        assert_eq!(result[1].ident.raw.as_str(), "background");
+        assert_eq!(props.len(), 2);
+        assert_eq!(props[0].ident.raw.as_str(), "color");
+        assert_eq!(props[1].ident.raw.as_str(), "background");
     }
 
     #[test]
     fn multiple_conditions() {
-        let css = ".a { color: red; font-size: 16px; background: blue; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(NameEquals::from("color"))
-            .add_condition(ValueEquals::from("16px"))
-            .build();
+        let result = search_css(
+            ".a { color: red; font-size: 16px; background: blue; }",
+            Searcher::new()
+                .add_condition(NameEquals::from("color"))
+                .add_condition(ValueEquals::from("16px")),
+        );
 
-        let search_result = searcher.search();
-
-        let by_name = search_result.get_result_for(NameEquals::from("color"));
+        let by_name = result.get_result_for(NameEquals::from("color"));
         assert_eq!(by_name.len(), 1);
         assert_eq!(by_name[0].value.raw.as_str(), "red");
 
-        let by_value = search_result.get_result_for(ValueEquals::from("16px"));
+        let by_value = result.get_result_for(ValueEquals::from("16px"));
         assert_eq!(by_value.len(), 1);
         assert_eq!(by_value[0].ident.raw.as_str(), "font-size");
     }
 
     #[test]
-    #[should_panic(expected = "condition not registered in SearcherBuilder")]
+    #[should_panic(expected = "condition not registered in Searcher")]
     fn unregistered_condition_panics() {
-        let css = ".a { color: red; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec()).build();
-
-        let search_result = searcher.search();
-        search_result.get_result_for(All);
+        let result = search_css(".a { color: red; }", Searcher::new());
+        result.get_result_for(All);
     }
 
     #[test]
     fn empty_css() {
-        let css = ".a { }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(All)
-            .build();
-
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(All);
-
-        assert!(result.is_empty());
+        let result = search_css(".a { }", Searcher::new().add_condition(All));
+        let props = result.get_result_for(All);
+        assert!(props.is_empty());
     }
 
     #[test]
     fn css_variables() {
-        let css = ":root { --primary: #ff0000; --secondary: #00ff00; color: black; }";
-        let parse_results = [test_parse(css)];
+        let result = search_css(
+            ":root { --primary: #ff0000; --secondary: #00ff00; color: black; }",
+            Searcher::new().add_condition(IsVariable),
+        );
+        let props = result.get_result_for(IsVariable);
 
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(IsVariable)
-            .build();
-
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(IsVariable);
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].ident.raw.as_str(), "--primary");
-        assert_eq!(result[0].value.raw.as_str(), "#ff0000");
-        assert_eq!(result[1].ident.raw.as_str(), "--secondary");
-        assert_eq!(result[1].value.raw.as_str(), "#00ff00");
+        assert_eq!(props.len(), 2);
+        assert_eq!(props[0].ident.raw.as_str(), "--primary");
+        assert_eq!(props[0].value.raw.as_str(), "#ff0000");
+        assert_eq!(props[1].ident.raw.as_str(), "--secondary");
+        assert_eq!(props[1].value.raw.as_str(), "#00ff00");
     }
 
     #[test]
     fn multiple_selectors() {
-        let css = ".a { color: red; } .b { color: blue; margin: 0; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(NameEquals::from("color"))
-            .build();
+        let result = search_css(
+            ".a { color: red; } .b { color: blue; margin: 0; }",
+            Searcher::new().add_condition(NameEquals::from("color")),
+        );
+        let props = result.get_result_for(NameEquals::from("color"));
 
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(NameEquals::from("color"));
-
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].value.raw.as_str(), "red");
-        assert_eq!(result[1].value.raw.as_str(), "blue");
+        assert_eq!(props.len(), 2);
+        assert_eq!(props[0].value.raw.as_str(), "red");
+        assert_eq!(props[1].value.raw.as_str(), "blue");
     }
 
     #[test]
     fn condition_with_no_matches() {
-        let css = ".a { color: red; font-size: 16px; }";
-        let parse_results = [test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results.to_vec())
-            .add_condition(NameEquals::from("background"))
-            .build();
-
-        let search_result = searcher.search();
-        let result = search_result.get_result_for(NameEquals::from("background"));
-
-        assert!(result.is_empty());
+        let result = search_css(
+            ".a { color: red; font-size: 16px; }",
+            Searcher::new().add_condition(NameEquals::from("background")),
+        );
+        let props = result.get_result_for(NameEquals::from("background"));
+        assert!(props.is_empty());
     }
 }

@@ -2,11 +2,11 @@ mod cli;
 mod commands;
 mod config;
 mod diagnostic_renderer;
-mod owned;
+mod owned_types;
 mod parser;
-mod position;
 mod rules;
 mod searcher;
+mod text_position;
 mod type_checker;
 mod variable_resolver;
 

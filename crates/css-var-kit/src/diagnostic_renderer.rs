@@ -164,7 +164,7 @@ fn byte_column_to_display_width(source: &str, line: u32, byte_column: u32) -> u3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use std::path::PathBuf;
     use std::rc::Rc;
 

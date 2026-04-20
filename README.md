@@ -31,7 +31,7 @@ cargo install css-var-kit
 
 ## Commands 🧰
 
-### `cvk lint`
+### `cvk lint [files...]`
 
 Lints CSS variables and their usage. Detects undefined variables, type mismatches, inconsistent definitions, and enforces variable usage for design tokens.
 

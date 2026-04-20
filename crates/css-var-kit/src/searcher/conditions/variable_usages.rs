@@ -1,10 +1,10 @@
-use crate::parser::css::Property as CssProperty;
+use crate::parser::Property;
 use crate::searcher::SearchCondition;
 
 pub struct VariableUsages;
 
 impl SearchCondition for VariableUsages {
-    fn matches(&self, prop: &CssProperty) -> bool {
+    fn matches(&self, prop: &Property) -> bool {
         prop.value.raw.contains("var(") || has_dashed_ident(prop.value.raw.as_ref())
     }
 }
@@ -23,7 +23,7 @@ fn has_dashed_ident(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
     use std::path::PathBuf;
     use std::rc::Rc;

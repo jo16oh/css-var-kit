@@ -2,7 +2,7 @@ pub mod value_kind;
 
 use std::collections::HashMap;
 
-use lightningcss::properties::Property as CssProperty;
+use lightningcss::properties::Property;
 use lightningcss::properties::PropertyId;
 use lightningcss::properties::custom::{Function, TokenList, TokenOrValue};
 use lightningcss::stylesheet::ParserOptions;
@@ -30,18 +30,18 @@ pub fn check_property_type(
     }
 
     let property_id = PropertyId::from(property_name);
-    let property = CssProperty::parse_string(property_id, value, ParserOptions::default())
+    let property = Property::parse_string(property_id, value, ParserOptions::default())
         .map_err(|_| TypeCheckError::InvalidSyntax)?;
 
     match property {
-        CssProperty::Unparsed(unparsed) => match unparsed.substitute_variables(vars) {
-            Ok(CssProperty::Unparsed(result))
+        Property::Unparsed(unparsed) => match unparsed.substitute_variables(vars) {
+            Ok(Property::Unparsed(result))
                 if contains_var(&result.value)
                     || contains_undefined_dashed_ident(&result.value, vars) =>
             {
                 Err(TypeCheckError::VariableNotFound(value.to_string()))
             }
-            Ok(CssProperty::Unparsed(_)) => Err(TypeCheckError::TypeMismatch(
+            Ok(Property::Unparsed(_)) => Err(TypeCheckError::TypeMismatch(
                 value.to_string(),
                 property_name.to_string(),
             )),

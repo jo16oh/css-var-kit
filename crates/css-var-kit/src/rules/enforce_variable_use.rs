@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::parser::css::Property;
+use crate::parser::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::SearchResult;
-use crate::searcher::SearcherBuilder;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::type_checker::value_kind::{
     ValueKindSet, lookup_dimension_unit_kinds, lookup_keyword_kinds,
@@ -36,10 +35,6 @@ impl EnforceVariableUse {
 }
 
 impl Rule for EnforceVariableUse {
-    fn register_conditions(&self, searcher: SearcherBuilder) -> SearcherBuilder {
-        searcher.add_condition(NonCustomProperties)
-    }
-
     fn check(&self, search_result: &SearchResult) -> Vec<Diagnostic> {
         let props = search_result.get_result_for(NonCustomProperties);
         props
@@ -252,9 +247,9 @@ mod tests {
     };
     use super::*;
     use crate::config::file::SeverityToggle;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
-    use crate::searcher::SearcherBuilder;
+    use crate::searcher::Searcher;
 
     fn make_config(types: &[&str]) -> EnforceVariableUseConfig {
         make_config_with_allowed_properties(types, vec![])
@@ -302,13 +297,10 @@ mod tests {
         expected: &[&str],
     ) {
         let rule = EnforceVariableUse::from_config(config);
-        let parse_results = vec![parser::css::parse(
-            &OwnedStr::from(css),
-            &Rc::from(PathBuf::from("test.css")),
-        )];
-        let searcher = rule
-            .register_conditions(SearcherBuilder::new(parse_results))
-            .build();
+        let parse_result =
+            parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
+        let mut searcher = Searcher::new().add_condition(NonCustomProperties);
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
         let search_result = searcher.search();
         let diagnostics = rule.check(&search_result);
         let mut messages: Vec<&str> = diagnostics.iter().map(|d| d.message.as_str()).collect();

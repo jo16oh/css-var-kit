@@ -42,8 +42,8 @@ pub enum ConfigError {
 
 pub struct Config {
     pub root_dir: PathBuf,
-    pub definition_files: LookupFilesMatcher,
-    pub include: LookupFilesMatcher,
+    pub definition_files: GlobFilter,
+    pub include: GlobFilter,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
 }
@@ -58,11 +58,11 @@ pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
 ];
 
 #[derive(Clone)]
-pub struct LookupFilesMatcher {
+pub struct GlobFilter {
     patterns: Vec<LookupPattern>,
 }
 
-impl Default for LookupFilesMatcher {
+impl Default for GlobFilter {
     fn default() -> Self {
         Self::compile(&["**/*.css".to_string()]).unwrap()
     }
@@ -74,7 +74,7 @@ struct LookupPattern {
     matcher: GlobMatcher,
 }
 
-impl LookupFilesMatcher {
+impl GlobFilter {
     fn compile(raw_patterns: &[String]) -> Result<Self, globset::Error> {
         raw_patterns
             .iter()
@@ -147,18 +147,21 @@ impl Config {
             None => config_base.join(&raw.root_dir),
         };
 
-        let definition_patterns = if !args.files.is_empty() {
-            args.files.as_slice()
-        } else if let Some(ref df) = raw.definition_files {
+        let definition_patterns = if let Some(ref df) = raw.definition_files {
             df.as_slice()
         } else {
             raw.lookup_files.as_slice()
         };
 
-        let definition_files = LookupFilesMatcher::compile(definition_patterns)
+        let definition_files = GlobFilter::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
-        let include = compile_include(&raw.include)?;
+        let include_patterns = if args.files.is_empty() {
+            raw.include
+        } else {
+            resolve_file_args_to_patterns(&args.files, cwd, &root_dir)
+        };
+        let include = compile_include(&include_patterns)?;
 
         let raw_rules = raw.rules.override_raw_rules_by_args(args)?;
         let rules = Rules::from_raw(raw_rules)?;
@@ -189,7 +192,7 @@ impl Config {
         let resolved_root_dir = project_root.join(&raw.root_dir);
 
         let definition_patterns = raw.definition_files.as_deref().unwrap_or(&raw.lookup_files);
-        let definition_files = LookupFilesMatcher::compile(definition_patterns)
+        let definition_files = GlobFilter::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
         let include = compile_include(&raw.include)?;
@@ -267,13 +270,38 @@ impl RawRules {
 /// Compiles an `include` matcher by prepending the default skip patterns before user-supplied
 /// patterns. With last-wins semantics, user patterns can selectively override the defaults
 /// (e.g. `"node_modules/my-lib/tokens.css"` overrides `"!**/node_modules/**"` for that path).
-fn compile_include(user_patterns: &[String]) -> Result<LookupFilesMatcher, ConfigError> {
+fn compile_include(user_patterns: &[String]) -> Result<GlobFilter, ConfigError> {
     let patterns: Vec<String> = DEFAULT_INCLUDE_PATTERNS
         .iter()
         .map(|s| s.to_string())
         .chain(user_patterns.iter().cloned())
         .collect();
-    LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
+    GlobFilter::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
+}
+
+/// Resolves CLI file arguments to `root_dir`-relative glob patterns.
+/// When all arguments are negation patterns, prepends `**/*.css` so
+/// negations act as exclusions from the full file set.
+fn resolve_file_args_to_patterns(args: &[String], cwd: &Path, root_dir: &Path) -> Vec<String> {
+    let resolve = |raw: &str| -> String {
+        let (negated, pat) = match raw.strip_prefix('!') {
+            Some(rest) => (true, rest),
+            None => (false, raw),
+        };
+        let abs = cwd.join(pat);
+        let rel = abs
+            .strip_prefix(root_dir)
+            .unwrap_or(&abs)
+            .to_string_lossy()
+            .into_owned();
+        if negated { format!("!{rel}") } else { rel }
+    };
+
+    let mut patterns: Vec<String> = args.iter().map(|a| resolve(a)).collect();
+    if patterns.iter().all(|p| p.starts_with('!')) {
+        patterns.insert(0, "**/*.css".to_string());
+    }
+    patterns
 }
 
 pub fn find_project_root(cwd: &Path) -> PathBuf {

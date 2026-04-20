@@ -39,7 +39,7 @@ pub struct LintArgs {
     #[arg(long)]
     pub rule: Vec<String>,
 
-    /// Files to lint (overrides lookupFiles in config)
+    /// Glob patterns for files to lint (supports negation with '!')
     pub files: Vec<String>,
 }
 

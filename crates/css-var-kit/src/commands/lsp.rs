@@ -25,9 +25,9 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
-use crate::owned::OwnedStr;
-use crate::parser::css::ParseResult;
-use crate::searcher::SearchCache;
+use crate::owned_types::OwnedStr;
+use crate::parser::ParseResult;
+use crate::searcher::Searcher;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
@@ -95,7 +95,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
 
     let source_cache = load_all_sources(&config);
     let parse_cache = build_parse_cache(&source_cache);
-    let search_cache = build_search_cache(&parse_cache, &config);
+    let searcher = build_searcher(&parse_cache, &config);
 
     let mut server = Server {
         connection: &connection,
@@ -105,7 +105,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         opened_documents: HashMap::new(),
         source_cache,
         parse_cache,
-        search_cache,
+        searcher,
         watcher_rx,
         logger: logger.as_ref(),
     };
@@ -130,7 +130,7 @@ struct Server<'a> {
     opened_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
     parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
-    search_cache: SearchCache,
+    searcher: Searcher,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
 }
@@ -327,12 +327,12 @@ impl Server<'_> {
 
     fn update_caches(&mut self, path: &Rc<Path>, source: &OwnedStr) {
         let parse_results = lint::parse_file(source, path);
-        self.search_cache.update_file(path, &parse_results);
+        self.searcher.update_file(path, &parse_results);
         self.parse_cache.insert(path.clone(), parse_results);
     }
 
     fn remove_from_caches(&mut self, path: &Path) {
-        self.search_cache.remove_file(path);
+        self.searcher.remove_file(path);
         self.parse_cache.remove(path);
     }
 
@@ -369,7 +369,7 @@ impl Server<'_> {
                 self.config = new_config;
                 self.source_cache = load_all_sources(&self.config);
                 self.parse_cache = build_parse_cache(&self.source_cache);
-                self.search_cache = build_search_cache(&self.parse_cache, &self.config);
+                self.searcher = build_searcher(&self.parse_cache, &self.config);
                 self.log("config reloaded");
                 self.publish_all_diagnostics()?;
             }
@@ -401,11 +401,8 @@ fn is_config_file(path: &Path) -> bool {
     )
 }
 
-fn build_search_cache(
-    parse_cache: &HashMap<Rc<Path>, Vec<ParseResult>>,
-    config: &Config,
-) -> SearchCache {
-    let mut cache = SearchCache::new()
+fn build_searcher(parse_cache: &HashMap<Rc<Path>, Vec<ParseResult>>, config: &Config) -> Searcher {
+    let mut searcher = Searcher::new()
         .add_condition(VariableDefinitions::new(
             config.definition_files.clone(),
             config.include.clone(),
@@ -414,10 +411,10 @@ fn build_search_cache(
         .add_condition(NonCustomProperties);
 
     for (path, parse_results) in parse_cache {
-        cache.update_file(path, parse_results);
+        searcher.update_file(path, parse_results);
     }
 
-    cache
+    searcher
 }
 
 fn build_parse_cache(

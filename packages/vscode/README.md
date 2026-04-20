@@ -42,7 +42,7 @@ If no config file exists, you can configure rules via VS Code settings:
 
 > When `cvk.json` exists, it takes full precedence and VS Code settings are ignored.
 
-See [Linter documentation](https://github.com/jo16oh/css-var-kit/blob/main/docs/linter.md) for details on rules and configuration options.
+See [Configuration & Rules](https://github.com/jo16oh/css-var-kit/blob/main/docs/config.md) for details on rules and configuration options.
 
 ## Binary Resolution Order
 
@@ -56,4 +56,4 @@ The extension resolves the `cvk` binary in this order:
 ## Links
 
 - [GitHub](https://github.com/jo16oh/css-var-kit)
-- [Linter documentation](https://github.com/jo16oh/css-var-kit/blob/main/docs/linter.md)
+- [Configuration & Rules](https://github.com/jo16oh/css-var-kit/blob/main/docs/config.md)

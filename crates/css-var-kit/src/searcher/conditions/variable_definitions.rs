@@ -2,20 +2,20 @@ use std::collections::HashMap;
 
 use lightningcss::properties::custom::TokenList;
 
-use crate::config::LookupFilesMatcher;
-use crate::parser::css::Property as CssProperty;
+use crate::config::GlobFilter;
+use crate::parser::Property;
 use crate::searcher::{PropMapFor, SearchCondition};
 
 pub type VarsMap<'a> = HashMap<&'a str, TokenList<'a>>;
 
 #[derive(Default)]
 pub struct VariableDefinitions {
-    definition_files: LookupFilesMatcher,
-    include: LookupFilesMatcher,
+    definition_files: GlobFilter,
+    include: GlobFilter,
 }
 
 impl VariableDefinitions {
-    pub fn new(definition_files: LookupFilesMatcher, include: LookupFilesMatcher) -> Self {
+    pub fn new(definition_files: GlobFilter, include: GlobFilter) -> Self {
         Self {
             definition_files,
             include,
@@ -24,7 +24,7 @@ impl VariableDefinitions {
 }
 
 impl SearchCondition for VariableDefinitions {
-    fn matches(&self, prop: &CssProperty) -> bool {
+    fn matches(&self, prop: &Property) -> bool {
         prop.ident.raw.starts_with("--")
             && (self.definition_files.matches(&prop.file_path)
                 || self.include.matches(&prop.file_path))
@@ -49,13 +49,13 @@ impl PropMapFor<'_, VariableDefinitions> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::{OwnedPropId, OwnedStr};
+    use crate::owned_types::{OwnedPropId, OwnedStr};
     use crate::parser;
+    use crate::parser::ParseResult;
     use std::path::PathBuf;
     use std::rc::Rc;
 
-    use crate::parser::css::ParseResult;
-    use crate::searcher::SearcherBuilder;
+    use crate::searcher::Searcher;
 
     fn test_parse(css: &str) -> ParseResult {
         parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")))
@@ -91,14 +91,16 @@ mod tests {
         }
     }
 
+    fn search_defs(css: &str) -> crate::searcher::SearchResult {
+        let parse_result = test_parse(css);
+        let mut searcher = Searcher::new().add_condition(VariableDefinitions::default());
+        searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
+        searcher.search()
+    }
+
     #[test]
     fn get_by_name() {
-        let css = ":root { --color: red; --size: 16px; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; --size: 16px; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
@@ -114,12 +116,7 @@ mod tests {
 
     #[test]
     fn get_nonexistent_returns_none() {
-        let css = ":root { --color: red; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let missing_id = OwnedPropId::from("--missing".to_string());
@@ -128,12 +125,7 @@ mod tests {
 
     #[test]
     fn contains_key_returns_correct_bool() {
-        let css = ":root { --color: red; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
@@ -144,12 +136,7 @@ mod tests {
 
     #[test]
     fn duplicate_definitions_grouped() {
-        let css = ":root { --color: red; } .dark { --color: blue; }";
-        let parse_results = vec![test_parse(css)];
-        let searcher = SearcherBuilder::new(parse_results)
-            .add_condition(VariableDefinitions::default())
-            .build();
-        let search_result = searcher.search();
+        let search_result = search_defs(":root { --color: red; } .dark { --color: blue; }");
         let map = search_result.get_prop_map_for::<VariableDefinitions>();
 
         let color_id = OwnedPropId::from("--color".to_string());
