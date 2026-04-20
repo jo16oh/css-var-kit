@@ -171,7 +171,7 @@ fn find_var_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::LookupFilesMatcher;
+    use crate::config::GlobFilter;
     use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
@@ -186,8 +186,8 @@ mod tests {
         };
         let mut searcher = Searcher::new()
             .add_condition(VariableDefinitions::new(
-                LookupFilesMatcher::default(),
-                LookupFilesMatcher::default(),
+                GlobFilter::default(),
+                GlobFilter::default(),
             ))
             .add_condition(VariableUsages);
         searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));

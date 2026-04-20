@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lightningcss::properties::custom::TokenList;
 
-use crate::config::LookupFilesMatcher;
+use crate::config::GlobFilter;
 use crate::parser::css::Property as CssProperty;
 use crate::searcher::{PropMapFor, SearchCondition};
 
@@ -10,12 +10,12 @@ pub type VarsMap<'a> = HashMap<&'a str, TokenList<'a>>;
 
 #[derive(Default)]
 pub struct VariableDefinitions {
-    definition_files: LookupFilesMatcher,
-    include: LookupFilesMatcher,
+    definition_files: GlobFilter,
+    include: GlobFilter,
 }
 
 impl VariableDefinitions {
-    pub fn new(definition_files: LookupFilesMatcher, include: LookupFilesMatcher) -> Self {
+    pub fn new(definition_files: GlobFilter, include: GlobFilter) -> Self {
         Self {
             definition_files,
             include,

@@ -97,7 +97,7 @@ fn check_variable_definitions(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::LookupFilesMatcher;
+    use crate::config::GlobFilter;
     use crate::owned::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
@@ -111,8 +111,8 @@ mod tests {
             severity: Severity::Warning,
         };
         let mut searcher = Searcher::new().add_condition(VariableDefinitions::new(
-            LookupFilesMatcher::default(),
-            LookupFilesMatcher::default(),
+            GlobFilter::default(),
+            GlobFilter::default(),
         ));
         searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
         let search_result = searcher.search();

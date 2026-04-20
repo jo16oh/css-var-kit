@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::rc::Rc;
 
-use crate::config::{Config, LookupFilesMatcher};
+use crate::config::{Config, GlobFilter};
 use crate::owned::OwnedStr;
 use crate::parser;
 use crate::parser::css::ParseResult;
@@ -111,7 +111,7 @@ pub fn check_search_result(search_result: &SearchResult, config: &Config) -> Vec
     diagnostics
 }
 
-pub fn collect_source_files(dir: &Path, include: &LookupFilesMatcher) -> Vec<PathBuf> {
+pub fn collect_source_files(dir: &Path, include: &GlobFilter) -> Vec<PathBuf> {
     let mut files = Vec::new();
     collect_source_files_recursive(dir, dir, include, &mut files);
     files.sort();
@@ -120,7 +120,7 @@ pub fn collect_source_files(dir: &Path, include: &LookupFilesMatcher) -> Vec<Pat
 
 /// Collects files matching positive patterns in `include`, walking the full tree.
 /// Returns an empty list when `include` has no positive patterns (the default).
-pub fn collect_include_files(root: &Path, include: &LookupFilesMatcher) -> Vec<PathBuf> {
+pub fn collect_include_files(root: &Path, include: &GlobFilter) -> Vec<PathBuf> {
     if !include.has_positive_patterns() {
         return vec![];
     }
@@ -133,7 +133,7 @@ pub fn collect_include_files(root: &Path, include: &LookupFilesMatcher) -> Vec<P
 fn collect_include_recursive(
     root: &Path,
     dir: &Path,
-    include: &LookupFilesMatcher,
+    include: &GlobFilter,
     files: &mut Vec<PathBuf>,
 ) {
     let entries = match fs::read_dir(dir) {
@@ -163,7 +163,7 @@ fn is_supported_extension(path: &Path) -> bool {
 fn collect_source_files_recursive(
     root: &Path,
     dir: &Path,
-    include: &LookupFilesMatcher,
+    include: &GlobFilter,
     files: &mut Vec<PathBuf>,
 ) {
     let entries = match fs::read_dir(dir) {

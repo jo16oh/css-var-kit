@@ -42,8 +42,8 @@ pub enum ConfigError {
 
 pub struct Config {
     pub root_dir: PathBuf,
-    pub definition_files: LookupFilesMatcher,
-    pub include: LookupFilesMatcher,
+    pub definition_files: GlobFilter,
+    pub include: GlobFilter,
     pub rules: Rules,
     pub lsp_log_file: Option<PathBuf>,
 }
@@ -58,11 +58,11 @@ pub const DEFAULT_INCLUDE_PATTERNS: &[&str] = &[
 ];
 
 #[derive(Clone)]
-pub struct LookupFilesMatcher {
+pub struct GlobFilter {
     patterns: Vec<LookupPattern>,
 }
 
-impl Default for LookupFilesMatcher {
+impl Default for GlobFilter {
     fn default() -> Self {
         Self::compile(&["**/*.css".to_string()]).unwrap()
     }
@@ -74,7 +74,7 @@ struct LookupPattern {
     matcher: GlobMatcher,
 }
 
-impl LookupFilesMatcher {
+impl GlobFilter {
     fn compile(raw_patterns: &[String]) -> Result<Self, globset::Error> {
         raw_patterns
             .iter()
@@ -153,7 +153,7 @@ impl Config {
             raw.lookup_files.as_slice()
         };
 
-        let definition_files = LookupFilesMatcher::compile(definition_patterns)
+        let definition_files = GlobFilter::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
         let include_patterns = if args.files.is_empty() {
@@ -192,7 +192,7 @@ impl Config {
         let resolved_root_dir = project_root.join(&raw.root_dir);
 
         let definition_patterns = raw.definition_files.as_deref().unwrap_or(&raw.lookup_files);
-        let definition_files = LookupFilesMatcher::compile(definition_patterns)
+        let definition_files = GlobFilter::compile(definition_patterns)
             .map_err(|e| ConfigError::InvalidPattern { source: e })?;
 
         let include = compile_include(&raw.include)?;
@@ -270,13 +270,13 @@ impl RawRules {
 /// Compiles an `include` matcher by prepending the default skip patterns before user-supplied
 /// patterns. With last-wins semantics, user patterns can selectively override the defaults
 /// (e.g. `"node_modules/my-lib/tokens.css"` overrides `"!**/node_modules/**"` for that path).
-fn compile_include(user_patterns: &[String]) -> Result<LookupFilesMatcher, ConfigError> {
+fn compile_include(user_patterns: &[String]) -> Result<GlobFilter, ConfigError> {
     let patterns: Vec<String> = DEFAULT_INCLUDE_PATTERNS
         .iter()
         .map(|s| s.to_string())
         .chain(user_patterns.iter().cloned())
         .collect();
-    LookupFilesMatcher::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
+    GlobFilter::compile(&patterns).map_err(|e| ConfigError::InvalidPattern { source: e })
 }
 
 /// Resolves CLI file arguments to `root_dir`-relative glob patterns.
