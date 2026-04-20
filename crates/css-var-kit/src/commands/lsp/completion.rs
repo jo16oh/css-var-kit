@@ -8,8 +8,8 @@ use lsp_types::{
 };
 
 use super::Server;
-use crate::position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::text_position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::type_checker::{TypeCheckError, check_property_type};
 
 impl Server<'_> {

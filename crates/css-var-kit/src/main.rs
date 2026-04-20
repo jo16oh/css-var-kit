@@ -4,9 +4,9 @@ mod config;
 mod diagnostic_renderer;
 mod owned;
 mod parser;
-mod position;
 mod rules;
 mod searcher;
+mod text_position;
 mod type_checker;
 mod variable_resolver;
 

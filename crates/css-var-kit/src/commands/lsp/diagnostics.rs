@@ -9,8 +9,8 @@ use lsp_types::{DiagnosticSeverity, NumberOrString, Position, PublishDiagnostics
 use super::Server;
 use crate::commands::lint;
 use crate::commands::lsp::uri::path_to_uri;
-use crate::position::byte_col_to_utf16_in_source;
 use crate::rules::{Diagnostic, Severity};
+use crate::text_position::byte_col_to_utf16_in_source;
 
 impl Server<'_> {
     pub fn publish_all_diagnostics(&self) -> Result<(), Box<dyn Error>> {

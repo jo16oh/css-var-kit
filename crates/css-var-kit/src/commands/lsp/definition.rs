@@ -7,8 +7,8 @@ use super::Server;
 use super::uri::path_to_uri;
 use crate::owned::OwnedPropId;
 
-use crate::position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::text_position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};
 
 impl Server<'_> {
     pub fn handle_definition_request(&self, req: Request) -> Result<(), Box<dyn Error>> {

@@ -11,10 +11,10 @@ use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cur
 use super::uri::path_to_uri;
 use crate::owned::OwnedPropId;
 use crate::parser::Property;
-use crate::position::offset_to_position;
-use crate::position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
+use crate::text_position::offset_to_position;
+use crate::text_position::{byte_col_to_utf16_in_source, byte_offset_to_utf16};
 
 impl Server<'_> {
     pub fn handle_rename_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
