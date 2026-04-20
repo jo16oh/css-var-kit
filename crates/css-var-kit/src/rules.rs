@@ -1,6 +1,6 @@
 use std::{path::Path, rc::Rc};
 
-use crate::{owned::OwnedStr, searcher::SearchResult};
+use crate::{owned_types::OwnedStr, searcher::SearchResult};
 
 pub mod enforce_variable_use;
 pub mod no_inconsistent_variable_definition;

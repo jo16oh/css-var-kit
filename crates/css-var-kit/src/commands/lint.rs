@@ -5,7 +5,7 @@ use std::process;
 use std::rc::Rc;
 
 use crate::config::{Config, GlobFilter};
-use crate::owned::OwnedStr;
+use crate::owned_types::OwnedStr;
 use crate::parser;
 use crate::parser::ParseResult;
 use crate::rules::{Diagnostic, Severity};

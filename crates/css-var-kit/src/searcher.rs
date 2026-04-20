@@ -7,7 +7,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::{
-    owned::OwnedPropId,
+    owned_types::OwnedPropId,
     parser::{ParseResult, Property},
     searcher::conditions::variable_definitions::VariableDefinitions,
 };
@@ -215,7 +215,7 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::rc::Rc;
 
-    use crate::{owned::OwnedStr, parser};
+    use crate::{owned_types::OwnedStr, parser};
 
     use super::*;
 

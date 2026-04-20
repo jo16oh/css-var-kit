@@ -50,7 +50,7 @@ fn check_type_mismatch(vars: &VarsMap, usages: &[Property], severity: Severity) 
 mod tests {
     use super::*;
     use crate::config::GlobFilter;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
     use std::path::PathBuf;

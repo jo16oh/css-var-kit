@@ -25,7 +25,7 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
-use crate::owned::OwnedStr;
+use crate::owned_types::OwnedStr;
 use crate::parser::ParseResult;
 use crate::searcher::Searcher;
 use crate::searcher::conditions::non_custom_properties::NonCustomProperties;

@@ -49,7 +49,7 @@ impl PropMapFor<'_, VariableDefinitions> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::{OwnedPropId, OwnedStr};
+    use crate::owned_types::{OwnedPropId, OwnedStr};
     use crate::parser;
     use crate::parser::ParseResult;
     use std::path::PathBuf;

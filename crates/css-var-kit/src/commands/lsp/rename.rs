@@ -9,7 +9,7 @@ use lsp_types::{
 use super::Server;
 use super::definition::{extract_variable_at_cursor, extract_variable_name_at_cursor};
 use super::uri::path_to_uri;
-use crate::owned::OwnedPropId;
+use crate::owned_types::OwnedPropId;
 use crate::parser::Property;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;

@@ -1,6 +1,6 @@
 use std::{cell::OnceCell, path::Path, rc::Rc};
 
-use crate::owned::{OwnedPropId, OwnedStr, OwnedTokenList};
+use crate::owned_types::{OwnedPropId, OwnedStr, OwnedTokenList};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PropertyIdent {

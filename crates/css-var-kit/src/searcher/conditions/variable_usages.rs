@@ -23,7 +23,7 @@ fn has_dashed_ident(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
     use std::path::PathBuf;
     use std::rc::Rc;

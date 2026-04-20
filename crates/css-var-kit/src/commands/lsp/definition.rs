@@ -5,7 +5,7 @@ use lsp_types::{GotoDefinitionParams, GotoDefinitionResponse, Location, Position
 
 use super::Server;
 use super::uri::path_to_uri;
-use crate::owned::OwnedPropId;
+use crate::owned_types::OwnedPropId;
 
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::text_position::{byte_col_to_utf16_in_source, utf16_to_byte_offset};

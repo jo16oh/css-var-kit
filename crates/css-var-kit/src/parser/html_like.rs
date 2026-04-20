@@ -1,6 +1,6 @@
 use std::{path::Path, rc::Rc};
 
-use crate::owned::OwnedStr;
+use crate::owned_types::OwnedStr;
 
 use super::css;
 use super::types::ParseResult;

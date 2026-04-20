@@ -1,6 +1,6 @@
 use std::{cell::OnceCell, path::Path, rc::Rc};
 
-use crate::owned::OwnedStr;
+use crate::owned_types::OwnedStr;
 
 use super::types::{ParseResult, Property, PropertyIdent, PropertyValue};
 

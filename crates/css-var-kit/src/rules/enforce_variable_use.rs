@@ -247,7 +247,7 @@ mod tests {
     };
     use super::*;
     use crate::config::file::SeverityToggle;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
 

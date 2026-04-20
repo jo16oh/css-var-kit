@@ -1,6 +1,6 @@
 use lightningcss::properties::custom::{TokenList, TokenOrValue};
 
-use crate::owned::OwnedPropId;
+use crate::owned_types::OwnedPropId;
 use crate::parser::Property;
 use crate::rules::{Diagnostic, Rule, Severity, is_ignored};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
@@ -172,7 +172,7 @@ fn find_var_position(
 mod tests {
     use super::*;
     use crate::config::GlobFilter;
-    use crate::owned::OwnedStr;
+    use crate::owned_types::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
     use std::path::PathBuf;
