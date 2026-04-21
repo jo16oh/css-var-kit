@@ -1,8 +1,9 @@
 mod completion;
 mod definition;
-mod diagnostics;
 mod file_watcher;
 mod logger;
+mod pull_diagnostics;
+mod push_diagnostics;
 mod rename;
 mod uri;
 
@@ -19,8 +20,9 @@ use lsp_types::notification::{
     Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
-    CompletionOptions, InitializeParams, OneOf, PublishDiagnosticsParams, RenameOptions,
-    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    CompletionOptions, DiagnosticOptions, DiagnosticServerCapabilities, InitializeParams, OneOf,
+    PublishDiagnosticsParams, RenameOptions, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Uri,
 };
 
 use crate::commands::lint;
@@ -47,6 +49,11 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         rename_provider: Some(OneOf::Right(RenameOptions {
             prepare_provider: Some(true),
             work_done_progress_options: Default::default(),
+        })),
+        diagnostic_provider: Some(DiagnosticServerCapabilities::Options(DiagnosticOptions {
+            inter_file_dependencies: true,
+            workspace_diagnostics: true,
+            ..Default::default()
         })),
         ..Default::default()
     };
@@ -168,7 +175,7 @@ impl Server<'_> {
                             self.reload_config()?;
                         } else if !source_paths.is_empty() {
                             self.update_source_cache_from_disk(&source_paths);
-                            self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                            self.publish_all_diagnostics()?;
                         }
                     }
                 }
@@ -194,17 +201,7 @@ impl Server<'_> {
                 }
                 self.opened_documents
                     .insert(params.text_document.uri, params.text_document.text);
-                if rel_path
-                    .as_deref()
-                    .is_some_and(|p| self.is_definition_file(p))
-                {
-                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
-                } else {
-                    let targets: Vec<Rc<Path>> = rel_path
-                        .map(|p| vec![Rc::<Path>::from(p)])
-                        .unwrap_or_default();
-                    self.publish_diagnostics_for_files(&targets)?;
-                }
+                self.publish_all_diagnostics()?;
             }
             DidChangeTextDocument::METHOD => {
                 let params: lsp_types::DidChangeTextDocumentParams =
@@ -230,7 +227,7 @@ impl Server<'_> {
                     .as_deref()
                     .is_some_and(|p| self.is_definition_file(p))
                 {
-                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                    self.publish_all_diagnostics()?;
                 } else {
                     let targets: Vec<Rc<Path>> = changed_rel_path
                         .map(|p| vec![Rc::<Path>::from(p)])
@@ -259,7 +256,7 @@ impl Server<'_> {
                     self.reload_config()?;
                 } else if !source_paths.is_empty() {
                     self.update_source_cache_from_disk(&source_paths);
-                    self.publish_diagnostics_for_files(&self.opened_files_rel_paths())?;
+                    self.publish_all_diagnostics()?;
                 }
             }
             DidCloseTextDocument::METHOD => {
@@ -281,14 +278,16 @@ impl Server<'_> {
                         Err(_) => {
                             self.remove_from_caches(rel_path.as_path());
                             self.source_cache.remove(rel_path.as_path());
+                            self.send_notification::<PublishDiagnostics>(
+                                PublishDiagnosticsParams {
+                                    uri: params.text_document.uri,
+                                    diagnostics: vec![],
+                                    version: None,
+                                },
+                            )?;
                         }
                     }
                 }
-                self.send_notification::<PublishDiagnostics>(PublishDiagnosticsParams {
-                    uri: params.text_document.uri,
-                    diagnostics: vec![],
-                    version: None,
-                })?;
             }
             _ => {}
         }
@@ -338,14 +337,6 @@ impl Server<'_> {
 
     fn is_definition_file(&self, rel_path: &Path) -> bool {
         self.config.definition_files.matches(&rel_path) || self.config.include.matches(&rel_path)
-    }
-
-    fn opened_files_rel_paths(&self) -> Vec<Rc<Path>> {
-        self.opened_documents
-            .keys()
-            .filter_map(|uri| self.uri_to_rel_path(uri))
-            .map(Rc::<Path>::from)
-            .collect()
     }
 
     fn uri_to_rel_path(&self, uri: &Uri) -> Option<PathBuf> {

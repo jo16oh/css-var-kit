@@ -94,7 +94,7 @@ impl Server<'_> {
     }
 }
 
-fn to_lsp_diagnostic(d: &Diagnostic) -> lsp_types::Diagnostic {
+pub fn to_lsp_diagnostic(d: &Diagnostic) -> lsp_types::Diagnostic {
     let start = Position {
         line: d.line,
         character: byte_col_to_utf16_in_source(&d.source, d.line, d.column),
