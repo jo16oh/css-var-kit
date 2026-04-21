@@ -113,7 +113,12 @@
     }
   },
   "activationEvents": [
-    "onLanguage:css"
+    "onLanguage:astro",
+    "onLanguage:css",
+    "onLanguage:html",
+    "onLanguage:scss",
+    "onLanguage:svelte",
+    "onLanguage:vue"
   ],
   "icon": "icon.png",
   "engines": {
