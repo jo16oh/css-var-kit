@@ -1,7 +1,10 @@
 use std::error::Error;
 
 use lsp_server::{Message, Request, Response};
-use lsp_types::request::{Completion, GotoDefinition, PrepareRenameRequest, Rename};
+use lsp_types::request::{
+    Completion, DocumentDiagnosticRequest, GotoDefinition, PrepareRenameRequest, Rename,
+    WorkspaceDiagnosticRequest,
+};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
     Position, Range, TextEdit,
@@ -33,6 +36,12 @@ impl Server<'_> {
             }
             <PrepareRenameRequest as lsp_types::request::Request>::METHOD => {
                 self.handle_prepare_rename_request(req)?;
+            }
+            <DocumentDiagnosticRequest as lsp_types::request::Request>::METHOD => {
+                self.handle_document_diagnostic_request(req)?;
+            }
+            <WorkspaceDiagnosticRequest as lsp_types::request::Request>::METHOD => {
+                self.handle_workspace_diagnostic_request(req)?;
             }
             _ => {}
         }

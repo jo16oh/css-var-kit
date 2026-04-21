@@ -184,6 +184,24 @@ impl LspClient {
         )
     }
 
+    pub fn request_document_diagnostic(&mut self, uri: &str) -> Value {
+        self.send_request(
+            "textDocument/diagnostic",
+            json!({
+                "textDocument": { "uri": uri }
+            }),
+        )
+    }
+
+    pub fn request_workspace_diagnostic(&mut self) -> Value {
+        self.send_request(
+            "workspace/diagnostic",
+            json!({
+                "previousResultIds": []
+            }),
+        )
+    }
+
     pub fn request_definition(&mut self, uri: &str, line: u32, character: u32) -> Value {
         self.send_request(
             "textDocument/definition",
