@@ -1,9 +1,8 @@
 mod completion;
 mod definition;
+mod diagnostics;
 mod file_watcher;
 mod logger;
-mod pull_diagnostics;
-mod push_diagnostics;
 mod rename;
 mod uri;
 

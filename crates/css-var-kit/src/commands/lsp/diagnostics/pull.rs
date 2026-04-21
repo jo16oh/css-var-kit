@@ -12,9 +12,9 @@ use lsp_types::{
 };
 
 use super::Server;
-use super::push_diagnostics::to_lsp_diagnostic;
-use super::uri::path_to_uri;
+use super::to_lsp_diagnostic;
 use crate::commands::lint;
+use crate::commands::lsp::uri::path_to_uri;
 
 impl Server<'_> {
     pub fn handle_document_diagnostic_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
