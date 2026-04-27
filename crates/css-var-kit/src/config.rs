@@ -177,17 +177,22 @@ impl Config {
         })
     }
 
-    /// Loads config for LSP. `cvk.json` takes precedence over `initializationOptions`;
-    /// `initializationOptions` is used only when no config file is found.
+    /// Loads config for LSP. `cvk.json` takes precedence over `initializationOptions`,
+    /// but unset `lsp.*` fields fall back to `initializationOptions` so user-local
+    /// settings (e.g. `logFile`) work even when a shared `cvk.json` exists.
     pub fn load_for_lsp(
         root_dir: &Path,
         init_options: Option<file::RawConfig>,
     ) -> Result<Self, ConfigError> {
         let project_root = find_project_root(root_dir);
 
-        let raw = file::RawConfig::load(&project_root)?
+        let init_lsp_log_file = init_options.as_ref().and_then(|c| c.lsp.log_file.clone());
+        let mut raw = file::RawConfig::load(&project_root)?
             .or(init_options)
             .unwrap_or_default();
+        if raw.lsp.log_file.is_none() {
+            raw.lsp.log_file = init_lsp_log_file;
+        }
 
         let resolved_root_dir = project_root.join(&raw.root_dir);
 

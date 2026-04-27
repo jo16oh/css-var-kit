@@ -75,16 +75,14 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
 
     let config = Config::load_for_lsp(&root_dir, init_options.clone())?;
 
-    let logger = if log {
+    let logger = (log || config.lsp_log_file.is_some()).then(|| {
         let l = Logger::new(config.lsp_log_file.as_deref());
         l.log(&format!(
             "initialized: root_dir={}",
             config.root_dir.display()
         ));
-        Some(l)
-    } else {
-        None
-    };
+        l
+    });
 
     let watcher_rx = if file_watcher::client_supports_watch(&init_params) {
         file_watcher::register_client_watcher(&connection)?;

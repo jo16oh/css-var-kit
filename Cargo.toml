@@ -3,6 +3,9 @@ resolver = "3"
 members = [
   "crates/css-var-kit",
 ]
+exclude = [
+  "crates/zed-extension",
+]
 
 [workspace.package]
 version = "0.3.1"
