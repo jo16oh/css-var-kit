@@ -1,8 +1,7 @@
-use zed_extension_api::{self as zed, LanguageServerId, Result, Worktree, settings::LspSettings};
+use zed_extension_api::{self as zed, LanguageServerId, Result, Worktree};
 
 use crate::CssVarKitExtension;
 
-const SERVER_NAME: &str = "css-var-kit";
 const REPO: &str = "jo16oh/css-var-kit";
 
 pub fn resolve(
@@ -10,10 +9,6 @@ pub fn resolve(
     id: &LanguageServerId,
     worktree: &Worktree,
 ) -> Result<String> {
-    if let Some(path) = configured_path(worktree) {
-        return Ok(path);
-    }
-
     if let Some(path) = worktree.which(bin_name()) {
         return Ok(path);
     }
@@ -27,13 +22,6 @@ pub fn resolve(
     let path = download(id)?;
     ext.cached_binary_path = Some(path.clone());
     Ok(path)
-}
-
-fn configured_path(worktree: &Worktree) -> Option<String> {
-    LspSettings::for_worktree(SERVER_NAME, worktree)
-        .ok()
-        .and_then(|s| s.binary)
-        .and_then(|b| b.path)
 }
 
 fn download(id: &LanguageServerId) -> Result<String> {

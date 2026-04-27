@@ -20,9 +20,25 @@ impl zed::Extension for CssVarKitExtension {
         id: &LanguageServerId,
         worktree: &Worktree,
     ) -> Result<Command> {
+        let user_binary = LspSettings::for_worktree("css-var-kit", worktree)
+            .ok()
+            .and_then(|s| s.binary)
+            .filter(|b| b.path.is_some());
+
+        if let Some(b) = user_binary {
+            return Ok(Command {
+                command: b.path.unwrap(),
+                args: b.arguments.unwrap_or_default(),
+                env: b
+                    .env
+                    .map(|m| m.into_iter().collect())
+                    .unwrap_or_default(),
+            });
+        }
+
         Ok(Command {
             command: binary::resolve(self, id, worktree)?,
-            args: vec!["lsp".into()],
+            args: vec!["lsp".into(), "--log".into()],
             env: Default::default(),
         })
     }
