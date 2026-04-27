@@ -38,7 +38,7 @@ impl zed::Extension for CssVarKitExtension {
 
         Ok(Command {
             command: binary::resolve(self, id, worktree)?,
-            args: vec!["lsp".into(), "--log".into()],
+            args: vec!["lsp".into()],
             env: Default::default(),
         })
     }
