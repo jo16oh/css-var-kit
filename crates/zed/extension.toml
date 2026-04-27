@@ -1,0 +1,19 @@
+id = "css-var-kit"
+name = "css-var-kit"
+description = "Type-aware completion and linting for CSS variables."
+version = "0.3.1"
+schema_version = 1
+authors = ["jo16oh"]
+repository = "https://github.com/jo16oh/css-var-kit"
+
+[language_servers.css-var-kit]
+name = "css-var-kit"
+languages = ["CSS", "SCSS", "HTML", "Vue.js", "Svelte", "Astro"]
+
+[language_servers.css-var-kit.language_ids]
+"CSS" = "css"
+"SCSS" = "scss"
+"HTML" = "html"
+"Vue.js" = "vue"
+"Svelte" = "svelte"
+"Astro" = "astro"

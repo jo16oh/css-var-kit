@@ -87,9 +87,14 @@ name = "css"
 language-servers = ["css-var-kit"]
 ```
 
+### Zed
+
+Install the **css-var-kit** extension from Zed's Extensions panel. The extension auto-resolves the `cvk` binary from your settings, `$PATH`, or the latest GitHub release.
+
+See [`crates/zed/README.md`](crates/zed/README.md) for configuration details.
+
 ## Planned Features 📝
 
 - [ ] `cvk prune` command
   - Strips unused CSS variables from the final build output.
-- [ ] Zed Extension
 - [ ] Adding configuration examples for Vim, Neovim, and Emacs.
