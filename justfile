@@ -34,6 +34,7 @@ bump-zed-version level:
     sed -i.bak "s/^version = \".*\"/version = \"$version\"/" {{zed-pkg}}/extension.toml
     rm {{zed-pkg}}/extension.toml.bak
     (cd {{zed-pkg}} && cargo generate-lockfile)
+    tombi format {{zed-pkg}}/Cargo.toml {{zed-pkg}}/extension.toml {{zed-pkg}}/Cargo.lock
 
     git add {{zed-pkg}}/Cargo.toml {{zed-pkg}}/extension.toml {{zed-pkg}}/Cargo.lock
     git commit -m "chore(zed): bump version to $version"
