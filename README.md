@@ -91,7 +91,7 @@ language-servers = ["css-var-kit"]
 
 Install the **css-var-kit** extension from Zed's Extensions panel. The extension auto-resolves the `cvk` binary from your settings, `$PATH`, or the latest GitHub release.
 
-See [`crates/zed/README.md`](crates/zed/README.md) for configuration details.
+See [`crates/zed-extension/README.md`](crates/zed-extension/README.md) for configuration details.
 
 ## Planned Features 📝
 

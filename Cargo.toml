@@ -4,7 +4,7 @@ members = [
   "crates/css-var-kit",
 ]
 exclude = [
-  "crates/zed",
+  "crates/zed-extension",
 ]
 
 [workspace.package]

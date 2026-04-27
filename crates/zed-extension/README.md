@@ -52,8 +52,8 @@ See [docs/config.md](https://github.com/jo16oh/css-var-kit/blob/main/docs/config
 
 ```sh
 rustup target add wasm32-wasip2
-cd crates/zed
+cd crates/zed-extension
 cargo build --release --target wasm32-wasip2
 ```
 
-In Zed: `extensions` panel → `Install Dev Extension` → select `crates/zed/`.
+In Zed: `extensions` panel → `Install Dev Extension` → select `crates/zed-extension/`.

@@ -6,6 +6,8 @@ pkgs := "packages/css-var-kit \
          packages/cli-linux-x64 \
          packages/cli-win32-x64"
 
+zed-pkg := "crates/zed-extension"
+
 bump-version level:
     #!/usr/bin/env sh
     for dir in {{pkgs}}; do
@@ -23,6 +25,19 @@ bump-version level:
     git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
     git commit -m "chore: bump version to $version"
     git tag "v$version"
+
+bump-zed-version level:
+    #!/usr/bin/env sh
+    set -e
+    (cd {{zed-pkg}} && cargo set-version --bump {{level}})
+    version=$(grep '^version' {{zed-pkg}}/Cargo.toml | head -1 | cut -d'"' -f2)
+    sed -i.bak "s/^version = \".*\"/version = \"$version\"/" {{zed-pkg}}/extension.toml
+    rm {{zed-pkg}}/extension.toml.bak
+    (cd {{zed-pkg}} && cargo generate-lockfile)
+
+    git add {{zed-pkg}}/Cargo.toml {{zed-pkg}}/extension.toml {{zed-pkg}}/Cargo.lock
+    git commit -m "chore(zed): bump version to $version"
+    git tag "zed-v$version"
 
 sync-optional-deps:
     @node -e "\
