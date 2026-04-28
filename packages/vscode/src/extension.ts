@@ -20,9 +20,10 @@ async function startClient(): Promise<void> {
     return;
   }
 
+  const log = workspace.getConfiguration("cvk").get<boolean>("lsp.log");
   const serverOptions: ServerOptions = {
     command: binary,
-    args: ["lsp"],
+    args: ["lsp", ...(log ? ["--log"] : [])],
   };
 
   const clientOptions: LanguageClientOptions = {

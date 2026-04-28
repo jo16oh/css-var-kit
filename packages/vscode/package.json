@@ -101,6 +101,11 @@
           "default": "off",
           "markdownDescription": "Enforce CSS variable usage. Set to `\"error\"`, `\"warn\"`, `\"off\"`, or an object with detailed config."
         },
+        "cvk.lsp.log": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Set to `true` to enable LSP logging to stderr."
+        },
         "cvk.lsp.logFile": {
           "type": [
             "string",
