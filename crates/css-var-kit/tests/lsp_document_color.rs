@@ -67,6 +67,99 @@ fn returns_color_info_only_for_var_usages() {
 }
 
 #[test]
+fn color_updates_when_definition_in_other_file_changes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let workspace = tmp.path();
+    std::fs::write(workspace.join("cvk.json"), "{}").unwrap();
+    std::fs::write(
+        workspace.join("tokens.css"),
+        ":root { --brand: #ff0000; }\n",
+    )
+    .unwrap();
+    std::fs::write(workspace.join("app.css"), ".x { color: var(--brand); }\n").unwrap();
+
+    let mut client = LspClient::spawn(workspace);
+    client.initialize();
+
+    let tokens_uri = client.file_uri("tokens.css");
+    let app_uri = client.file_uri("app.css");
+    client.open_document(
+        &tokens_uri,
+        &std::fs::read_to_string(workspace.join("tokens.css")).unwrap(),
+    );
+    client.open_document(
+        &app_uri,
+        &std::fs::read_to_string(workspace.join("app.css")).unwrap(),
+    );
+
+    let _ = client.request_document_color(&app_uri);
+
+    client.change_document(&tokens_uri, 2, ":root { --brand: #00ff00; }\n");
+
+    let response = client.request_document_color(&app_uri);
+    client.shutdown();
+
+    let result = response.get("result").expect("expected result");
+    let infos = result.as_array().expect("result should be array");
+    assert_eq!(infos.len(), 1, "expected 1 color info, got {infos:?}");
+
+    let red = infos[0]["color"]["red"].as_f64().unwrap();
+    let green = infos[0]["color"]["green"].as_f64().unwrap();
+    let blue = infos[0]["color"]["blue"].as_f64().unwrap();
+    assert!(red.abs() < 1e-3, "red should be 0 after change, got {red}");
+    assert!(
+        (green - 1.0).abs() < 1e-3,
+        "green should be 1 after change, got {green}"
+    );
+    assert!(
+        blue.abs() < 1e-3,
+        "blue should be 0 after change, got {blue}"
+    );
+}
+
+#[test]
+fn color_updates_when_definition_changes() {
+    let fixture_dir = Path::new(common::FIXTURES).join("document-color");
+    let mut client = LspClient::spawn(&fixture_dir);
+    client.initialize();
+
+    let uri = client.file_uri("styles.css");
+    let text = std::fs::read_to_string(fixture_dir.join("styles.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let _ = client.request_document_color(&uri);
+
+    let updated = text.replace("--brand: #ff0000;", "--brand: #00ff00;");
+    client.change_document(&uri, 2, &updated);
+
+    let response = client.request_document_color(&uri);
+    client.shutdown();
+
+    let result = response.get("result").expect("expected result");
+    let infos = result.as_array().expect("result should be array");
+    assert_eq!(
+        infos.len(),
+        2,
+        "expected 2 color infos after change, got {infos:?}"
+    );
+
+    for info in infos {
+        let red = info["color"]["red"].as_f64().unwrap();
+        let green = info["color"]["green"].as_f64().unwrap();
+        let blue = info["color"]["blue"].as_f64().unwrap();
+        assert!(red.abs() < 1e-3, "red should be 0 after change, got {red}");
+        assert!(
+            (green - 1.0).abs() < 1e-3,
+            "green should be 1 after change, got {green}"
+        );
+        assert!(
+            blue.abs() < 1e-3,
+            "blue should be 0 after change, got {blue}"
+        );
+    }
+}
+
+#[test]
 fn color_presentation_returns_empty_array() {
     let fixture_dir = Path::new(common::FIXTURES).join("document-color");
     let mut client = LspClient::spawn(&fixture_dir);
