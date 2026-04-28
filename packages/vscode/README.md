@@ -29,16 +29,17 @@ If your project has a `cvk.json` (or `cvk.jsonc`), the extension uses it directl
 
 If no config file exists, you can configure rules via VS Code settings:
 
-| Setting                                      | Default        | Description                       |
-| -------------------------------------------- | -------------- | --------------------------------- |
-| `cvk.path`                                   | `null`         | Path to the `cvk` binary          |
-| `cvk.rootDir`                                | `"."`          | Root directory for analysis       |
-| `cvk.lookupFiles`                            | `["**/*.css"]` | Glob patterns for CSS files       |
-| `cvk.rules.noUndefinedVariableUse`           | `"error"`      | Undefined variable usage          |
-| `cvk.rules.noVariableTypeMismatch`           | `"error"`      | Variable type mismatch            |
-| `cvk.rules.noInconsistentVariableDefinition` | `"error"`      | Inconsistent variable definitions |
-| `cvk.rules.enforceVariableUse`               | `"off"`        | Enforce CSS variable usage        |
-| `cvk.lsp.logFile`                            | `null`         | LSP log file path                 |
+| Setting                                      | Default        | Description                            |
+| -------------------------------------------- | -------------- | -------------------------------------- |
+| `cvk.path`                                   | `null`         | Path to the `cvk` binary               |
+| `cvk.rootDir`                                | `"."`          | Root directory for analysis            |
+| `cvk.lookupFiles`                            | `["**/*.css"]` | Glob patterns for CSS files            |
+| `cvk.rules.noUndefinedVariableUse`           | `"error"`      | Undefined variable usage               |
+| `cvk.rules.noVariableTypeMismatch`           | `"error"`      | Variable type mismatch                 |
+| `cvk.rules.noInconsistentVariableDefinition` | `"error"`      | Inconsistent variable definitions      |
+| `cvk.rules.enforceVariableUse`               | `"off"`        | Enforce CSS variable usage             |
+| `cvk.lsp.log`                                | `false`        | `true` to enable LSP logging to stderr |
+| `cvk.lsp.logFile`                            | `null`         | LSP log file path                      |
 
 > When `cvk.json` exists, it takes full precedence and VS Code settings are ignored.
 

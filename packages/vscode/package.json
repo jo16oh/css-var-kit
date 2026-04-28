@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@types/vscode": "~1.100.0",
-    "vite": "^8.0.7"
+    "vite": "^8.0.10"
   },
   "contributes": {
     "configuration": {
@@ -100,6 +100,11 @@
           ],
           "default": "off",
           "markdownDescription": "Enforce CSS variable usage. Set to `\"error\"`, `\"warn\"`, `\"off\"`, or an object with detailed config."
+        },
+        "cvk.lsp.log": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Set to `true` to enable LSP logging to stderr."
         },
         "cvk.lsp.logFile": {
           "type": [
