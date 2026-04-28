@@ -2,8 +2,8 @@ use std::error::Error;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::request::{
-    Completion, DocumentDiagnosticRequest, GotoDefinition, PrepareRenameRequest, Rename,
-    WorkspaceDiagnosticRequest,
+    ColorPresentationRequest, Completion, DocumentColor, DocumentDiagnosticRequest, GotoDefinition,
+    PrepareRenameRequest, Rename, WorkspaceDiagnosticRequest,
 };
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
@@ -42,6 +42,12 @@ impl Server<'_> {
             }
             <WorkspaceDiagnosticRequest as lsp_types::request::Request>::METHOD => {
                 self.handle_workspace_diagnostic_request(req)?;
+            }
+            <DocumentColor as lsp_types::request::Request>::METHOD => {
+                self.handle_document_color_request(req)?;
+            }
+            <ColorPresentationRequest as lsp_types::request::Request>::METHOD => {
+                self.handle_color_presentation_request(req)?;
             }
             _ => {}
         }

@@ -1,0 +1,11 @@
+:root {
+    --brand: #ff0000;
+    --primary: var(--brand);
+    --size: 16px;
+}
+
+.box {
+    color: var(--brand);
+    background: var(--primary);
+    padding: var(--size);
+}
