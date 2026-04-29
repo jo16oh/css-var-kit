@@ -214,7 +214,7 @@ fn collect_from_token_list(
     }
 }
 
-pub(super) fn find_var_in_source(
+fn find_var_in_source(
     source: &str,
     value_offset: usize,
     search_from: usize,

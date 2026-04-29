@@ -212,29 +212,6 @@ impl LspClient {
         )
     }
 
-    pub fn request_document_color(&mut self, uri: &str) -> Value {
-        self.send_request(
-            "textDocument/documentColor",
-            json!({
-                "textDocument": { "uri": uri }
-            }),
-        )
-    }
-
-    pub fn send_color_presentation(&mut self, uri: &str) -> Value {
-        self.send_request(
-            "textDocument/colorPresentation",
-            json!({
-                "textDocument": { "uri": uri },
-                "color": { "red": 1.0, "green": 0.0, "blue": 0.0, "alpha": 1.0 },
-                "range": {
-                    "start": { "line": 0, "character": 0 },
-                    "end": { "line": 0, "character": 1 }
-                }
-            }),
-        )
-    }
-
     pub fn collect_diagnostics(&mut self) -> Vec<PublishedDiagnostics> {
         // Use a map keyed by URI so that later notifications replace earlier ones.
         // The LSP spec treats each publishDiagnostics as a full replacement for that

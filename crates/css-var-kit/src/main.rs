@@ -1,5 +1,4 @@
 mod cli;
-mod color_value;
 mod commands;
 mod config;
 mod diagnostic_renderer;

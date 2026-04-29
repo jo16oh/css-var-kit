@@ -1,7 +1,6 @@
 mod completion;
 mod definition;
 mod diagnostics;
-mod document_color;
 mod file_watcher;
 mod logger;
 mod rename;
@@ -20,9 +19,9 @@ use lsp_types::notification::{
     Notification as _, PublishDiagnostics,
 };
 use lsp_types::{
-    ColorProviderCapability, CompletionOptions, DiagnosticOptions, DiagnosticServerCapabilities,
-    InitializeParams, OneOf, PublishDiagnosticsParams, RenameOptions, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    CompletionOptions, DiagnosticOptions, DiagnosticServerCapabilities, InitializeParams, OneOf,
+    PublishDiagnosticsParams, RenameOptions, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Uri,
 };
 
 use crate::commands::lint;
@@ -55,7 +54,6 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
             workspace_diagnostics: true,
             ..Default::default()
         })),
-        color_provider: Some(ColorProviderCapability::Simple(true)),
         ..Default::default()
     };
 
