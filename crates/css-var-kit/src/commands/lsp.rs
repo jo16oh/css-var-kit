@@ -14,17 +14,15 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use crossbeam_channel::Receiver;
-use lsp_server::{Connection, Message, Notification, Request as LspRequest};
+use lsp_server::{Connection, Message, Notification};
 use lsp_types::notification::{
     DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
     Notification as _, PublishDiagnostics,
 };
-use lsp_types::request::{DocumentColor, RegisterCapability, Request as _, UnregisterCapability};
 use lsp_types::{
     ColorProviderCapability, CompletionOptions, DiagnosticOptions, DiagnosticServerCapabilities,
-    DocumentFilter, InitializeParams, OneOf, PublishDiagnosticsParams, Registration,
-    RegistrationParams, RenameOptions, ServerCapabilities, TextDocumentRegistrationOptions,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Unregistration, UnregistrationParams, Uri,
+    InitializeParams, OneOf, PublishDiagnosticsParams, RenameOptions, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
 use crate::commands::lint;
@@ -40,22 +38,6 @@ use uri::uri_to_path;
 
 pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let (connection, _io_threads) = Connection::stdio();
-
-    let (initialize_id, initialize_params) = connection.initialize_start()?;
-    let mut init_params: InitializeParams = serde_json::from_value(initialize_params)?;
-
-    // When the client supports dynamic registration for documentColor, we
-    // register dynamically and re-register on var-affecting changes — this is
-    // the only way to force VSCode to refresh swatches in files that didn't
-    // themselves change (e.g. usage files when a definition file was edited).
-    // Otherwise we fall back to static registration (no cross-file refresh).
-    let supports_dynamic_color = init_params
-        .capabilities
-        .text_document
-        .as_ref()
-        .and_then(|td| td.color_provider.as_ref())
-        .and_then(|cp| cp.dynamic_registration)
-        .unwrap_or(false);
 
     let capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
@@ -73,14 +55,13 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
             workspace_diagnostics: true,
             ..Default::default()
         })),
-        color_provider: (!supports_dynamic_color).then_some(ColorProviderCapability::Simple(true)),
+        color_provider: Some(ColorProviderCapability::Simple(true)),
         ..Default::default()
     };
 
-    let initialize_result = serde_json::json!({
-        "capabilities": serde_json::to_value(capabilities)?,
-    });
-    connection.initialize_finish(initialize_id, initialize_result)?;
+    let capabilities_json = serde_json::to_value(capabilities)?;
+    let mut init_params: InitializeParams =
+        serde_json::from_value(connection.initialize(capabilities_json)?)?;
 
     let init_options: Option<RawConfig> = init_params
         .initialization_options
@@ -133,14 +114,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         searcher,
         watcher_rx,
         logger: logger.as_ref(),
-        supports_dynamic_color,
-        color_registration_id: None,
-        next_outgoing_request_id: 0,
     };
-
-    if supports_dynamic_color {
-        server.register_color_provider()?;
-    }
 
     let result = server.main_loop();
 
@@ -165,9 +139,6 @@ struct Server<'a> {
     searcher: Searcher,
     watcher_rx: Option<Receiver<Vec<PathBuf>>>,
     logger: Option<&'a Logger>,
-    supports_dynamic_color: bool,
-    color_registration_id: Option<String>,
-    next_outgoing_request_id: i32,
 }
 
 impl Server<'_> {
@@ -204,7 +175,6 @@ impl Server<'_> {
                         } else if !source_paths.is_empty() {
                             self.update_source_cache_from_disk(&source_paths);
                             self.publish_all_diagnostics()?;
-                            self.refresh_color_provider()?;
                         }
                     }
                 }
@@ -257,7 +227,6 @@ impl Server<'_> {
                     .is_some_and(|p| self.is_definition_file(p))
                 {
                     self.publish_all_diagnostics()?;
-                    self.refresh_color_provider()?;
                 } else {
                     let targets: Vec<Rc<Path>> = changed_rel_path
                         .map(|p| vec![Rc::<Path>::from(p)])
@@ -287,7 +256,6 @@ impl Server<'_> {
                 } else if !source_paths.is_empty() {
                     self.update_source_cache_from_disk(&source_paths);
                     self.publish_all_diagnostics()?;
-                    self.refresh_color_provider()?;
                 }
             }
             DidCloseTextDocument::METHOD => {
@@ -361,70 +329,6 @@ impl Server<'_> {
         self.parse_cache.insert(path.clone(), parse_results);
     }
 
-    /// Re-register the documentColor provider so the client invalidates and
-    /// re-queries swatches on every open editor. Used after edits that may
-    /// affect cross-file color resolution — e.g. a definition file changing
-    /// while a usage file is open: VSCode wouldn't otherwise re-query the
-    /// usage file because its content didn't change.
-    fn refresh_color_provider(&mut self) -> Result<(), Box<dyn Error>> {
-        if !self.supports_dynamic_color {
-            return Ok(());
-        }
-        self.unregister_color_provider()?;
-        self.register_color_provider()?;
-        Ok(())
-    }
-
-    fn register_color_provider(&mut self) -> Result<(), Box<dyn Error>> {
-        let id = self.next_color_registration_id();
-        self.color_registration_id = Some(id.clone());
-
-        let params = RegistrationParams {
-            registrations: vec![Registration {
-                id,
-                method: DocumentColor::METHOD.to_owned(),
-                register_options: Some(serde_json::to_value(TextDocumentRegistrationOptions {
-                    document_selector: Some(color_document_selector()),
-                })?),
-            }],
-        };
-
-        self.send_outgoing_request(RegisterCapability::METHOD, params)
-    }
-
-    fn unregister_color_provider(&mut self) -> Result<(), Box<dyn Error>> {
-        let Some(id) = self.color_registration_id.take() else {
-            return Ok(());
-        };
-        let params = UnregistrationParams {
-            unregisterations: vec![Unregistration {
-                id,
-                method: DocumentColor::METHOD.to_owned(),
-            }],
-        };
-        self.send_outgoing_request(UnregisterCapability::METHOD, params)
-    }
-
-    fn next_color_registration_id(&mut self) -> String {
-        self.next_outgoing_request_id += 1;
-        format!("cvk-color-{}", self.next_outgoing_request_id)
-    }
-
-    fn send_outgoing_request<P: serde::Serialize>(
-        &mut self,
-        method: &str,
-        params: P,
-    ) -> Result<(), Box<dyn Error>> {
-        self.next_outgoing_request_id += 1;
-        let req = LspRequest::new(
-            self.next_outgoing_request_id.into(),
-            method.to_owned(),
-            params,
-        );
-        self.connection.sender.send(Message::Request(req))?;
-        Ok(())
-    }
-
     fn remove_from_caches(&mut self, path: &Path) {
         self.searcher.remove_file(path);
         self.parse_cache.remove(path);
@@ -458,7 +362,6 @@ impl Server<'_> {
                 self.searcher = build_searcher(&self.parse_cache, &self.config);
                 self.log("config reloaded");
                 self.publish_all_diagnostics()?;
-                self.refresh_color_provider()?;
             }
             Err(e) => {
                 self.log(&format!("config reload failed: {e}"));
@@ -479,17 +382,6 @@ impl Server<'_> {
             )))?;
         Ok(())
     }
-}
-
-fn color_document_selector() -> Vec<DocumentFilter> {
-    ["css", "scss", "html", "vue", "svelte", "astro"]
-        .into_iter()
-        .map(|lang| DocumentFilter {
-            language: Some(lang.to_owned()),
-            scheme: None,
-            pattern: None,
-        })
-        .collect()
 }
 
 fn is_config_file(path: &Path) -> bool {
