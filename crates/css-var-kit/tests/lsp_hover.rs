@@ -46,7 +46,10 @@ fn hover_on_color_var_returns_swatch_and_value() {
         value.contains("data:image/svg+xml;base64,"),
         "swatch missing: {value}"
     );
-    assert!(value.contains("`red`"), "expected resolved value: {value}");
+    assert!(
+        value.contains("`#ff0000`"),
+        "expected resolved value: {value}"
+    );
 
     client.shutdown();
 }
@@ -104,8 +107,8 @@ fn hover_resolves_var_defined_in_other_file() {
     let response = client.request_hover(&uri, 1, 23);
     let value = hover_text(&response);
     assert!(
-        value.contains("`red`"),
-        "expected chained resolution to red: {value}"
+        value.contains("`#ff0000`"),
+        "expected chained resolution to brand color: {value}"
     );
 
     client.shutdown();
@@ -162,7 +165,7 @@ fn hover_reflects_changes_to_definition_in_other_file() {
     let response = client.request_hover(&app_uri, 0, 18);
     let value = hover_text(&response);
     assert!(
-        value.contains("`#0f0`"),
+        value.contains("`#00ff00`"),
         "expected updated value after cross-file edit: {value}"
     );
 

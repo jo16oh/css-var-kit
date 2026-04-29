@@ -2,6 +2,7 @@ use std::error::Error;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
+use lightningcss::properties::custom::TokenOrValue;
 use lsp_server::{Message, Request, Response};
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position, Range};
 
@@ -53,13 +54,14 @@ fn compute_hover(
     let line_str = source.lines().nth(pos.line as usize)?;
     let var_call = extract_enclosing_var_call(line_str, var.byte_start)?;
 
-    let vars = var_defs.vars_map();
     let prop_id = OwnedPropId::from(var.name.clone());
     let defs = var_defs.get(&prop_id);
 
     let value = match defs.as_deref() {
-        Some(props) if props.len() > 1 => format_multi_def(props, &vars)?,
+        Some(props) if props.len() > 1 => format_multi_def(props, var_defs)?,
+        Some([prop]) => format_single(&resolve_to_raw_value(prop, var_defs, 0)?),
         _ => {
+            let vars = var_defs.vars_map();
             let resolved = resolve_var_call(var_call, &vars)?;
             format_single(&resolved)
         }
@@ -131,11 +133,14 @@ fn format_single(resolved: &str) -> String {
     }
 }
 
-fn format_multi_def(props: &[&Property], vars: &VarsMap<'_>) -> Option<String> {
+fn format_multi_def(
+    props: &[&Property],
+    var_defs: &PropMapFor<'_, VariableDefinitions>,
+) -> Option<String> {
     let lines: Vec<String> = props
         .iter()
         .filter_map(|prop| {
-            let resolved = resolve_variables(prop.token_list().inner(), vars).ok()?;
+            let resolved = resolve_to_raw_value(prop, var_defs, 0)?;
             let location = format!("{}:{}", prop.file_path.display(), prop.ident.line + 1);
             Some(match parse_to_rgba(&resolved) {
                 Some(color) => format!("{} `{resolved}` — {location}", swatch_markdown(&color)),
@@ -145,6 +150,26 @@ fn format_multi_def(props: &[&Property], vars: &VarsMap<'_>) -> Option<String> {
         .collect();
 
     (!lines.is_empty()).then(|| lines.join("\n"))
+}
+
+fn resolve_to_raw_value(
+    prop: &Property,
+    var_defs: &PropMapFor<'_, VariableDefinitions>,
+    depth: usize,
+) -> Option<String> {
+    if depth > 32 {
+        return None;
+    }
+    let token_list = prop.token_list().inner();
+    if let [TokenOrValue::Var(var)] = token_list.0.as_slice() {
+        if var.fallback.is_none() {
+            let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
+            if let Some(next) = var_defs.get(&prop_id).and_then(|defs| defs.last().copied()) {
+                return resolve_to_raw_value(next, var_defs, depth + 1);
+            }
+        }
+    }
+    Some(prop.value.raw.as_str().to_string())
 }
 
 fn swatch_markdown(color: &lsp_types::Color) -> String {
@@ -223,7 +248,38 @@ mod tests {
             text.contains("data:image/svg+xml;base64,"),
             "swatch missing: {text}"
         );
-        assert!(text.contains("`red`"), "expected resolved value: {text}");
+        assert!(
+            text.contains("`#ff0000`"),
+            "expected resolved value: {text}"
+        );
+    }
+
+    #[test]
+    fn hover_preserves_hsl_definition() {
+        let css = ":root { --brand: hsl(0, 100%, 50%); }\n.x { color: var(--brand); }";
+        let fixture = Fixture::new(css);
+        let hover = fixture.hover(css, 1, 18).expect("hover present");
+        let text = hover_text(&hover);
+        assert!(
+            text.contains("`hsl(0, 100%, 50%)`"),
+            "expected raw hsl preserved: {text}"
+        );
+        assert!(
+            text.contains("data:image/svg+xml;base64,"),
+            "swatch missing: {text}"
+        );
+    }
+
+    #[test]
+    fn hover_preserves_hwb_definition() {
+        let css = ":root { --brand: hwb(0 0% 0%); }\n.x { color: var(--brand); }";
+        let fixture = Fixture::new(css);
+        let hover = fixture.hover(css, 1, 18).expect("hover present");
+        let text = hover_text(&hover);
+        assert!(
+            text.contains("`hwb(0 0% 0%)`"),
+            "expected raw hwb preserved: {text}"
+        );
     }
 
     #[test]
@@ -265,7 +321,10 @@ mod tests {
             text.contains("data:image/svg+xml;base64,"),
             "swatch missing: {text}"
         );
-        assert!(text.contains("`#0f0`"), "expected resolved value: {text}");
+        assert!(
+            text.contains("`#00ff00`"),
+            "expected resolved value: {text}"
+        );
     }
 
     #[test]
