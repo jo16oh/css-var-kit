@@ -7,10 +7,11 @@ use lsp_types::request::{
 };
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
-    Position, Range, TextEdit,
+    Documentation, MarkupContent, MarkupKind, Position, Range, TextEdit,
 };
 
 use super::Server;
+use super::hover::{format_multi_def, format_single, multi_def_separator, resolve_to_raw_value};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::text_position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::type_checker::{TypeCheckError, check_property_type};
@@ -71,6 +72,8 @@ impl Server<'_> {
             end: pos,
         };
 
+        let separator = multi_def_separator(self.client_name.as_deref());
+
         let items: Vec<CompletionItem> = var_defs
             .iter()
             .filter(|(_prop_id, props)| {
@@ -84,6 +87,7 @@ impl Server<'_> {
             .map(|(_prop_id, props)| {
                 let name = &*props[0].ident.raw;
                 let detail = props.last().map(|p| p.value.raw.to_string());
+                let documentation = build_documentation(&props[..], &var_defs, separator);
                 let new_text = if ctx.inside_var {
                     name.to_owned()
                 } else {
@@ -93,6 +97,7 @@ impl Server<'_> {
                     label: name.to_owned(),
                     kind: Some(CompletionItemKind::VARIABLE),
                     detail,
+                    documentation,
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: replace_range,
                         new_text,
@@ -179,6 +184,21 @@ fn is_inside_var(value_prefix: &str) -> bool {
     value_prefix
         .rfind("var(")
         .is_some_and(|pos| !value_prefix[pos + 4..].contains(')'))
+}
+
+fn build_documentation(
+    props: &[&crate::parser::Property],
+    var_defs: &crate::searcher::PropMapFor<'_, VariableDefinitions>,
+    separator: &str,
+) -> Option<Documentation> {
+    let value = match props {
+        [single] => format_single(&resolve_to_raw_value(single, var_defs, 0)?),
+        many => format_multi_def(many, var_defs, separator)?,
+    };
+    Some(Documentation::MarkupContent(MarkupContent {
+        kind: MarkupKind::Markdown,
+        value,
+    }))
 }
 
 fn build_test_value(ctx: &PropertyContext, var_name: &str) -> String {

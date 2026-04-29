@@ -46,7 +46,7 @@ impl Server<'_> {
     }
 }
 
-fn multi_def_separator(client_name: Option<&str>) -> &'static str {
+pub(super) fn multi_def_separator(client_name: Option<&str>) -> &'static str {
     match client_name {
         Some(name) if name.eq_ignore_ascii_case("helix") => "  \n",
         _ => "\n\n",
@@ -135,14 +135,14 @@ fn resolve_var_call(var_call: &str, vars: &VarsMap<'_>) -> Option<String> {
     resolve_variables(parsed.inner(), vars).ok()
 }
 
-fn format_single(resolved: &str) -> String {
+pub(super) fn format_single(resolved: &str) -> String {
     match parse_to_rgba(resolved) {
         Some(color) => format!("{} `{resolved}`", swatch_markdown(&color)),
         None => format!("`{resolved}`"),
     }
 }
 
-fn format_multi_def(
+pub(super) fn format_multi_def(
     props: &[&Property],
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     separator: &str,
@@ -162,7 +162,7 @@ fn format_multi_def(
     (!lines.is_empty()).then(|| lines.join(separator))
 }
 
-fn resolve_to_raw_value(
+pub(super) fn resolve_to_raw_value(
     prop: &Property,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     depth: usize,

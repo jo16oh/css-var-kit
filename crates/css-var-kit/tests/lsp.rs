@@ -300,6 +300,26 @@ fn completion_text_edit_replaces_typed_prefix() {
         Some("blue"),
         "detail should show the last variable value"
     );
+
+    let documentation = primary["documentation"]["value"]
+        .as_str()
+        .expect("documentation should be present");
+    assert!(
+        documentation.contains("`#3490dc`"),
+        "first definition value missing from documentation: {documentation}"
+    );
+    assert!(
+        documentation.contains("`blue`"),
+        "second definition value missing from documentation: {documentation}"
+    );
+    assert!(
+        documentation.contains("variables.css:2"),
+        "first definition location missing: {documentation}"
+    );
+    assert!(
+        documentation.contains("variables.css:8"),
+        "second definition location missing: {documentation}"
+    );
 }
 
 #[test]
