@@ -40,8 +40,16 @@ impl Server<'_> {
 
         let search_result = self.searcher.search();
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
+        let separator = multi_def_separator(self.client_name.as_deref());
 
-        compute_hover(source, &pos, &var_defs)
+        compute_hover(source, &pos, &var_defs, separator)
+    }
+}
+
+fn multi_def_separator(client_name: Option<&str>) -> &'static str {
+    match client_name {
+        Some(name) if name.eq_ignore_ascii_case("helix") => "  \n",
+        _ => "\n\n",
     }
 }
 
@@ -49,6 +57,7 @@ fn compute_hover(
     source: &str,
     pos: &Position,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
+    multi_def_separator: &str,
 ) -> Option<Hover> {
     let var = extract_variable_at_cursor(source, pos)?;
     let line_str = source.lines().nth(pos.line as usize)?;
@@ -58,7 +67,7 @@ fn compute_hover(
     let defs = var_defs.get(&prop_id);
 
     let value = match defs.as_deref() {
-        Some(props) if props.len() > 1 => format_multi_def(props, var_defs)?,
+        Some(props) if props.len() > 1 => format_multi_def(props, var_defs, multi_def_separator)?,
         Some([prop]) => format_single(&resolve_to_raw_value(prop, var_defs, 0)?),
         _ => {
             let vars = var_defs.vars_map();
@@ -136,6 +145,7 @@ fn format_single(resolved: &str) -> String {
 fn format_multi_def(
     props: &[&Property],
     var_defs: &PropMapFor<'_, VariableDefinitions>,
+    separator: &str,
 ) -> Option<String> {
     let lines: Vec<String> = props
         .iter()
@@ -149,7 +159,7 @@ fn format_multi_def(
         })
         .collect();
 
-    (!lines.is_empty()).then(|| lines.join("\n\n"))
+    (!lines.is_empty()).then(|| lines.join(separator))
 }
 
 fn resolve_to_raw_value(
@@ -227,7 +237,7 @@ mod tests {
         fn hover(&self, source: &str, line: u32, character: u32) -> Option<Hover> {
             let result = self.searcher.search();
             let map = result.get_prop_map_for::<VariableDefinitions>();
-            compute_hover(source, &Position { line, character }, &map)
+            compute_hover(source, &Position { line, character }, &map, "\n\n")
         }
     }
 
@@ -325,6 +335,19 @@ mod tests {
             text.contains("`#00ff00`"),
             "expected resolved value: {text}"
         );
+    }
+
+    #[test]
+    fn separator_picks_hard_break_for_helix() {
+        assert_eq!(multi_def_separator(Some("helix")), "  \n");
+        assert_eq!(multi_def_separator(Some("Helix")), "  \n");
+    }
+
+    #[test]
+    fn separator_defaults_to_paragraph_break() {
+        assert_eq!(multi_def_separator(None), "\n\n");
+        assert_eq!(multi_def_separator(Some("Visual Studio Code")), "\n\n");
+        assert_eq!(multi_def_separator(Some("Zed")), "\n\n");
     }
 
     #[test]

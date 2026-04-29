@@ -103,11 +103,17 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let parse_cache = build_parse_cache(&source_cache);
     let searcher = build_searcher(&parse_cache, &config);
 
+    let client_name = init_params
+        .client_info
+        .as_ref()
+        .map(|info| info.name.clone());
+
     let mut server = Server {
         connection: &connection,
         config,
         lsp_root_dir: root_dir,
         init_options,
+        client_name,
         opened_documents: HashMap::new(),
         source_cache,
         parse_cache,
@@ -133,6 +139,7 @@ struct Server<'a> {
     config: Config,
     lsp_root_dir: PathBuf,
     init_options: Option<RawConfig>,
+    client_name: Option<String>,
     opened_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
     parse_cache: HashMap<Rc<Path>, Vec<ParseResult>>,
