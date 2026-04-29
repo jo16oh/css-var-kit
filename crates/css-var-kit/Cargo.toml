@@ -15,6 +15,7 @@ name = "cvk"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.22"
 bitflags = "2"
 clap = { version = "4.5.60", features = ["derive"] }
 crossbeam-channel = "0.5"

@@ -2,8 +2,8 @@ use std::error::Error;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::request::{
-    Completion, DocumentDiagnosticRequest, GotoDefinition, PrepareRenameRequest, Rename,
-    WorkspaceDiagnosticRequest,
+    Completion, DocumentDiagnosticRequest, GotoDefinition, HoverRequest, PrepareRenameRequest,
+    Rename, WorkspaceDiagnosticRequest,
 };
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
@@ -30,6 +30,9 @@ impl Server<'_> {
             }
             <GotoDefinition as lsp_types::request::Request>::METHOD => {
                 self.handle_definition_request(req)?;
+            }
+            <HoverRequest as lsp_types::request::Request>::METHOD => {
+                self.handle_hover_request(req)?;
             }
             <Rename as lsp_types::request::Request>::METHOD => {
                 self.handle_rename_request(req)?;

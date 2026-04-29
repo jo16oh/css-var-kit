@@ -1,0 +1,4 @@
+.x { color: var(--brand); }
+.y { background: var(--primary); }
+.z { padding: var(--size); }
+.m { color: var(--missing); }

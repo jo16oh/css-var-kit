@@ -67,6 +67,7 @@ Supported Features
 - **Type-aware variable completion**
 - **Rename variable**
 - **Go to defintition**
+- **Hover preview** of resolved `var(--name)` values, with a color swatch when the resolved value is a color
 
 ## Editor Integration
 
