@@ -149,7 +149,7 @@ fn format_multi_def(
         })
         .collect();
 
-    (!lines.is_empty()).then(|| lines.join("\n"))
+    (!lines.is_empty()).then(|| lines.join("  \n"))
 }
 
 fn resolve_to_raw_value(
