@@ -3,10 +3,9 @@ use std::path::Path;
 
 use lightningcss::properties::custom::{TokenList, TokenOrValue, Variable};
 use lsp_server::{Message, Request, Response};
-use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position, Range};
+use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position};
 
 use super::Server;
-use super::definition::extract_variable_at_cursor;
 use super::description::{
     format_multi_def, format_single, multi_def_separator, resolve_to_raw_value,
 };
@@ -16,7 +15,7 @@ use crate::searcher::PropMapFor;
 use crate::searcher::SearchResultFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
-use crate::text_position::{byte_offset_to_utf16, position_to_byte_offset};
+use crate::text_position::{byte_range_to_lsp_range, position_to_byte_offset};
 use crate::variable_resolver::resolve_variables;
 
 impl Server<'_> {
@@ -60,7 +59,6 @@ fn compute_hover(
     multi_def_separator: &str,
 ) -> Option<Hover> {
     let cursor = position_to_byte_offset(source, pos)?;
-    let var_at_cursor = extract_variable_at_cursor(source, pos)?;
 
     let prop = usages
         .iter()
@@ -68,26 +66,16 @@ fn compute_hover(
         .find(|p| value_contains_offset(p, cursor))?;
 
     let token_list = prop.token_list();
-    let var = find_var_by_name(token_list.inner(), &var_at_cursor.name)?;
+    let (var, name_range) = find_var_at_cursor(prop, token_list.inner(), cursor)?;
 
     let value = format_var_hover(var, var_defs, multi_def_separator)?;
 
-    let line_str = source.lines().nth(pos.line as usize)?;
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
             kind: MarkupKind::Markdown,
             value,
         }),
-        range: Some(Range {
-            start: Position {
-                line: pos.line,
-                character: byte_offset_to_utf16(line_str, var_at_cursor.byte_start),
-            },
-            end: Position {
-                line: pos.line,
-                character: byte_offset_to_utf16(line_str, var_at_cursor.byte_end),
-            },
-        }),
+        range: Some(byte_range_to_lsp_range(source, name_range)),
     })
 }
 
@@ -97,16 +85,47 @@ fn value_contains_offset(prop: &Property, cursor: usize) -> bool {
     (start..=end).contains(&cursor)
 }
 
-fn find_var_by_name<'t>(tokens: &'t TokenList<'t>, target: &str) -> Option<&'t Variable<'t>> {
-    tokens.0.iter().find_map(|token| match token {
-        TokenOrValue::Var(var) if &*var.name.ident.0 == target => Some(var),
-        TokenOrValue::Var(var) => var
-            .fallback
-            .as_ref()
-            .and_then(|fb| find_var_by_name(fb, target)),
-        TokenOrValue::Function(func) => find_var_by_name(&func.arguments, target),
-        _ => None,
+fn find_var_at_cursor<'t>(
+    prop: &Property,
+    tokens: &'t TokenList<'t>,
+    cursor: usize,
+) -> Option<(&'t Variable<'t>, std::ops::Range<usize>)> {
+    let cursor_rel = cursor.checked_sub(prop.value.offset)?;
+    let value_raw = prop.value.raw.as_str();
+
+    let mut vars = Vec::new();
+    collect_vars_in_source_order(tokens, &mut vars);
+
+    let mut search_from = 0usize;
+    vars.into_iter().find_map(|var| {
+        let ident = &*var.name.ident.0;
+        let rel = value_raw[search_from..].find(ident)?;
+        let ident_start = search_from + rel;
+        let name_start = ident_start - 2;
+        let name_end = ident_start + ident.len();
+        search_from = name_end;
+        (name_start..name_end).contains(&cursor_rel).then(|| {
+            (
+                var,
+                (prop.value.offset + name_start)..(prop.value.offset + name_end),
+            )
+        })
     })
+}
+
+fn collect_vars_in_source_order<'t>(tokens: &'t TokenList<'t>, out: &mut Vec<&'t Variable<'t>>) {
+    for token in &tokens.0 {
+        match token {
+            TokenOrValue::Var(var) => {
+                out.push(var);
+                if let Some(fb) = &var.fallback {
+                    collect_vars_in_source_order(fb, out);
+                }
+            }
+            TokenOrValue::Function(func) => collect_vars_in_source_order(&func.arguments, out),
+            _ => {}
+        }
+    }
 }
 
 fn format_var_hover(
