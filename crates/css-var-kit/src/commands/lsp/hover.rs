@@ -91,42 +91,40 @@ fn find_var_at_cursor<'t>(
     tokens: &'t TokenList<'t>,
     cursor: usize,
 ) -> Option<(&'t Variable<'t>, Range<usize>)> {
-    let cursor_rel = cursor.checked_sub(prop.value.offset)?;
     let value_raw = prop.value.raw.as_str();
+    let base = prop.value.offset;
 
-    let mut vars = Vec::new();
-    collect_vars_in_source_order(tokens, &mut vars);
-
-    let mut search_from = 0usize;
-    vars.into_iter().find_map(|var| {
-        let ident = &*var.name.ident.0;
-        let rel = value_raw[search_from..].find(ident)?;
-        let ident_start = search_from + rel;
-        let name_start = ident_start - 2;
-        let name_end = ident_start + ident.len();
-        search_from = name_end;
-        (name_start..name_end).contains(&cursor_rel).then(|| {
-            (
-                var,
-                (prop.value.offset + name_start)..(prop.value.offset + name_end),
-            )
+    collect_vars(tokens)
+        .into_iter()
+        .scan(0usize, |search_from, var| {
+            let ident = &*var.name.ident.0;
+            let rel = value_raw[*search_from..].find(ident)?;
+            let ident_abs = base + *search_from + rel;
+            *search_from += rel + ident.len();
+            Some((var, (ident_abs - 2)..(ident_abs + ident.len())))
         })
-    })
+        .find(|(_, range)| range.contains(&cursor))
 }
 
-fn collect_vars_in_source_order<'t>(tokens: &'t TokenList<'t>, out: &mut Vec<&'t Variable<'t>>) {
+fn collect_vars<'t>(tokens: &'t TokenList<'t>) -> Vec<&'t Variable<'t>> {
+    let mut vars: Vec<&'t Variable<'t>> = Vec::new();
+
     for token in &tokens.0 {
         match token {
             TokenOrValue::Var(var) => {
-                out.push(var);
+                vars.push(var);
                 if let Some(fb) = &var.fallback {
-                    collect_vars_in_source_order(fb, out);
+                    vars.extend(collect_vars(fb));
                 }
             }
-            TokenOrValue::Function(func) => collect_vars_in_source_order(&func.arguments, out),
+            TokenOrValue::Function(func) => {
+                vars.extend(collect_vars(&func.arguments));
+            }
             _ => {}
         }
     }
+
+    vars
 }
 
 fn format_var_hover(
