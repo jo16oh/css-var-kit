@@ -87,7 +87,7 @@ impl Server<'_> {
             })
             .map(|(_prop_id, props)| {
                 let name = &*props[0].ident.raw;
-                let inline_value = match props.as_slice() {
+                let detail = match props.as_slice() {
                     [single] => Some(format!(": {}", single.value.raw)),
                     _ => None,
                 };
@@ -100,11 +100,11 @@ impl Server<'_> {
                 CompletionItem {
                     label: name.to_owned(),
                     label_details: Some(CompletionItemLabelDetails {
-                        detail: inline_value.clone(),
+                        detail: detail.clone(),
                         description: Some("cvk".to_owned()),
                     }),
                     kind: Some(CompletionItemKind::VARIABLE),
-                    detail: inline_value,
+                    detail,
                     documentation,
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: replace_range,
