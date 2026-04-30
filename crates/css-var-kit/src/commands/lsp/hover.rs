@@ -67,12 +67,14 @@ fn compute_hover(
     let defs = var_defs.get(&prop_id);
 
     let value = match defs.as_deref() {
-        Some(props) if props.len() > 1 => format_multi_def(props, var_defs, multi_def_separator)?,
-        Some([prop]) => format_single(&resolve_to_raw_value(prop, var_defs, 0)?),
+        Some(props) if props.len() > 1 => {
+            format_multi_def(props, var_defs, multi_def_separator, true)?
+        }
+        Some([prop]) => format_single(&resolve_to_raw_value(prop, var_defs, 0)?, true),
         _ => {
             let vars = var_defs.vars_map();
             let resolved = resolve_var_call(var_call, &vars)?;
-            format_single(&resolved)
+            format_single(&resolved, true)
         }
     };
 
@@ -135,8 +137,8 @@ fn resolve_var_call(var_call: &str, vars: &VarsMap<'_>) -> Option<String> {
     resolve_variables(parsed.inner(), vars).ok()
 }
 
-pub(super) fn format_single(resolved: &str) -> String {
-    match parse_to_rgba(resolved) {
+pub(super) fn format_single(resolved: &str, include_swatch: bool) -> String {
+    match parse_to_rgba(resolved).filter(|_| include_swatch) {
         Some(color) => format!("{} `{resolved}`", swatch_markdown(&color)),
         None => format!("`{resolved}`"),
     }
@@ -146,13 +148,14 @@ pub(super) fn format_multi_def(
     props: &[&Property],
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     separator: &str,
+    include_swatch: bool,
 ) -> Option<String> {
     let lines: Vec<String> = props
         .iter()
         .filter_map(|prop| {
             let resolved = resolve_to_raw_value(prop, var_defs, 0)?;
             let location = format!("{}:{}", prop.file_path.display(), prop.ident.line + 1);
-            Some(match parse_to_rgba(&resolved) {
+            Some(match parse_to_rgba(&resolved).filter(|_| include_swatch) {
                 Some(color) => format!("{} `{resolved}` — {location}", swatch_markdown(&color)),
                 None => format!("`{resolved}` — {location}"),
             })

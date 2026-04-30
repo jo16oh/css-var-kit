@@ -192,8 +192,8 @@ fn build_documentation(
     separator: &str,
 ) -> Option<Documentation> {
     let value = match props {
-        [single] => format_single(&resolve_to_raw_value(single, var_defs, 0)?),
-        many => format_multi_def(many, var_defs, separator)?,
+        [single] => format_single(&resolve_to_raw_value(single, var_defs, 0)?, false),
+        many => format_multi_def(many, var_defs, separator, false)?,
     };
     Some(Documentation::MarkupContent(MarkupContent {
         kind: MarkupKind::Markdown,

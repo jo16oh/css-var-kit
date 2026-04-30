@@ -320,6 +320,10 @@ fn completion_text_edit_replaces_typed_prefix() {
         documentation.contains("variables.css:8"),
         "second definition location missing: {documentation}"
     );
+    assert!(
+        !documentation.contains("data:image/svg"),
+        "completion documentation should omit swatch images: {documentation}"
+    );
 }
 
 #[test]
