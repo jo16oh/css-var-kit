@@ -1,19 +1,22 @@
 use std::error::Error;
+use std::path::Path;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use lightningcss::properties::custom::TokenOrValue;
+use lightningcss::properties::custom::{TokenList, TokenOrValue, Variable};
 use lsp_server::{Message, Request, Response};
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position, Range};
 
 use super::Server;
-use super::definition::{VariableAtCursor, extract_variable_at_cursor};
+use super::definition::extract_variable_at_cursor;
 use crate::color_value::parse_to_rgba;
-use crate::owned_types::{OwnedPropId, OwnedStr};
+use crate::owned_types::OwnedPropId;
 use crate::parser::Property;
 use crate::searcher::PropMapFor;
-use crate::searcher::conditions::variable_definitions::{VariableDefinitions, VarsMap};
-use crate::text_position::byte_offset_to_utf16;
+use crate::searcher::SearchResultFor;
+use crate::searcher::conditions::variable_definitions::VariableDefinitions;
+use crate::searcher::conditions::variable_usages::VariableUsages;
+use crate::text_position::{byte_offset_to_utf16, position_to_byte_offset};
 use crate::variable_resolver::resolve_variables;
 
 impl Server<'_> {
@@ -37,12 +40,14 @@ impl Server<'_> {
         let uri = &params.text_document_position_params.text_document.uri;
         let pos = params.text_document_position_params.position;
         let source = self.opened_documents.get(uri)?;
+        let rel_path = self.uri_to_rel_path(uri)?;
 
         let search_result = self.searcher.search();
+        let usages = search_result.get_result_for(VariableUsages);
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
         let separator = multi_def_separator(self.client_name.as_deref());
 
-        compute_hover(source, &pos, &var_defs, separator)
+        compute_hover(source, &pos, &rel_path, &usages, &var_defs, separator)
     }
 }
 
@@ -56,85 +61,82 @@ pub(super) fn multi_def_separator(client_name: Option<&str>) -> &'static str {
 fn compute_hover(
     source: &str,
     pos: &Position,
+    file_path: &Path,
+    usages: &SearchResultFor<'_, VariableUsages>,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     multi_def_separator: &str,
 ) -> Option<Hover> {
-    let var = extract_variable_at_cursor(source, pos)?;
+    let cursor = position_to_byte_offset(source, pos)?;
+    let var_at_cursor = extract_variable_at_cursor(source, pos)?;
+
+    let prop = usages
+        .iter()
+        .filter(|p| p.file_path.as_ref() == file_path)
+        .find(|p| value_contains_offset(p, cursor))?;
+
+    let token_list = prop.token_list();
+    let var = find_var_by_name(token_list.inner(), &var_at_cursor.name)?;
+
+    let value = format_var_hover(var, var_defs, multi_def_separator)?;
+
     let line_str = source.lines().nth(pos.line as usize)?;
-    let var_call = extract_enclosing_var_call(line_str, var.byte_start)?;
-
-    let prop_id = OwnedPropId::from(var.name.clone());
-    let defs = var_defs.get(&prop_id);
-
-    let value = match defs.as_deref() {
-        Some(props) if props.len() > 1 => {
-            format_multi_def(props, var_defs, multi_def_separator, true)?
-        }
-        Some([prop]) => format_single(&resolve_to_raw_value(prop, var_defs, 0)?, true),
-        _ => {
-            let vars = var_defs.vars_map();
-            let resolved = resolve_var_call(var_call, &vars)?;
-            format_single(&resolved, true)
-        }
-    };
-
-    let range = make_range(line_str, pos.line, &var);
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
             kind: MarkupKind::Markdown,
             value,
         }),
-        range: Some(range),
+        range: Some(Range {
+            start: Position {
+                line: pos.line,
+                character: byte_offset_to_utf16(line_str, var_at_cursor.byte_start),
+            },
+            end: Position {
+                line: pos.line,
+                character: byte_offset_to_utf16(line_str, var_at_cursor.byte_end),
+            },
+        }),
     })
 }
 
-fn extract_enclosing_var_call(line: &str, name_start: usize) -> Option<&str> {
-    let bytes = line.as_bytes();
-    let scan_end = name_start.min(bytes.len());
-
-    let mut open_paren = None;
-    for i in (0..scan_end).rev() {
-        match bytes[i] {
-            b'(' => {
-                open_paren = Some(i);
-                break;
-            }
-            b';' | b'{' | b'}' => return None,
-            _ => {}
-        }
-    }
-    let open_paren = open_paren?;
-
-    let prefix_end = line[..open_paren]
-        .trim_end_matches(|c: char| c.is_ascii_whitespace())
-        .len();
-    if !line[..prefix_end].ends_with("var") {
-        return None;
-    }
-    let var_start = prefix_end - 3;
-
-    let mut depth = 1usize;
-    let mut close_paren = None;
-    for (k, &b) in bytes.iter().enumerate().skip(open_paren + 1) {
-        match b {
-            b'(' => depth += 1,
-            b')' => {
-                depth -= 1;
-                if depth == 0 {
-                    close_paren = Some(k);
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-    Some(&line[var_start..=close_paren?])
+fn value_contains_offset(prop: &Property, cursor: usize) -> bool {
+    let start = prop.value.offset;
+    let end = start + prop.value.raw.len();
+    (start..=end).contains(&cursor)
 }
 
-fn resolve_var_call(var_call: &str, vars: &VarsMap<'_>) -> Option<String> {
-    let owned = OwnedStr::from(var_call);
-    let parsed = crate::owned_types::OwnedTokenList::parse(&owned).ok()?;
-    resolve_variables(parsed.inner(), vars).ok()
+fn find_var_by_name<'t>(tokens: &'t TokenList<'t>, target: &str) -> Option<&'t Variable<'t>> {
+    tokens.0.iter().find_map(|token| match token {
+        TokenOrValue::Var(var) if &*var.name.ident.0 == target => Some(var),
+        TokenOrValue::Var(var) => var
+            .fallback
+            .as_ref()
+            .and_then(|fb| find_var_by_name(fb, target)),
+        TokenOrValue::Function(func) => find_var_by_name(&func.arguments, target),
+        _ => None,
+    })
+}
+
+fn format_var_hover(
+    var: &Variable<'_>,
+    var_defs: &PropMapFor<'_, VariableDefinitions>,
+    multi_def_separator: &str,
+) -> Option<String> {
+    let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
+    match var_defs.get(&prop_id).as_deref() {
+        Some(props) if props.len() > 1 => {
+            format_multi_def(props, var_defs, multi_def_separator, true)
+        }
+        Some([prop]) => Some(format_single(
+            &resolve_to_raw_value(prop, var_defs, 0)?,
+            true,
+        )),
+        _ => {
+            let vars = var_defs.vars_map();
+            let synthetic = TokenList(vec![TokenOrValue::Var(var.clone())]);
+            let resolved = resolve_variables(&synthetic, &vars).ok()?;
+            Some(format_single(&resolved, true))
+        }
+    }
 }
 
 pub(super) fn format_single(resolved: &str, include_swatch: bool) -> String {
@@ -199,48 +201,47 @@ fn swatch_markdown(color: &lsp_types::Color) -> String {
     format!("![](data:image/svg+xml;base64,{encoded})")
 }
 
-fn make_range(line_str: &str, line: u32, var: &VariableAtCursor) -> Range {
-    let start_char = byte_offset_to_utf16(line_str, var.byte_start);
-    let end_char = byte_offset_to_utf16(line_str, var.byte_end);
-    Range {
-        start: Position {
-            line,
-            character: start_char,
-        },
-        end: Position {
-            line,
-            character: end_char,
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::owned_types::OwnedStr;
     use crate::parser;
     use crate::searcher::Searcher;
-    use crate::searcher::conditions::variable_definitions::VariableDefinitions;
     use std::path::PathBuf;
     use std::rc::Rc;
 
     struct Fixture {
         searcher: Searcher,
+        file_path: PathBuf,
     }
 
     impl Fixture {
         fn new(css: &str) -> Self {
+            let file_path = PathBuf::from("test.css");
             let parse_result =
-                parser::css::parse(&OwnedStr::from(css), &Rc::from(PathBuf::from("test.css")));
-            let mut searcher = Searcher::new().add_condition(VariableDefinitions::default());
+                parser::css::parse(&OwnedStr::from(css), &Rc::from(file_path.clone()));
+            let mut searcher = Searcher::new()
+                .add_condition(VariableDefinitions::default())
+                .add_condition(VariableUsages);
             searcher.update_file(&parse_result.file_path, std::slice::from_ref(&parse_result));
-            Self { searcher }
+            Self {
+                searcher,
+                file_path,
+            }
         }
 
         fn hover(&self, source: &str, line: u32, character: u32) -> Option<Hover> {
             let result = self.searcher.search();
+            let usages = result.get_result_for(VariableUsages);
             let map = result.get_prop_map_for::<VariableDefinitions>();
-            compute_hover(source, &Position { line, character }, &map, "\n\n")
+            compute_hover(
+                source,
+                &lsp_types::Position { line, character },
+                &self.file_path,
+                &usages,
+                &map,
+                "\n\n",
+            )
         }
     }
 

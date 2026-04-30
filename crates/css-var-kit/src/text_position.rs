@@ -35,3 +35,13 @@ pub fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
             }
         })
 }
+
+pub fn position_to_byte_offset(source: &str, pos: &lsp_types::Position) -> Option<usize> {
+    let line_start: usize = source
+        .split_inclusive('\n')
+        .take(pos.line as usize)
+        .map(str::len)
+        .sum();
+    let line_str = source.lines().nth(pos.line as usize)?;
+    Some(line_start + utf16_to_byte_offset(line_str, pos.character))
+}
