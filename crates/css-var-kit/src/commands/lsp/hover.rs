@@ -7,7 +7,7 @@ use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Po
 
 use super::Server;
 use super::definition::extract_variable_at_cursor;
-use super::var_markdown::{
+use super::description::{
     format_multi_def, format_single, multi_def_separator, resolve_to_raw_value,
 };
 use crate::owned_types::OwnedPropId;
