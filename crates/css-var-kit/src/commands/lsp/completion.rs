@@ -12,7 +12,9 @@ use lsp_types::{
 };
 
 use super::Server;
-use super::hover::{format_multi_def, format_single, multi_def_separator, resolve_to_raw_value};
+use super::var_markdown::{
+    format_multi_def, format_single, multi_def_separator, resolve_to_raw_value,
+};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::text_position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::type_checker::{TypeCheckError, check_property_type};

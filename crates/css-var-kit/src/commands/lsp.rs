@@ -6,6 +6,7 @@ mod hover;
 mod logger;
 mod rename;
 mod uri;
+mod var_markdown;
 
 use std::collections::HashMap;
 use std::error::Error;
