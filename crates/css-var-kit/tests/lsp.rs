@@ -295,10 +295,30 @@ fn completion_text_edit_replaces_typed_prefix() {
     // replace range should cover the typed "--" (col 11..13)
     assert_eq!(text_edit["range"]["start"]["character"], 11);
     assert_eq!(text_edit["range"]["end"]["character"], 13);
+    assert!(
+        primary["detail"].is_null(),
+        "detail should be omitted when multiple definitions exist, got: {}",
+        primary["detail"]
+    );
+    assert!(
+        primary["labelDetails"]["detail"].is_null(),
+        "labelDetails.detail should be omitted when multiple definitions exist, got: {}",
+        primary["labelDetails"]["detail"]
+    );
+
+    let secondary = items
+        .iter()
+        .find(|i| i["label"].as_str() == Some("--secondary-color"))
+        .expect("--secondary-color not found in completions");
     assert_eq!(
-        primary["detail"].as_str(),
-        Some("blue"),
-        "detail should show the last variable value"
+        secondary["labelDetails"]["detail"].as_str(),
+        Some(": #ffed4a"),
+        "labelDetails.detail should show the value inline when only one definition exists"
+    );
+    assert_eq!(
+        secondary["detail"].as_str(),
+        Some(": #ffed4a"),
+        "detail should also carry the value for clients without labelDetails support"
     );
 
     let documentation = primary["documentation"]["value"]

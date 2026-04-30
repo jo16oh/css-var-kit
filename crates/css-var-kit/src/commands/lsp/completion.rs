@@ -87,7 +87,10 @@ impl Server<'_> {
             })
             .map(|(_prop_id, props)| {
                 let name = &*props[0].ident.raw;
-                let detail = props.last().map(|p| p.value.raw.to_string());
+                let inline_value = match props.as_slice() {
+                    [single] => Some(format!(": {}", single.value.raw)),
+                    _ => None,
+                };
                 let documentation = build_documentation(&props[..], &var_defs, separator);
                 let new_text = if ctx.inside_var {
                     name.to_owned()
@@ -97,11 +100,11 @@ impl Server<'_> {
                 CompletionItem {
                     label: name.to_owned(),
                     label_details: Some(CompletionItemLabelDetails {
-                        detail: None,
+                        detail: inline_value.clone(),
                         description: Some("cvk".to_owned()),
                     }),
                     kind: Some(CompletionItemKind::VARIABLE),
-                    detail,
+                    detail: inline_value,
                     documentation,
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: replace_range,
