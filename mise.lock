@@ -222,33 +222,33 @@ checksum = "sha256:8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e7
 url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip"
 
 [[tools.tombi]]
-version = "0.9.23"
+version = "0.9.24"
 backend = "aqua:tombi-toml/tombi"
 
 [tools.tombi."platforms.linux-arm64"]
-checksum = "sha256:2f4baa6b2b1c783067bda0f424e092e97ec73fff723516cf59be4187f37542e9"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:abf65df01b3a16e059c18b5b8fdb9931c0b941a5bebb4f577cfd4ca46c05011d"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-arm64-musl"]
-checksum = "sha256:2f4baa6b2b1c783067bda0f424e092e97ec73fff723516cf59be4187f37542e9"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:abf65df01b3a16e059c18b5b8fdb9931c0b941a5bebb4f577cfd4ca46c05011d"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-x64"]
-checksum = "sha256:533ec06187ccd8cd825ecf7f3f535952386ac8f5cffa5a920f1cc7f0a39c840f"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:b1e7cec2c165fd5cf2f6c97e607a4ac8870120c3d1163ad6e354198fc67443d5"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-x64-musl"]
-checksum = "sha256:533ec06187ccd8cd825ecf7f3f535952386ac8f5cffa5a920f1cc7f0a39c840f"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:b1e7cec2c165fd5cf2f6c97e607a4ac8870120c3d1163ad6e354198fc67443d5"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.macos-arm64"]
-checksum = "sha256:ae129b122791dd27b7632fcbae6474fe8e38a1233f58fdfce1e929eb717c1028"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-aarch64-apple-darwin.tar.gz"
+checksum = "sha256:860ebb82ec47049239fb52a20c537489100ec1a3a1c1f42d59a5dde647c88d78"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-apple-darwin.tar.gz"
 
 [tools.tombi."platforms.macos-x64"]
-checksum = "sha256:2b9276723aab5648e002b5cea9f9a13bbe2746f5fb89e3f10aba897da9c49ec9"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-x86_64-apple-darwin.tar.gz"
+checksum = "sha256:d07b4241de3e58dbdc93304cc2575a694f0468b2323f6dc312809329b6e1574f"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-apple-darwin.tar.gz"
 
 [tools.tombi."platforms.windows-x64"]
-checksum = "sha256:a3ea84d420e3a4f8097efaf61ff0236d90373a1d3e5c9ce0bc614f26d4350c8a"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.23/tombi-cli-0.9.23-x86_64-pc-windows-msvc.zip"
+checksum = "sha256:ed619035f4669802a10eac25944f1706b3993bf44727e056ac290d7c9b3b2336"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-pc-windows-msvc.zip"
