@@ -6,8 +6,9 @@ use lsp_types::request::{
     Rename, WorkspaceDiagnosticRequest,
 };
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
-    Documentation, MarkupContent, MarkupKind, Position, Range, TextEdit,
+    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionParams,
+    CompletionResponse, CompletionTextEdit, Documentation, MarkupContent, MarkupKind, Position,
+    Range, TextEdit,
 };
 
 use super::Server;
@@ -95,6 +96,10 @@ impl Server<'_> {
                 };
                 CompletionItem {
                     label: name.to_owned(),
+                    label_details: Some(CompletionItemLabelDetails {
+                        detail: None,
+                        description: Some("cvk".to_owned()),
+                    }),
                     kind: Some(CompletionItemKind::VARIABLE),
                     detail,
                     documentation,
