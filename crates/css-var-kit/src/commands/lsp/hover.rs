@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::ops::Range;
 use std::path::Path;
 
 use lightningcss::properties::custom::{TokenList, TokenOrValue, Variable};
@@ -89,7 +90,7 @@ fn find_var_at_cursor<'t>(
     prop: &Property,
     tokens: &'t TokenList<'t>,
     cursor: usize,
-) -> Option<(&'t Variable<'t>, std::ops::Range<usize>)> {
+) -> Option<(&'t Variable<'t>, Range<usize>)> {
     let cursor_rel = cursor.checked_sub(prop.value.offset)?;
     let value_raw = prop.value.raw.as_str();
 
