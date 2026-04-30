@@ -12,9 +12,7 @@ use lsp_types::{
 };
 
 use super::Server;
-use super::description::{
-    format_multi_def, format_single, multi_def_separator, resolve_to_raw_value,
-};
+use super::description::{format_multi_def, format_single, resolve_to_raw_value};
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::text_position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::type_checker::{TypeCheckError, check_property_type};
@@ -75,7 +73,7 @@ impl Server<'_> {
             end: pos,
         };
 
-        let separator = multi_def_separator(self.client_name.as_deref());
+        let client_name = self.client_name.as_deref();
 
         let items: Vec<CompletionItem> = var_defs
             .iter()
@@ -93,7 +91,7 @@ impl Server<'_> {
                     [single] => Some(format!(": {}", single.value.raw)),
                     _ => None,
                 };
-                let documentation = build_documentation(&props[..], &var_defs, separator);
+                let documentation = build_documentation(&props[..], &var_defs, client_name);
                 let new_text = if ctx.inside_var {
                     name.to_owned()
                 } else {
@@ -199,11 +197,11 @@ fn is_inside_var(value_prefix: &str) -> bool {
 fn build_documentation(
     props: &[&crate::parser::Property],
     var_defs: &crate::searcher::PropMapFor<'_, VariableDefinitions>,
-    separator: &str,
+    client_name: Option<&str>,
 ) -> Option<Documentation> {
     let value = match props {
         [single] => format_single(&resolve_to_raw_value(single, var_defs, 0)?, false),
-        many => format_multi_def(many, var_defs, separator, false)?,
+        many => format_multi_def(many, var_defs, client_name, false)?,
     };
     Some(Documentation::MarkupContent(MarkupContent {
         kind: MarkupKind::Markdown,

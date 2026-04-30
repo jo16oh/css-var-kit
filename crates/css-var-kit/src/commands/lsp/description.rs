@@ -8,13 +8,6 @@ use crate::parser::Property;
 use crate::searcher::PropMapFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 
-pub fn multi_def_separator(client_name: Option<&str>) -> &'static str {
-    match client_name {
-        Some(name) if name.eq_ignore_ascii_case("helix") => "  \n",
-        _ => "\n\n",
-    }
-}
-
 pub fn format_single(resolved: &str, include_swatch: bool) -> String {
     match parse_to_rgba(resolved).filter(|_| include_swatch) {
         Some(color) => format!("{} `{resolved}`", swatch_markdown(&color)),
@@ -25,7 +18,7 @@ pub fn format_single(resolved: &str, include_swatch: bool) -> String {
 pub fn format_multi_def(
     props: &[&Property],
     var_defs: &PropMapFor<'_, VariableDefinitions>,
-    separator: &str,
+    client_name: Option<&str>,
     include_swatch: bool,
 ) -> Option<String> {
     let lines: Vec<String> = props
@@ -40,7 +33,7 @@ pub fn format_multi_def(
         })
         .collect();
 
-    (!lines.is_empty()).then(|| lines.join(separator))
+    (!lines.is_empty()).then(|| lines.join(multi_def_separator(client_name)))
 }
 
 pub fn resolve_to_raw_value(
@@ -61,6 +54,13 @@ pub fn resolve_to_raw_value(
         }
     }
     Some(prop.value.raw.as_str().to_string())
+}
+
+fn multi_def_separator(client_name: Option<&str>) -> &'static str {
+    match client_name {
+        Some(name) if name.eq_ignore_ascii_case("helix") => "  \n",
+        _ => "\n\n",
+    }
 }
 
 fn swatch_markdown(color: &lsp_types::Color) -> String {

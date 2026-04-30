@@ -7,9 +7,7 @@ use lsp_server::{Message, Request, Response};
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position};
 
 use super::Server;
-use super::description::{
-    format_multi_def, format_single, multi_def_separator, resolve_to_raw_value,
-};
+use super::description::{format_multi_def, format_single, resolve_to_raw_value};
 use crate::owned_types::OwnedPropId;
 use crate::parser::Property;
 use crate::searcher::PropMapFor;
@@ -45,9 +43,9 @@ impl Server<'_> {
         let search_result = self.searcher.search();
         let usages = search_result.get_result_for(VariableUsages);
         let var_defs = search_result.get_prop_map_for::<VariableDefinitions>();
-        let separator = multi_def_separator(self.client_name.as_deref());
+        let client_name = self.client_name.as_deref();
 
-        compute_hover(source, &pos, &rel_path, &usages, &var_defs, separator)
+        compute_hover(source, &pos, &rel_path, &usages, &var_defs, client_name)
     }
 }
 
@@ -57,7 +55,7 @@ fn compute_hover(
     file_path: &Path,
     usages: &SearchResultFor<'_, VariableUsages>,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
-    multi_def_separator: &str,
+    client_name: Option<&str>,
 ) -> Option<Hover> {
     let cursor = position_to_byte_offset(source, pos)?;
 
@@ -69,7 +67,7 @@ fn compute_hover(
     let token_list = prop.token_list();
     let (var, name_range) = find_var_at_cursor(prop, token_list.inner(), cursor)?;
 
-    let value = format_var_hover(var, var_defs, multi_def_separator)?;
+    let value = format_var_hover(var, var_defs, client_name)?;
 
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
@@ -130,13 +128,11 @@ fn collect_vars<'t>(tokens: &'t TokenList<'t>) -> Vec<&'t Variable<'t>> {
 fn format_var_hover(
     var: &Variable<'_>,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
-    multi_def_separator: &str,
+    client_name: Option<&str>,
 ) -> Option<String> {
     let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
     match var_defs.get(&prop_id).as_deref() {
-        Some(props) if props.len() > 1 => {
-            format_multi_def(props, var_defs, multi_def_separator, true)
-        }
+        Some(props) if props.len() > 1 => format_multi_def(props, var_defs, client_name, true),
         Some([prop]) => Some(format_single(
             &resolve_to_raw_value(prop, var_defs, 0)?,
             true,
@@ -189,7 +185,7 @@ mod tests {
                 &self.file_path,
                 &usages,
                 &map,
-                "\n\n",
+                None,
             )
         }
     }
