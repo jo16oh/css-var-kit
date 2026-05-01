@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::de::{self, Deserializer};
 
 use super::ConfigError;
+use crate::file_kinds::CONFIG_FILENAMES;
 use crate::rules::Severity;
 use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
@@ -49,19 +50,16 @@ impl RawConfig {
     /// Searches for `cvk.json` or `cvk.jsonc` in `project_root`.
     /// Returns `Ok(Some(config))` if found, `Ok(None)` if no config file exists.
     pub fn load(project_root: &Path) -> Result<Option<Self>, ConfigError> {
-        let candidates = ["cvk.json", "cvk.jsonc"];
-
-        for name in candidates {
-            let path = project_root.join(name);
-            if let Ok(raw) = fs::read_to_string(&path) {
+        CONFIG_FILENAMES
+            .iter()
+            .map(|name| project_root.join(name))
+            .find_map(|path| fs::read_to_string(&path).ok().map(|raw| (path, raw)))
+            .map(|(path, raw)| {
                 let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-                return serde_json::from_reader(stripped)
-                    .map(Some)
-                    .map_err(|e| ConfigError::Parse { path, source: e });
-            }
-        }
-
-        Ok(None)
+                serde_json::from_reader(stripped)
+                    .map_err(|e| ConfigError::Parse { path, source: e })
+            })
+            .transpose()
     }
 
     pub(super) fn load_from(path: &Path) -> Result<Self, ConfigError> {

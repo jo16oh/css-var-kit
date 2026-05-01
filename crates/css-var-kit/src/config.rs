@@ -14,6 +14,7 @@ use crate::{
         file::{RawRules, SeverityToggle},
         rules::Rules,
     },
+    file_kinds::CONFIG_FILENAMES,
     rules::enforce_variable_use::config::RawEnforceVariableUse,
 };
 
@@ -310,7 +311,11 @@ fn resolve_file_args_to_patterns(args: &[String], cwd: &Path, root_dir: &Path) -
 }
 
 pub fn find_project_root(cwd: &Path) -> PathBuf {
-    let markers = ["cvk.json", "cvk.jsonc", "package.json", ".git"];
+    let markers: Vec<&str> = CONFIG_FILENAMES
+        .iter()
+        .copied()
+        .chain(["package.json", ".git"])
+        .collect();
 
     for marker in markers {
         let mut dir = cwd;

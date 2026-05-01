@@ -3,6 +3,7 @@ mod color_value;
 mod commands;
 mod config;
 mod diagnostic_renderer;
+mod file_kinds;
 mod owned_types;
 mod parser;
 mod rules;

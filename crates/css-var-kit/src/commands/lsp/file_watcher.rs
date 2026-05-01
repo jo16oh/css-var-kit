@@ -14,6 +14,8 @@ use lsp_types::{
 use notify::RecursiveMode;
 use notify_debouncer_full::{DebouncedEvent, new_debouncer};
 
+use crate::file_kinds::{is_config_filename, is_supported_source_extension, watched_glob_patterns};
+
 pub fn client_supports_watch(init_params: &InitializeParams) -> bool {
     init_params
         .capabilities
@@ -30,20 +32,13 @@ pub fn register_client_watcher(connection: &Connection) -> Result<(), Box<dyn Er
         method: DidChangeWatchedFiles::METHOD.to_owned(),
         register_options: Some(serde_json::to_value(
             DidChangeWatchedFilesRegistrationOptions {
-                watchers: [
-                    "**/*.css",
-                    "**/*.vue",
-                    "**/*.svelte",
-                    "**/*.astro",
-                    "**/cvk.json",
-                    "**/cvk.jsonc",
-                ]
-                .into_iter()
-                .map(|pattern| FileSystemWatcher {
-                    glob_pattern: GlobPattern::String(pattern.to_owned()),
-                    kind: None,
-                })
-                .collect(),
+                watchers: watched_glob_patterns()
+                    .into_iter()
+                    .map(|pattern| FileSystemWatcher {
+                        glob_pattern: GlobPattern::String(pattern),
+                        kind: None,
+                    })
+                    .collect(),
             },
         )?),
     };
@@ -66,18 +61,16 @@ pub fn start_server_watcher(root_dir: &Path) -> Result<Receiver<Vec<PathBuf>>, B
         None,
         move |events: Result<Vec<DebouncedEvent>, _>| {
             if let Ok(events) = events {
-                const WATCHED_EXTENSIONS: &[&str] = &["css", "vue", "svelte", "astro"];
-                const CONFIG_FILENAMES: &[&str] = &["cvk.json", "cvk.jsonc"];
                 let mut paths: Vec<PathBuf> = events
                     .iter()
                     .flat_map(|e| &e.paths)
                     .filter(|p| {
                         p.extension()
                             .and_then(|e| e.to_str())
-                            .is_some_and(|ext| WATCHED_EXTENSIONS.contains(&ext))
+                            .is_some_and(is_supported_source_extension)
                             || p.file_name()
                                 .and_then(|n| n.to_str())
-                                .is_some_and(|name| CONFIG_FILENAMES.contains(&name))
+                                .is_some_and(is_config_filename)
                     })
                     .cloned()
                     .collect();

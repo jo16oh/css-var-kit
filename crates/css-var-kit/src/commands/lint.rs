@@ -5,6 +5,7 @@ use std::process;
 use std::rc::Rc;
 
 use crate::config::{Config, GlobFilter};
+use crate::file_kinds::{is_html_like_extension, is_supported_source_extension};
 use crate::owned_types::OwnedStr;
 use crate::parser;
 use crate::parser::ParseResult;
@@ -13,8 +14,6 @@ use crate::searcher::conditions::non_custom_properties::NonCustomProperties;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::searcher::{SearchResult, Searcher};
-
-const HTML_LIKE_EXTENSIONS: &[&str] = &["html", "vue", "svelte", "astro"];
 
 pub fn run(config: &Config) {
     let css_files = collect_source_files(config.root_dir.as_path(), &config.include);
@@ -157,7 +156,7 @@ fn collect_include_recursive(
 fn is_supported_extension(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
-        .is_some_and(|ext| matches!(ext, "css" | "scss") || HTML_LIKE_EXTENSIONS.contains(&ext))
+        .is_some_and(is_supported_source_extension)
 }
 
 fn collect_source_files_recursive(
@@ -188,7 +187,7 @@ fn collect_source_files_recursive(
 pub fn parse_file(source: &OwnedStr, path: &Path) -> Vec<ParseResult> {
     let file_path: Rc<Path> = Rc::from(path);
     match path.extension().and_then(|e| e.to_str()) {
-        Some(ext) if HTML_LIKE_EXTENSIONS.contains(&ext) => {
+        Some(ext) if is_html_like_extension(ext) => {
             parser::html_like::parse_html_like(source, &file_path)
         }
         _ => vec![parser::css::parse(source, &file_path)],
