@@ -212,6 +212,16 @@ impl LspClient {
         )
     }
 
+    pub fn request_hover(&mut self, uri: &str, line: u32, character: u32) -> Value {
+        self.send_request(
+            "textDocument/hover",
+            json!({
+                "textDocument": { "uri": uri },
+                "position": { "line": line, "character": character }
+            }),
+        )
+    }
+
     pub fn collect_diagnostics(&mut self) -> Vec<PublishedDiagnostics> {
         // Use a map keyed by URI so that later notifications replace earlier ones.
         // The LSP spec treats each publishDiagnostics as a full replacement for that

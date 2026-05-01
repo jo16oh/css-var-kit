@@ -2,15 +2,17 @@ use std::error::Error;
 
 use lsp_server::{Message, Request, Response};
 use lsp_types::request::{
-    Completion, DocumentDiagnosticRequest, GotoDefinition, PrepareRenameRequest, Rename,
-    WorkspaceDiagnosticRequest,
+    Completion, DocumentDiagnosticRequest, GotoDefinition, HoverRequest, PrepareRenameRequest,
+    Rename, WorkspaceDiagnosticRequest,
 };
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit,
-    Position, Range, TextEdit,
+    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionParams,
+    CompletionResponse, CompletionTextEdit, Documentation, MarkupContent, MarkupKind, Position,
+    Range, TextEdit,
 };
 
 use super::Server;
+use super::description::format_desc;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::text_position::{byte_offset_to_utf16, utf16_to_byte_offset};
 use crate::type_checker::{TypeCheckError, check_property_type};
@@ -30,6 +32,9 @@ impl Server<'_> {
             }
             <GotoDefinition as lsp_types::request::Request>::METHOD => {
                 self.handle_definition_request(req)?;
+            }
+            <HoverRequest as lsp_types::request::Request>::METHOD => {
+                self.handle_hover_request(req)?;
             }
             <Rename as lsp_types::request::Request>::METHOD => {
                 self.handle_rename_request(req)?;
@@ -68,6 +73,8 @@ impl Server<'_> {
             end: pos,
         };
 
+        let client_name = self.client_name.as_deref();
+
         let items: Vec<CompletionItem> = var_defs
             .iter()
             .filter(|(_prop_id, props)| {
@@ -80,16 +87,33 @@ impl Server<'_> {
             })
             .map(|(_prop_id, props)| {
                 let name = &*props[0].ident.raw;
-                let detail = props.last().map(|p| p.value.raw.to_string());
+                let detail = match props.as_slice() {
+                    [single] => Some(format!(": {}", single.value.raw)),
+                    _ => None,
+                };
+
                 let new_text = if ctx.inside_var {
                     name.to_owned()
                 } else {
                     format!("var({name})")
                 };
+
                 CompletionItem {
                     label: name.to_owned(),
+                    label_details: Some(CompletionItemLabelDetails {
+                        detail: detail.clone(),
+                        description: Some("cvk".to_owned()),
+                    }),
                     kind: Some(CompletionItemKind::VARIABLE),
                     detail,
+                    documentation: format_desc(&props[..], &var_defs, client_name, false).map(
+                        |value| {
+                            Documentation::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value,
+                            })
+                        },
+                    ),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         range: replace_range,
                         new_text,

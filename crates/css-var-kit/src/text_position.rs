@@ -35,3 +35,31 @@ pub fn offset_to_position(source: &str, offset: usize) -> (u32, u32) {
             }
         })
 }
+
+pub fn position_to_byte_offset(source: &str, pos: &lsp_types::Position) -> Option<usize> {
+    let line_start: usize = source
+        .split_inclusive('\n')
+        .take(pos.line as usize)
+        .map(str::len)
+        .sum();
+    let line_str = source.lines().nth(pos.line as usize)?;
+    Some(line_start + utf16_to_byte_offset(line_str, pos.character))
+}
+
+pub fn byte_range_to_lsp_range(
+    source: &str,
+    byte_range: std::ops::Range<usize>,
+) -> lsp_types::Range {
+    let (start_line, start_col) = offset_to_position(source, byte_range.start);
+    let (end_line, end_col) = offset_to_position(source, byte_range.end);
+    lsp_types::Range {
+        start: lsp_types::Position {
+            line: start_line,
+            character: byte_col_to_utf16_in_source(source, start_line, start_col),
+        },
+        end: lsp_types::Position {
+            line: end_line,
+            character: byte_col_to_utf16_in_source(source, end_line, end_col),
+        },
+    }
+}

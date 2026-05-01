@@ -1,0 +1,5 @@
+:root {
+  --brand: #ff0000;
+  --size: 16px;
+  --primary: var(--brand);
+}
