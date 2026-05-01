@@ -28,6 +28,7 @@ use lsp_types::{
 
 use crate::commands::lint;
 use crate::config::{Config, RawConfig};
+use crate::file_kinds::is_config_filename;
 use crate::owned_types::OwnedStr;
 use crate::parser::ParseResult;
 use crate::searcher::Searcher;
@@ -399,10 +400,9 @@ impl Server<'_> {
 }
 
 fn is_config_file(path: &Path) -> bool {
-    matches!(
-        path.file_name().and_then(|n| n.to_str()),
-        Some("cvk.json" | "cvk.jsonc")
-    )
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(is_config_filename)
 }
 
 fn build_searcher(parse_cache: &HashMap<Rc<Path>, Vec<ParseResult>>, config: &Config) -> Searcher {
