@@ -15,6 +15,7 @@ use crate::searcher::SearchResultFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::text_position::{byte_range_to_lsp_range, position_to_byte_offset};
+use crate::variable_resolver::resolve_variables;
 
 impl Server<'_> {
     pub fn handle_hover_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
@@ -71,7 +72,12 @@ fn compute_hover(
     let value = var_defs
         .get(&prop_id)
         .as_deref()
-        .and_then(|props| format_desc(props, var_defs, client_name, true))?;
+        .and_then(|props| format_desc(props, var_defs, client_name, true))
+        .or_else(|| {
+            var.fallback
+                .clone()
+                .and_then(|token_list| resolve_variables(&token_list, &var_defs.vars_map()).ok())
+        })?;
 
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
