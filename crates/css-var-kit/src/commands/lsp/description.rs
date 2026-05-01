@@ -8,14 +8,7 @@ use crate::parser::Property;
 use crate::searcher::PropMapFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 
-pub fn format_single(resolved: &str, include_swatch: bool) -> String {
-    match parse_to_rgba(resolved).filter(|_| include_swatch) {
-        Some(color) => format!("{} `{resolved}`", swatch_markdown(&color)),
-        None => format!("`{resolved}`"),
-    }
-}
-
-pub fn format_multi_def(
+pub fn format_desc(
     props: &[&Property],
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     client_name: Option<&str>,
@@ -36,7 +29,7 @@ pub fn format_multi_def(
     (!lines.is_empty()).then(|| lines.join(multi_def_separator(client_name)))
 }
 
-pub fn resolve_to_raw_value(
+fn resolve_to_raw_value(
     prop: &Property,
     var_defs: &PropMapFor<'_, VariableDefinitions>,
     depth: usize,

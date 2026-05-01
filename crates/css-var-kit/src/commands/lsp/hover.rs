@@ -7,7 +7,7 @@ use lsp_server::{Message, Request, Response};
 use lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind, Position};
 
 use super::Server;
-use super::description::{format_multi_def, format_single, resolve_to_raw_value};
+use super::description::format_desc;
 use crate::owned_types::OwnedPropId;
 use crate::parser::Property;
 use crate::searcher::PropMapFor;
@@ -15,7 +15,6 @@ use crate::searcher::SearchResultFor;
 use crate::searcher::conditions::variable_definitions::VariableDefinitions;
 use crate::searcher::conditions::variable_usages::VariableUsages;
 use crate::text_position::{byte_range_to_lsp_range, position_to_byte_offset};
-use crate::variable_resolver::resolve_variables;
 
 impl Server<'_> {
     pub fn handle_hover_request(&self, req: Request) -> Result<(), Box<dyn Error>> {
@@ -67,7 +66,12 @@ fn compute_hover(
     let token_list = prop.token_list();
     let (var, name_range) = find_var_at_cursor(prop, token_list.inner(), cursor)?;
 
-    let value = format_var_hover(var, var_defs, client_name)?;
+    let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
+
+    let value = var_defs
+        .get(&prop_id)
+        .as_deref()
+        .and_then(|props| format_desc(props, var_defs, client_name, true))?;
 
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
@@ -123,27 +127,6 @@ fn collect_vars<'t>(tokens: &'t TokenList<'t>) -> Vec<&'t Variable<'t>> {
     }
 
     vars
-}
-
-fn format_var_hover(
-    var: &Variable<'_>,
-    var_defs: &PropMapFor<'_, VariableDefinitions>,
-    client_name: Option<&str>,
-) -> Option<String> {
-    let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
-    match var_defs.get(&prop_id).as_deref() {
-        Some(props) if props.len() > 1 => format_multi_def(props, var_defs, client_name, true),
-        Some([prop]) => Some(format_single(
-            &resolve_to_raw_value(prop, var_defs, 0)?,
-            true,
-        )),
-        _ => {
-            let vars = var_defs.vars_map();
-            let synthetic = TokenList(vec![TokenOrValue::Var(var.clone())]);
-            let resolved = resolve_variables(&synthetic, &vars).ok()?;
-            Some(format_single(&resolved, true))
-        }
-    }
 }
 
 #[cfg(test)]
