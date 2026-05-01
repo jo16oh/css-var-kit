@@ -365,7 +365,13 @@ impl Server<'_> {
         match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
             Ok(new_config) => {
                 self.config = new_config;
-                self.source_cache = load_all_sources(&self.config);
+                let mut source_cache = load_all_sources(&self.config);
+                for (uri, text) in &self.opened_documents {
+                    if let Some(rel_path) = self.uri_to_rel_path(uri) {
+                        source_cache.insert(Rc::<Path>::from(rel_path), OwnedStr::from(text));
+                    }
+                }
+                self.source_cache = source_cache;
                 self.parse_cache = build_parse_cache(&self.source_cache);
                 self.searcher = build_searcher(&self.parse_cache, &self.config);
                 self.log("config reloaded");
