@@ -122,9 +122,16 @@ impl<'a> Scanner<'a> {
         css.map(|s| s[content_start..self.pos].trim())
     }
 
-    fn skip_at_rule(&mut self) {
+    fn read_at_rule_name(&mut self) -> &'a str {
         self.advance(1); // skip '@'
-        // Skip until ';' (statement) or matched '{...}' (block)
+        let start = self.pos;
+        while !self.is_eof() && is_ident_char(self.bytes[self.pos]) {
+            self.advance(1);
+        }
+        std::str::from_utf8(&self.bytes[start..self.pos]).unwrap_or("")
+    }
+
+    fn skip_at_rule_prelude(&mut self) {
         while !self.is_eof() {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
@@ -133,26 +140,29 @@ impl<'a> Scanner<'a> {
                     self.advance(1);
                     return;
                 }
+                b'{' => return,
+                _ => self.advance(1),
+            }
+        }
+    }
+
+    fn skip_at_rule_body(&mut self) {
+        if self.is_eof() || self.bytes[self.pos] != b'{' {
+            return;
+        }
+        self.advance(1);
+        let mut depth = 1i32;
+        while !self.is_eof() && depth > 0 {
+            match self.bytes[self.pos] {
+                b'"' | b'\'' => self.skip_string_literal(),
+                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
                 b'{' => {
-                    // Skip the block including nested braces
+                    depth += 1;
                     self.advance(1);
-                    let mut depth = 1i32;
-                    while !self.is_eof() && depth > 0 {
-                        match self.bytes[self.pos] {
-                            b'"' | b'\'' => self.skip_string_literal(),
-                            b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
-                            b'{' => {
-                                depth += 1;
-                                self.advance(1);
-                            }
-                            b'}' => {
-                                depth -= 1;
-                                self.advance(1);
-                            }
-                            _ => self.advance(1),
-                        }
-                    }
-                    return;
+                }
+                b'}' => {
+                    depth -= 1;
+                    self.advance(1);
                 }
                 _ => self.advance(1),
             }
@@ -303,10 +313,13 @@ fn parse_impl(
                     pending_ignores.push(content);
                 }
             }
-            // Skip @-rules at top level (e.g. @property, @import, @charset)
-            b'@' if brace_depth == initial_brace_depth => {
+            b'@' => {
                 pending_ignores.clear();
-                s.skip_at_rule();
+                let name = s.read_at_rule_name();
+                s.skip_at_rule_prelude();
+                if !is_transparent_at_rule(name) {
+                    s.skip_at_rule_body();
+                }
             }
             b'{' => {
                 pending_ignores.clear();
@@ -392,6 +405,18 @@ fn parse_impl(
         file_path: file_path.clone(),
         properties,
     }
+}
+
+fn is_transparent_at_rule(name: &str) -> bool {
+    const TRANSPARENT: &[&str] = &[
+        "media",
+        "supports",
+        "container",
+        "layer",
+        "scope",
+        "starting-style",
+    ];
+    TRANSPARENT.iter().any(|t| name.eq_ignore_ascii_case(t))
 }
 
 fn is_ident_start(b: u8) -> bool {
@@ -827,6 +852,80 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+    }
+
+    #[test]
+    fn at_media_top_level_collects_inner_defs() {
+        let css = "@media (prefers-color-scheme: dark) {\n  :root { --color: white; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "white");
+    }
+
+    #[test]
+    fn at_media_with_bare_declarations() {
+        let css = "@media (max-width: 600px) {\n  --pad: 8px;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--pad");
+        assert_eq!(result.properties[0].value.raw.as_str(), "8px");
+    }
+
+    #[test]
+    fn at_media_nested_in_supports() {
+        let css = "@supports (color: oklch(0 0 0)) {\n  @media (prefers-color-scheme: dark) {\n    :root { --x: 1; }\n  }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn at_layer_block_form() {
+        let css = "@layer theme {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn at_layer_statement_form() {
+        let css = "@layer foo, bar;\n:root { --y: 2; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[0].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn at_media_inside_selector() {
+        let css = ":root {\n  --base: 0;\n  @media (prefers-color-scheme: dark) {\n    --base: 1;\n  }\n}";
+        let result = test_parse(css);
+        let names: Vec<&str> = result
+            .properties
+            .iter()
+            .map(|p| p.ident.raw.as_str())
+            .collect();
+        assert_eq!(names, vec!["--base", "--base"]);
+        assert_eq!(result.properties[0].value.raw.as_str(), "0");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn at_media_uppercase() {
+        let css = "@MEDIA (prefers-color-scheme: dark) {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn at_media_with_string_in_prelude() {
+        let css = "@media (min-width: 100px) and (foo: \"with } brace\") {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
     }
 
     #[test]
