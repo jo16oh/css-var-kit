@@ -266,6 +266,7 @@ impl<'a> Scanner<'a> {
 
     fn scan_value_end(&mut self) -> usize {
         let mut paren_depth = 0i32;
+        let mut interp_depth = 0i32;
 
         while !self.is_eof() {
             match self.bytes[self.pos] {
@@ -281,7 +282,17 @@ impl<'a> Scanner<'a> {
                     paren_depth -= 1;
                     self.advance(1);
                 }
-                b';' if paren_depth <= 0 => {
+                b'#' if self.peek_at(1) == Some(b'{') => {
+                    // SCSS interpolation — treat `#{ … }` as a balanced group
+                    // so the inner `}` doesn't terminate the value.
+                    interp_depth += 1;
+                    self.advance(2);
+                }
+                b'}' if interp_depth > 0 => {
+                    interp_depth -= 1;
+                    self.advance(1);
+                }
+                b';' if paren_depth <= 0 && interp_depth <= 0 => {
                     let end = self.pos;
                     self.advance(1); // skip ';'
                     return end;
@@ -290,7 +301,7 @@ impl<'a> Scanner<'a> {
                     // Don't consume '}', let the main loop handle brace_depth
                     return self.pos;
                 }
-                b'/' if self.peek_at(1) == Some(b'*') && paren_depth <= 0 => {
+                b'/' if self.peek_at(1) == Some(b'*') && paren_depth <= 0 && interp_depth <= 0 => {
                     // Comment starts — value ends here
                     let end = self.pos;
                     // Skip the comment
@@ -314,7 +325,7 @@ impl<'a> Scanner<'a> {
                     }
                     return end;
                 }
-                b'\n' | b'\r' if paren_depth <= 0 => {
+                b'\n' | b'\r' if paren_depth <= 0 && interp_depth <= 0 => {
                     // Check if the next non-whitespace looks like a new property
                     let mut skip = 1;
                     // For \r\n, skip both bytes
@@ -766,6 +777,56 @@ mod tests {
             result.properties[0].value.raw.as_str(),
             "rgb(calc(100 + 50), 0, 0)"
         );
+    }
+
+    #[test]
+    fn scss_interpolation_in_value() {
+        let css = ":root {\n    --color: #{$brand};\n    --size: 16px;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{$brand}");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
+    }
+
+    #[test]
+    fn scss_interpolation_with_semicolon_inside() {
+        // Semicolons inside `#{ … }` must not terminate the value.
+        let css = ":root { --x: #{ map-get($m, 'a'); $y } px; --z: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "#{ map-get($m, 'a'); $y } px"
+        );
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--z");
+    }
+
+    #[test]
+    fn scss_interpolation_no_terminator_break() {
+        // The closing `}` of an interpolation must not terminate the value
+        // and must not pop the surrounding rule's brace depth.
+        let css = ".a {\n    --x: #{$a}px;\n    --y: 2;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{$a}px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn scss_interpolation_with_newline_inside() {
+        // A newline inside `#{ … }` must not trigger the missing-semicolon
+        // recovery path.
+        let css = ":root {\n    --x: #{\n        $a\n    };\n    --y: 2;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "#{\n        $a\n    }"
+        );
+        assert_eq!(result.properties[1].value.raw.as_str(), "2");
     }
 
     #[test]
