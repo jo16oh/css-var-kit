@@ -157,29 +157,6 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn skip_at_rule_body(&mut self) {
-        if self.is_eof() || self.bytes[self.pos] != b'{' {
-            return;
-        }
-        self.advance(1);
-        let mut depth = 1i32;
-        while !self.is_eof() && depth > 0 {
-            match self.bytes[self.pos] {
-                b'"' | b'\'' => self.skip_string_literal(),
-                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
-                b'{' => {
-                    depth += 1;
-                    self.advance(1);
-                }
-                b'}' => {
-                    depth -= 1;
-                    self.advance(1);
-                }
-                _ => self.advance(1),
-            }
-        }
-    }
-
     fn skip_inline_and_newlines(&mut self) {
         while !self.is_eof() && matches!(self.bytes[self.pos], b' ' | b'\t' | b'\n' | b'\r') {
             self.advance(1);
@@ -210,7 +187,6 @@ impl<'a> Scanner<'a> {
         let name_end = self.pos;
         if name_start == name_end {
             self.skip_at_rule_prelude();
-            self.skip_at_rule_body();
             return None;
         }
 
@@ -456,9 +432,8 @@ fn parse_impl(
                     }
                 } else {
                     s.skip_at_rule_prelude();
-                    if !is_transparent_at_rule(name) {
-                        s.skip_at_rule_body();
-                    }
+                    // Body (if any) is parsed by the main loop just like a
+                    // selector block — `b'{'` will bump `brace_depth`.
                 }
             }
             b'{' => {
@@ -545,18 +520,6 @@ fn parse_impl(
         file_path: file_path.clone(),
         properties,
     }
-}
-
-fn is_transparent_at_rule(name: &str) -> bool {
-    const TRANSPARENT: &[&str] = &[
-        "media",
-        "supports",
-        "container",
-        "layer",
-        "scope",
-        "starting-style",
-    ];
-    TRANSPARENT.iter().any(|t| name.eq_ignore_ascii_case(t))
 }
 
 fn is_ident_start(b: u8) -> bool {
@@ -1087,6 +1050,37 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+    }
+
+    #[test]
+    fn at_keyframes_collects_inner_var_usage() {
+        let css =
+            "@keyframes pulse {\n  from { color: var(--start); }\n  to { color: var(--end); }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--start)");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--end)");
+    }
+
+    #[test]
+    fn at_font_face_collects_inner_var_usage() {
+        let css = "@font-face {\n  font-family: var(--family);\n  src: url(\"file.woff2\");\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "font-family");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--family)");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "src");
+    }
+
+    #[test]
+    fn at_page_collects_inner_definitions() {
+        let css = "@page {\n  --margin: 1cm;\n  margin: var(--margin);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--margin");
+        assert_eq!(result.properties[0].value.raw.as_str(), "1cm");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--margin)");
     }
 
     #[test]
