@@ -157,9 +157,13 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn skip_inline_and_newlines(&mut self) {
-        while !self.is_eof() && matches!(self.bytes[self.pos], b' ' | b'\t' | b'\n' | b'\r') {
-            self.advance(1);
+    fn skip_trivia(&mut self) {
+        while !self.is_eof() {
+            match self.bytes[self.pos] {
+                b' ' | b'\t' | b'\n' | b'\r' => self.advance(1),
+                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                _ => return,
+            }
         }
     }
 
@@ -170,7 +174,7 @@ impl<'a> Scanner<'a> {
     /// consumed. Returns `None` only when the prelude lacks an identifier or
     /// the body never opens.
     fn scan_at_property_rule(&mut self) -> Option<AtPropertyParts> {
-        self.skip_inline_and_newlines();
+        self.skip_trivia();
 
         let name_start = self.pos;
         let name_line = self.line;
@@ -1041,6 +1045,15 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+    }
+
+    #[test]
+    fn at_property_comment_between_keyword_and_name() {
+        let css = "@property /* doc */ --logo {\n  initial-value: red;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--logo");
         assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
