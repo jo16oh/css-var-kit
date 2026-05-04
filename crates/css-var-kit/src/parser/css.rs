@@ -11,6 +11,17 @@ struct Scanner<'a> {
     col: u32,
 }
 
+struct AtPropertyParts {
+    name_start: usize,
+    name_end: usize,
+    name_line: u32,
+    name_col: u32,
+    value_start: usize,
+    value_end: usize,
+    value_line: u32,
+    value_col: u32,
+}
+
 impl<'a> Scanner<'a> {
     fn new_with_offset(css: &'a OwnedStr, line_offset: u32, column_offset: u32) -> Self {
         Self {
@@ -122,9 +133,16 @@ impl<'a> Scanner<'a> {
         css.map(|s| s[content_start..self.pos].trim())
     }
 
-    fn skip_at_rule(&mut self) {
+    fn read_at_rule_name(&mut self) -> &'a str {
         self.advance(1); // skip '@'
-        // Skip until ';' (statement) or matched '{...}' (block)
+        let start = self.pos;
+        while !self.is_eof() && is_ident_char(self.bytes[self.pos]) {
+            self.advance(1);
+        }
+        std::str::from_utf8(&self.bytes[start..self.pos]).unwrap_or("")
+    }
+
+    fn skip_at_rule_prelude(&mut self) {
         while !self.is_eof() {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
@@ -133,30 +151,117 @@ impl<'a> Scanner<'a> {
                     self.advance(1);
                     return;
                 }
+                b'{' => return,
+                _ => self.advance(1),
+            }
+        }
+    }
+
+    fn skip_trivia(&mut self) {
+        while !self.is_eof() {
+            match self.bytes[self.pos] {
+                b' ' | b'\t' | b'\n' | b'\r' => self.advance(1),
+                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                _ => return,
+            }
+        }
+    }
+
+    /// Scans an `@property --name { … initial-value: V; … }` rule.
+    /// The leading `@property` token has already been consumed.
+    /// Returns prelude name + `initial-value` spans (the value span is empty
+    /// when no `initial-value` declaration is present). The closing `}` is
+    /// consumed. Returns `None` only when the prelude lacks an identifier or
+    /// the body never opens.
+    fn scan_at_property_rule(&mut self) -> Option<AtPropertyParts> {
+        self.skip_trivia();
+
+        let name_start = self.pos;
+        let name_line = self.line;
+        let name_col = self.col;
+        while !self.is_eof() {
+            if self.bytes[self.pos] == b'\\' {
+                self.skip_escape();
+            } else if is_ident_char(self.bytes[self.pos]) {
+                self.advance(1);
+            } else {
+                break;
+            }
+        }
+        let name_end = self.pos;
+        if name_start == name_end {
+            self.skip_at_rule_prelude();
+            return None;
+        }
+
+        self.skip_at_rule_prelude();
+        if self.is_eof() || self.bytes[self.pos] != b'{' {
+            return None;
+        }
+        self.advance(1); // consume '{'
+
+        let mut value_start = self.pos;
+        let mut value_end = self.pos;
+        let mut value_line = self.line;
+        let mut value_col = self.col;
+
+        let mut depth = 1i32;
+        while !self.is_eof() && depth > 0 {
+            match self.bytes[self.pos] {
+                b'"' | b'\'' => self.skip_string_literal(),
+                b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
                 b'{' => {
-                    // Skip the block including nested braces
+                    depth += 1;
                     self.advance(1);
-                    let mut depth = 1i32;
-                    while !self.is_eof() && depth > 0 {
-                        match self.bytes[self.pos] {
-                            b'"' | b'\'' => self.skip_string_literal(),
-                            b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
-                            b'{' => {
-                                depth += 1;
-                                self.advance(1);
-                            }
-                            b'}' => {
-                                depth -= 1;
-                                self.advance(1);
-                            }
-                            _ => self.advance(1),
+                }
+                b'}' => {
+                    depth -= 1;
+                    self.advance(1);
+                }
+                _ if depth == 1 && is_ident_start(self.bytes[self.pos]) => {
+                    let prop_name_start = self.pos;
+                    while !self.is_eof() {
+                        if self.bytes[self.pos] == b'\\' {
+                            self.skip_escape();
+                        } else if is_ident_char(self.bytes[self.pos]) {
+                            self.advance(1);
+                        } else {
+                            break;
                         }
                     }
-                    return;
+                    let prop_name_end = self.pos;
+                    self.skip_whitespace();
+                    if !self.is_eof() && self.bytes[self.pos] == b':' {
+                        self.advance(1);
+                        self.skip_whitespace();
+                        let line = self.line;
+                        let col = self.col;
+                        let start = self.pos;
+                        let end = self.scan_value_end();
+                        let prop_name = &self.bytes[prop_name_start..prop_name_end];
+                        if prop_name.eq_ignore_ascii_case(b"initial-value") {
+                            // Last `initial-value` wins, matching CSS cascade.
+                            value_start = start;
+                            value_end = end;
+                            value_line = line;
+                            value_col = col;
+                        }
+                    }
                 }
                 _ => self.advance(1),
             }
         }
+
+        Some(AtPropertyParts {
+            name_start,
+            name_end,
+            name_line,
+            name_col,
+            value_start,
+            value_end,
+            value_line,
+            value_col,
+        })
     }
 
     fn scan_value_end(&mut self) -> usize {
@@ -303,10 +408,37 @@ fn parse_impl(
                     pending_ignores.push(content);
                 }
             }
-            // Skip @-rules at top level (e.g. @property, @import, @charset)
-            b'@' if brace_depth == initial_brace_depth => {
-                pending_ignores.clear();
-                s.skip_at_rule();
+            b'@' => {
+                let ignore_comments = std::mem::take(&mut pending_ignores);
+                let name = s.read_at_rule_name();
+                if name.eq_ignore_ascii_case("property") {
+                    if let Some(parts) = s.scan_at_property_rule() {
+                        let raw_name = css.slice(parts.name_start..parts.name_end);
+                        let raw_value = css.map(|s| s[parts.value_start..parts.value_end].trim());
+                        properties.push(Property {
+                            file_path: file_path.clone(),
+                            source: source.clone(),
+                            ident: PropertyIdent::new(
+                                raw_name,
+                                parts.name_start + byte_offset,
+                                parts.name_line,
+                                parts.name_col,
+                            ),
+                            value: PropertyValue {
+                                raw: raw_value,
+                                offset: parts.value_start + byte_offset,
+                                line: parts.value_line,
+                                column: parts.value_col,
+                            },
+                            ignore_comments,
+                            token_list: OnceCell::new(),
+                        });
+                    }
+                } else {
+                    s.skip_at_rule_prelude();
+                    // Body (if any) is parsed by the main loop just like a
+                    // selector block — `b'{'` will bump `brace_depth`.
+                }
             }
             b'{' => {
                 pending_ignores.clear();
@@ -804,21 +936,125 @@ mod tests {
     }
 
     #[test]
-    fn at_property_rule_skipped() {
+    fn at_property_rule_collects_definition() {
         let css = "@property --my-color {\n  syntax: \"<color>\";\n  inherits: false;\n  initial-value: red;\n}\n.a { color: var(--my-color); }";
         let result = test_parse(css);
-        assert_eq!(result.properties.len(), 1);
-        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
-        assert_eq!(result.properties[0].value.raw.as_str(), "var(--my-color)");
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--my-color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--my-color)");
     }
 
     #[test]
-    fn at_property_between_selectors() {
+    fn at_property_between_selectors_collects_definition() {
         let css = ".before { margin: 0; }\n@property --x {\n  syntax: \"*\";\n  inherits: true;\n}\n.after { padding: 0; }";
         let result = test_parse(css);
-        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties.len(), 3);
         assert_eq!(result.properties[0].ident.raw.as_str(), "margin");
-        assert_eq!(result.properties[1].ident.raw.as_str(), "padding");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[1].value.raw.as_str(), "");
+        assert_eq!(result.properties[2].ident.raw.as_str(), "padding");
+    }
+
+    #[test]
+    fn at_property_extracts_initial_value() {
+        let css = "@property --logo-color {\n  syntax: \"<color>\";\n  inherits: false;\n  initial-value: #c0ffee;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        let p = &result.properties[0];
+        assert_eq!(p.ident.raw.as_str(), "--logo-color");
+        assert_eq!(p.value.raw.as_str(), "#c0ffee");
+        // name on line 0, after "@property " (10 cols)
+        assert_eq!(p.ident.line, 0);
+        assert_eq!(p.ident.column, 10);
+        // value on line 3, after "  initial-value: " (17 cols)
+        assert_eq!(p.value.line, 3);
+        assert_eq!(p.value.column, 17);
+    }
+
+    #[test]
+    fn at_property_without_initial_value() {
+        let css = "@property --x {\n  syntax: \"*\";\n  inherits: true;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "");
+    }
+
+    #[test]
+    fn at_property_initial_value_with_var() {
+        let css = "@property --x {\n  syntax: \"<color>\";\n  initial-value: var(--base, red);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--base, red)");
+    }
+
+    #[test]
+    fn at_property_with_string_in_syntax() {
+        let css =
+            "@property --x {\n  syntax: \"<length> | <percentage>\";\n  initial-value: 8px;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "8px");
+    }
+
+    #[test]
+    fn at_property_invalid_name() {
+        let css = "@property foo {\n  initial-value: red;\n}\n.a { color: red; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "foo");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "color");
+    }
+
+    #[test]
+    fn at_property_last_initial_value_wins() {
+        let css = "@property --x {\n  initial-value: red;\n  initial-value: blue;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].value.raw.as_str(), "blue");
+    }
+
+    #[test]
+    fn at_property_cvk_ignore_propagates() {
+        let css = "/* cvk-ignore */\n@property --x {\n  initial-value: red;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore"])
+        );
+    }
+
+    #[test]
+    fn at_property_inside_media() {
+        let css = "@media (prefers-color-scheme: dark) {\n  @property --x {\n    initial-value: white;\n  }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "white");
+    }
+
+    #[test]
+    fn at_property_uppercase() {
+        let css = "@PROPERTY --x {\n  initial-value: red;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+    }
+
+    #[test]
+    fn at_property_comment_between_keyword_and_name() {
+        let css = "@property /* doc */ --logo {\n  initial-value: red;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--logo");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
     }
 
     #[test]
@@ -827,6 +1063,111 @@ mod tests {
         let result = test_parse(css);
         assert_eq!(result.properties.len(), 1);
         assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+    }
+
+    #[test]
+    fn at_keyframes_collects_inner_var_usage() {
+        let css =
+            "@keyframes pulse {\n  from { color: var(--start); }\n  to { color: var(--end); }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--start)");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--end)");
+    }
+
+    #[test]
+    fn at_font_face_collects_inner_var_usage() {
+        let css = "@font-face {\n  font-family: var(--family);\n  src: url(\"file.woff2\");\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "font-family");
+        assert_eq!(result.properties[0].value.raw.as_str(), "var(--family)");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "src");
+    }
+
+    #[test]
+    fn at_page_collects_inner_definitions() {
+        let css = "@page {\n  --margin: 1cm;\n  margin: var(--margin);\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--margin");
+        assert_eq!(result.properties[0].value.raw.as_str(), "1cm");
+        assert_eq!(result.properties[1].value.raw.as_str(), "var(--margin)");
+    }
+
+    #[test]
+    fn at_media_top_level_collects_inner_defs() {
+        let css = "@media (prefers-color-scheme: dark) {\n  :root { --color: white; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "white");
+    }
+
+    #[test]
+    fn at_media_with_bare_declarations() {
+        let css = "@media (max-width: 600px) {\n  --pad: 8px;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--pad");
+        assert_eq!(result.properties[0].value.raw.as_str(), "8px");
+    }
+
+    #[test]
+    fn at_media_nested_in_supports() {
+        let css = "@supports (color: oklch(0 0 0)) {\n  @media (prefers-color-scheme: dark) {\n    :root { --x: 1; }\n  }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn at_layer_block_form() {
+        let css = "@layer theme {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn at_layer_statement_form() {
+        let css = "@layer foo, bar;\n:root { --y: 2; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[0].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn at_media_inside_selector() {
+        let css = ":root {\n  --base: 0;\n  @media (prefers-color-scheme: dark) {\n    --base: 1;\n  }\n}";
+        let result = test_parse(css);
+        let names: Vec<&str> = result
+            .properties
+            .iter()
+            .map(|p| p.ident.raw.as_str())
+            .collect();
+        assert_eq!(names, vec!["--base", "--base"]);
+        assert_eq!(result.properties[0].value.raw.as_str(), "0");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn at_media_uppercase() {
+        let css = "@MEDIA (prefers-color-scheme: dark) {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn at_media_with_string_in_prelude() {
+        let css = "@media (min-width: 100px) and (foo: \"with } brace\") {\n  :root { --x: 1; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
     }
 
     #[test]
