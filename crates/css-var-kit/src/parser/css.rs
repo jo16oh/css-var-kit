@@ -1158,6 +1158,48 @@ mod tests {
     }
 
     #[test]
+    fn scss_at_mixin_body_collects_definitions() {
+        let css = "@mixin theme($name) {\n  :root { --color: $name; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "$name");
+    }
+
+    #[test]
+    fn scss_at_if_else_collects_both_branches() {
+        let css = "@if $dark {\n  :root { --bg: black; }\n}\n@else {\n  :root { --bg: white; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--bg");
+        assert_eq!(result.properties[0].value.raw.as_str(), "black");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--bg");
+        assert_eq!(result.properties[1].value.raw.as_str(), "white");
+    }
+
+    #[test]
+    fn scss_at_each_collects_definitions() {
+        let css = "@each $name in $colors {\n  .text-#{$name} { color: var(--color-#{$name}); }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "var(--color-#{$name})"
+        );
+    }
+
+    #[test]
+    fn scss_at_function_with_return_does_not_pollute() {
+        // SCSS @function bodies are full of `@return …;` statement-form at-rules.
+        // Descending must not invent any properties from them.
+        let css = "@function double($n) {\n  @return $n * 2;\n}\n:root { --x: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
     fn at_media_top_level_collects_inner_defs() {
         let css = "@media (prefers-color-scheme: dark) {\n  :root { --color: white; }\n}";
         let result = test_parse(css);
