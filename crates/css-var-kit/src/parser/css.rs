@@ -118,6 +118,13 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn skip_line_comment(&mut self) {
+        self.advance(2); // skip //
+        while !self.is_eof() && !matches!(self.bytes[self.pos], b'\n' | b'\r') {
+            self.advance(1);
+        }
+    }
+
     fn scan_comment(&mut self, css: &'a OwnedStr) -> OwnedStr {
         self.advance(2); // skip /*
         let content_start = self.pos;
@@ -143,10 +150,24 @@ impl<'a> Scanner<'a> {
     }
 
     fn skip_at_rule_prelude(&mut self) {
+        let mut paren_depth = 0i32;
         while !self.is_eof() {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
                 b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                // `//` inside parens may be a protocol-relative `url(//cdn/…)`,
+                // so only treat it as a SCSS line comment outside parens.
+                b'/' if self.peek_at(1) == Some(b'/') && paren_depth <= 0 => {
+                    self.skip_line_comment();
+                }
+                b'(' => {
+                    paren_depth += 1;
+                    self.advance(1);
+                }
+                b')' => {
+                    paren_depth -= 1;
+                    self.advance(1);
+                }
                 b';' => {
                     self.advance(1);
                     return;
@@ -210,6 +231,7 @@ impl<'a> Scanner<'a> {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
                 b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                b'/' if self.peek_at(1) == Some(b'/') => self.skip_line_comment(),
                 b'{' => {
                     depth += 1;
                     self.advance(1);
@@ -331,6 +353,18 @@ impl<'a> Scanner<'a> {
                     // interpolation closer and pop interp_depth prematurely.
                     self.skip_comment();
                 }
+                b'/' if self.peek_at(1) == Some(b'/') && paren_depth <= 0 && interp_depth <= 0 => {
+                    // SCSS line comment outside parens/interp — terminates value.
+                    let end = self.pos;
+                    self.skip_line_comment();
+                    return end;
+                }
+                b'/' if self.peek_at(1) == Some(b'/') && interp_depth > 0 => {
+                    // Inside `#{ … }` a `}` in the comment would otherwise pop
+                    // interp_depth; skip to EOL instead. (Inside parens we keep
+                    // bytes as-is so `url(//cdn/…)` survives.)
+                    self.skip_line_comment();
+                }
                 b'\n' | b'\r' if paren_depth <= 0 && interp_depth <= 0 => {
                     // Check if the next non-whitespace looks like a new property
                     let mut skip = 1;
@@ -424,6 +458,12 @@ fn parse_impl(
                 if content.starts_with("cvk-ignore") {
                     pending_ignores.push(content);
                 }
+            }
+            // SCSS line comments — skip to EOL so a `;` or `}` inside doesn't
+            // break parsing. cvk-ignore is intentionally not honored here:
+            // pairing it with `//` is a separate enhancement.
+            b'/' if s.peek_at(1) == Some(b'/') => {
+                s.skip_line_comment();
             }
             b'@' => {
                 let ignore_comments = std::mem::take(&mut pending_ignores);
@@ -833,6 +873,103 @@ mod tests {
             "#{\n        $a\n    }"
         );
         assert_eq!(result.properties[1].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn scss_line_comment_in_value() {
+        let css = ":root { --x: 16px // comment\n  --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_with_semicolon_inside() {
+        // A `;` inside `// …` must not terminate the value early.
+        let css = ":root { --x: 16px // ; trap\n  --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_with_closebrace_inside() {
+        // A `}` inside `// …` must not pop the rule's brace_depth.
+        let css = ":root { --x: 16px // } trap\n  --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_at_top_level() {
+        let css = "// hint\n:root { --x: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_with_brace_at_top_level() {
+        // A `}` inside a top-level `// …` must not affect brace_depth.
+        let css = "// } trap\n:root { --x: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_inside_interp() {
+        // `//` inside `#{ … }` is skipped without terminating the value, so a
+        // `}` in the comment doesn't pop interp_depth.
+        let css = ":root { --x: #{ // } trap\n  $a }; --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_in_at_rule_prelude() {
+        let css = "@media // legacy ; {\n  (min-width: 1px) { :root { --x: 1; } }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_in_at_property_body() {
+        // `}` inside `// …` between declarations of an `@property` body must
+        // not close the body early.
+        let css = "@property --x { initial-value: red; // } trap\n }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+    }
+
+    #[test]
+    fn scss_protocol_relative_url_in_value_not_line_comment() {
+        // `//` inside `url(…)` is a protocol-relative URL, not a comment.
+        let css = ":root { --bg: url(//cdn.example.com/x.png); --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "url(//cdn.example.com/x.png)"
+        );
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_protocol_relative_url_in_at_rule_prelude_not_line_comment() {
+        let css = "@import url(//cdn.example.com/x.css);\n:root { --x: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
     }
 
     #[test]
