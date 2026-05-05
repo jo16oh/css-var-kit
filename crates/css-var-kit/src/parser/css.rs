@@ -9,6 +9,7 @@ struct Scanner<'a> {
     pos: usize,
     line: u32,
     col: u32,
+    scss: bool,
 }
 
 struct AtPropertyParts {
@@ -23,12 +24,18 @@ struct AtPropertyParts {
 }
 
 impl<'a> Scanner<'a> {
-    fn new_with_offset(css: &'a OwnedStr, line_offset: u32, column_offset: u32) -> Self {
+    fn new_with_offset(
+        css: &'a OwnedStr,
+        line_offset: u32,
+        column_offset: u32,
+        scss: bool,
+    ) -> Self {
         Self {
             bytes: css.as_bytes(),
             pos: 0,
             line: line_offset,
             col: column_offset,
+            scss,
         }
     }
 
@@ -118,6 +125,22 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn skip_line_comment(&mut self) {
+        self.advance(2); // skip //
+        while !self.is_eof() && !matches!(self.bytes[self.pos], b'\n' | b'\r') {
+            self.advance(1);
+        }
+    }
+
+    fn scan_line_comment(&mut self, css: &'a OwnedStr) -> OwnedStr {
+        self.advance(2); // skip //
+        let content_start = self.pos;
+        while !self.is_eof() && !matches!(self.bytes[self.pos], b'\n' | b'\r') {
+            self.advance(1);
+        }
+        css.map(|s| s[content_start..self.pos].trim())
+    }
+
     fn scan_comment(&mut self, css: &'a OwnedStr) -> OwnedStr {
         self.advance(2); // skip /*
         let content_start = self.pos;
@@ -143,10 +166,25 @@ impl<'a> Scanner<'a> {
     }
 
     fn skip_at_rule_prelude(&mut self) {
+        let mut paren_depth = 0i32;
         while !self.is_eof() {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
                 b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                // SCSS only: `//` outside parens is a line comment. Inside
+                // parens it may be a protocol-relative `url(//cdn/…)`, so we
+                // leave the bytes as-is.
+                b'/' if self.scss && self.peek_at(1) == Some(b'/') && paren_depth <= 0 => {
+                    self.skip_line_comment();
+                }
+                b'(' => {
+                    paren_depth += 1;
+                    self.advance(1);
+                }
+                b')' => {
+                    paren_depth -= 1;
+                    self.advance(1);
+                }
                 b';' => {
                     self.advance(1);
                     return;
@@ -210,6 +248,9 @@ impl<'a> Scanner<'a> {
             match self.bytes[self.pos] {
                 b'"' | b'\'' => self.skip_string_literal(),
                 b'/' if self.peek_at(1) == Some(b'*') => self.skip_comment(),
+                b'/' if self.scss && self.peek_at(1) == Some(b'/') => {
+                    self.skip_line_comment();
+                }
                 b'{' => {
                     depth += 1;
                     self.advance(1);
@@ -266,6 +307,7 @@ impl<'a> Scanner<'a> {
 
     fn scan_value_end(&mut self) -> usize {
         let mut paren_depth = 0i32;
+        let mut interp_depth = 0i32;
 
         while !self.is_eof() {
             match self.bytes[self.pos] {
@@ -281,7 +323,17 @@ impl<'a> Scanner<'a> {
                     paren_depth -= 1;
                     self.advance(1);
                 }
-                b';' if paren_depth <= 0 => {
+                b'#' if self.peek_at(1) == Some(b'{') => {
+                    // SCSS interpolation — treat `#{ … }` as a balanced group
+                    // so the inner `}` doesn't terminate the value.
+                    interp_depth += 1;
+                    self.advance(2);
+                }
+                b'}' if interp_depth > 0 => {
+                    interp_depth -= 1;
+                    self.advance(1);
+                }
+                b';' if paren_depth <= 0 && interp_depth <= 0 => {
                     let end = self.pos;
                     self.advance(1); // skip ';'
                     return end;
@@ -290,7 +342,7 @@ impl<'a> Scanner<'a> {
                     // Don't consume '}', let the main loop handle brace_depth
                     return self.pos;
                 }
-                b'/' if self.peek_at(1) == Some(b'*') && paren_depth <= 0 => {
+                b'/' if self.peek_at(1) == Some(b'*') && paren_depth <= 0 && interp_depth <= 0 => {
                     // Comment starts — value ends here
                     let end = self.pos;
                     // Skip the comment
@@ -314,7 +366,29 @@ impl<'a> Scanner<'a> {
                     }
                     return end;
                 }
-                b'\n' | b'\r' if paren_depth <= 0 => {
+                b'/' if self.peek_at(1) == Some(b'*') && interp_depth > 0 => {
+                    // Inside `#{ … }` a block comment must be skipped wholesale,
+                    // otherwise a `}` inside it would be mistaken for the
+                    // interpolation closer and pop interp_depth prematurely.
+                    self.skip_comment();
+                }
+                b'/' if self.scss
+                    && self.peek_at(1) == Some(b'/')
+                    && paren_depth <= 0
+                    && interp_depth <= 0 =>
+                {
+                    // SCSS line comment outside parens/interp — terminates value.
+                    let end = self.pos;
+                    self.skip_line_comment();
+                    return end;
+                }
+                b'/' if self.scss && self.peek_at(1) == Some(b'/') && interp_depth > 0 => {
+                    // Inside `#{ … }` a `}` in the comment would otherwise pop
+                    // interp_depth; skip to EOL instead. (Inside parens we keep
+                    // bytes as-is so `url(//cdn/…)` survives.)
+                    self.skip_line_comment();
+                }
+                b'\n' | b'\r' if paren_depth <= 0 && interp_depth <= 0 => {
                     // Check if the next non-whitespace looks like a new property
                     let mut skip = 1;
                     // For \r\n, skip both bytes
@@ -347,7 +421,7 @@ impl<'a> Scanner<'a> {
 }
 
 pub fn parse(css: &OwnedStr, file_path: &Rc<Path>) -> ParseResult {
-    parse_impl(css, css, file_path, 0, 0, 0, 0)
+    parse_impl(css, css, file_path, 0, 0, 0, is_scss_path(file_path))
 }
 
 /// Used when parsing `<style>` blocks from HTML-like files.
@@ -366,28 +440,34 @@ pub fn parse_with_offset(
         css,
         full_source,
         file_path,
-        0,
         line_offset,
         column_offset,
         byte_offset,
+        is_scss_path(file_path),
     )
+}
+
+fn is_scss_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("scss"))
 }
 
 fn parse_impl(
     css: &OwnedStr,
     source: &OwnedStr,
     file_path: &Rc<Path>,
-    initial_brace_depth: i32,
     line_offset: u32,
     column_offset: u32,
     byte_offset: usize,
+    scss: bool,
 ) -> ParseResult {
-    let mut s = Scanner::new_with_offset(css, line_offset, column_offset);
+    let mut s = Scanner::new_with_offset(css, line_offset, column_offset, scss);
     let mut properties = Vec::new();
     let mut pending_ignores: Vec<OwnedStr> = Vec::new();
     let mut last_comment_end_line: u32 = 0;
 
-    let mut brace_depth = initial_brace_depth;
+    let mut brace_depth = 0i32;
 
     while !s.is_eof() {
         match s.bytes[s.pos] {
@@ -403,6 +483,19 @@ fn parse_impl(
                     pending_ignores.clear();
                 }
                 let content = s.scan_comment(css);
+                last_comment_end_line = s.line;
+                if content.starts_with("cvk-ignore") {
+                    pending_ignores.push(content);
+                }
+            }
+            // SCSS line comments — skip to EOL and capture cvk-ignore content
+            // with the same chain-tracking rules as the block-comment arm above.
+            b'/' if s.scss && s.peek_at(1) == Some(b'/') => {
+                let comment_start_line = s.line;
+                if !pending_ignores.is_empty() && comment_start_line > last_comment_end_line + 1 {
+                    pending_ignores.clear();
+                }
+                let content = s.scan_line_comment(css);
                 last_comment_end_line = s.line;
                 if content.starts_with("cvk-ignore") {
                     pending_ignores.push(content);
@@ -583,9 +676,17 @@ mod tests {
     use super::*;
 
     const TEST_PATH: &str = "test.css";
+    const TEST_SCSS_PATH: &str = "test.scss";
 
     fn test_parse(css: &str) -> ParseResult {
         parse(&OwnedStr::from(css), &Rc::from(PathBuf::from(TEST_PATH)))
+    }
+
+    fn test_parse_scss(css: &str) -> ParseResult {
+        parse(
+            &OwnedStr::from(css),
+            &Rc::from(PathBuf::from(TEST_SCSS_PATH)),
+        )
     }
 
     fn map_owned_str(vec: Vec<&str>) -> Vec<OwnedStr> {
@@ -766,6 +867,194 @@ mod tests {
             result.properties[0].value.raw.as_str(),
             "rgb(calc(100 + 50), 0, 0)"
         );
+    }
+
+    #[test]
+    fn scss_interpolation_in_value() {
+        let css = ":root {\n    --color: #{$brand};\n    --size: 16px;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{$brand}");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--size");
+        assert_eq!(result.properties[1].value.raw.as_str(), "16px");
+    }
+
+    #[test]
+    fn scss_interpolation_with_semicolon_inside() {
+        // Semicolons inside `#{ … }` must not terminate the value.
+        let css = ":root { --x: #{ map-get($m, 'a'); $y } px; --z: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "#{ map-get($m, 'a'); $y } px"
+        );
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--z");
+    }
+
+    #[test]
+    fn scss_interpolation_no_terminator_break() {
+        // The closing `}` of an interpolation must not terminate the value
+        // and must not pop the surrounding rule's brace depth.
+        let css = ".a {\n    --x: #{$a}px;\n    --y: 2;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{$a}px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn scss_interpolation_with_newline_inside() {
+        // A newline inside `#{ … }` must not trigger the missing-semicolon
+        // recovery path.
+        let css = ":root {\n    --x: #{\n        $a\n    };\n    --y: 2;\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "#{\n        $a\n    }"
+        );
+        assert_eq!(result.properties[1].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn scss_line_comment_in_value() {
+        let css = ":root { --x: 16px // comment\n  --y: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_with_semicolon_inside() {
+        // A `;` inside `// …` must not terminate the value early.
+        let css = ":root { --x: 16px // ; trap\n  --y: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_with_closebrace_inside() {
+        // A `}` inside `// …` must not pop the rule's brace_depth.
+        let css = ":root { --x: 16px // } trap\n  --y: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "16px");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_at_top_level() {
+        let css = "// hint\n:root { --x: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_with_brace_at_top_level() {
+        // A `}` inside a top-level `// …` must not affect brace_depth.
+        let css = "// } trap\n:root { --x: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_inside_interp() {
+        // `//` inside `#{ … }` is skipped without terminating the value, so a
+        // `}` in the comment doesn't pop interp_depth.
+        let css = ":root { --x: #{ // } trap\n  $a }; --y: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_line_comment_in_at_rule_prelude() {
+        let css = "@media // legacy ; {\n  (min-width: 1px) { :root { --x: 1; } }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn scss_line_comment_in_at_property_body() {
+        // `}` inside `// …` between declarations of an `@property` body must
+        // not close the body early.
+        let css = "@property --x { initial-value: red; // } trap\n }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "red");
+    }
+
+    #[test]
+    fn scss_protocol_relative_url_in_value_not_line_comment() {
+        // Even in SCSS mode, `//` inside `url(…)` must stay verbatim.
+        let css = ":root { --bg: url(//cdn.example.com/x.png); --y: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "url(//cdn.example.com/x.png)"
+        );
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_protocol_relative_url_in_at_rule_prelude_not_line_comment() {
+        let css = "@import url(//cdn.example.com/x.css);\n:root { --x: 1; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
+    fn css_mode_does_not_treat_double_slash_as_comment() {
+        // CSS custom-property values may legitimately contain `//`
+        // (e.g. raw URLs). In CSS mode the parser must keep them verbatim
+        // rather than truncating at `//`.
+        let css = ":root { --link: https://example.com/path; --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "https://example.com/path"
+        );
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn css_mode_keeps_double_slash_brace_in_value() {
+        // The SCSS-only line-comment recognition must not fire in CSS mode,
+        // so a literal `//` followed by `}` stays as bytes (and the rule's
+        // brace tracking is unaffected).
+        let css = ":root { --x: a//b; --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].value.raw.as_str(), "a//b");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
+    }
+
+    #[test]
+    fn scss_interpolation_with_block_comment_brace() {
+        // A `}` inside a block comment within `#{ … }` must be invisible to
+        // interp-depth tracking; otherwise the surrounding rule's brace
+        // tracking gets thrown off and trailing properties are dropped.
+        let css = ":root { --x: #{ /* } */ $a }; --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{ /* } */ $a }");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
     }
 
     #[test]
@@ -1097,6 +1386,48 @@ mod tests {
     }
 
     #[test]
+    fn scss_at_mixin_body_collects_definitions() {
+        let css = "@mixin theme($name) {\n  :root { --color: $name; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--color");
+        assert_eq!(result.properties[0].value.raw.as_str(), "$name");
+    }
+
+    #[test]
+    fn scss_at_if_else_collects_both_branches() {
+        let css = "@if $dark {\n  :root { --bg: black; }\n}\n@else {\n  :root { --bg: white; }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--bg");
+        assert_eq!(result.properties[0].value.raw.as_str(), "black");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--bg");
+        assert_eq!(result.properties[1].value.raw.as_str(), "white");
+    }
+
+    #[test]
+    fn scss_at_each_collects_definitions() {
+        let css = "@each $name in $colors {\n  .text-#{$name} { color: var(--color-#{$name}); }\n}";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "color");
+        assert_eq!(
+            result.properties[0].value.raw.as_str(),
+            "var(--color-#{$name})"
+        );
+    }
+
+    #[test]
+    fn scss_at_function_with_return_does_not_pollute() {
+        // SCSS @function bodies are full of `@return …;` statement-form at-rules.
+        // Descending must not invent any properties from them.
+        let css = "@function double($n) {\n  @return $n * 2;\n}\n:root { --x: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+    }
+
+    #[test]
     fn at_media_top_level_collects_inner_defs() {
         let css = "@media (prefers-color-scheme: dark) {\n  :root { --color: white; }\n}";
         let result = test_parse(css);
@@ -1173,7 +1504,7 @@ mod tests {
     #[test]
     fn unterminated_comment_consumes_all_bytes() {
         let str = OwnedStr::from("/* {");
-        let mut s = Scanner::new_with_offset(&str, 0, 0);
+        let mut s = Scanner::new_with_offset(&str, 0, 0, false);
         s.skip_comment();
         assert!(
             s.is_eof(),
@@ -1300,6 +1631,83 @@ mod tests {
             result.properties[0].ignore_comments,
             map_owned_str(vec!["cvk-ignore"])
         );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_via_line_comment() {
+        let css = ".a {\n  // cvk-ignore\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_with_rule_name_via_line_comment() {
+        let css = ".a {\n  // cvk-ignore: no-undefined-variable-use\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore: no-undefined-variable-use"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_chain_block_then_line() {
+        let css = ".a {\n  /* cvk-ignore */\n  // cvk-ignore: rule-a\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore", "cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_chain_line_then_block() {
+        let css = ".a {\n  // cvk-ignore\n  /* cvk-ignore: rule-a */\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore", "cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_blank_line_between_line_comments() {
+        let css = ".a {\n  // cvk-ignore\n\n  // cvk-ignore: rule-a\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_resets_after_brace_via_line_comment() {
+        let css = "// cvk-ignore\n.a { --x: red; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn css_mode_double_slash_cvk_ignore_does_not_suppress() {
+        // In CSS mode the `//` is not recognized as a comment, so the directive
+        // never reaches `pending_ignores` and `--x` stays unsuppressed.
+        let css = ".a {\n  // cvk-ignore\n  --x: red;\n}";
+        let result = test_parse(css);
+        let prop = result
+            .properties
+            .iter()
+            .find(|p| p.ident.raw.as_str() == "--x")
+            .expect("--x should still be parsed");
+        assert!(prop.ignore_comments.is_empty());
     }
 
     // CSS escape sequence tests
