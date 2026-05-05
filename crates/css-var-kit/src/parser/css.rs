@@ -132,6 +132,15 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn scan_line_comment(&mut self, css: &'a OwnedStr) -> OwnedStr {
+        self.advance(2); // skip //
+        let content_start = self.pos;
+        while !self.is_eof() && !matches!(self.bytes[self.pos], b'\n' | b'\r') {
+            self.advance(1);
+        }
+        css.map(|s| s[content_start..self.pos].trim())
+    }
+
     fn scan_comment(&mut self, css: &'a OwnedStr) -> OwnedStr {
         self.advance(2); // skip /*
         let content_start = self.pos;
@@ -479,11 +488,18 @@ fn parse_impl(
                     pending_ignores.push(content);
                 }
             }
-            // SCSS line comments — skip to EOL so a `;` or `}` inside doesn't
-            // break parsing. cvk-ignore is intentionally not honored here:
-            // pairing it with `//` is a separate enhancement.
+            // SCSS line comments — skip to EOL and capture cvk-ignore content
+            // with the same chain-tracking rules as the block-comment arm above.
             b'/' if s.scss && s.peek_at(1) == Some(b'/') => {
-                s.skip_line_comment();
+                let comment_start_line = s.line;
+                if !pending_ignores.is_empty() && comment_start_line > last_comment_end_line + 1 {
+                    pending_ignores.clear();
+                }
+                let content = s.scan_line_comment(css);
+                last_comment_end_line = s.line;
+                if content.starts_with("cvk-ignore") {
+                    pending_ignores.push(content);
+                }
             }
             b'@' => {
                 let ignore_comments = std::mem::take(&mut pending_ignores);
@@ -1615,6 +1631,83 @@ mod tests {
             result.properties[0].ignore_comments,
             map_owned_str(vec!["cvk-ignore"])
         );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_via_line_comment() {
+        let css = ".a {\n  // cvk-ignore\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_with_rule_name_via_line_comment() {
+        let css = ".a {\n  // cvk-ignore: no-undefined-variable-use\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore: no-undefined-variable-use"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_chain_block_then_line() {
+        let css = ".a {\n  /* cvk-ignore */\n  // cvk-ignore: rule-a\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore", "cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_chain_line_then_block() {
+        let css = ".a {\n  // cvk-ignore\n  /* cvk-ignore: rule-a */\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore", "cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_blank_line_between_line_comments() {
+        let css = ".a {\n  // cvk-ignore\n\n  // cvk-ignore: rule-a\n  --x: red;\n}";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert_eq!(
+            result.properties[0].ignore_comments,
+            map_owned_str(vec!["cvk-ignore: rule-a"])
+        );
+    }
+
+    #[test]
+    fn scss_cvk_ignore_resets_after_brace_via_line_comment() {
+        let css = "// cvk-ignore\n.a { --x: red; }";
+        let result = test_parse_scss(css);
+        assert_eq!(result.properties.len(), 1);
+        assert!(result.properties[0].ignore_comments.is_empty());
+    }
+
+    #[test]
+    fn css_mode_double_slash_cvk_ignore_does_not_suppress() {
+        // In CSS mode the `//` is not recognized as a comment, so the directive
+        // never reaches `pending_ignores` and `--x` stays unsuppressed.
+        let css = ".a {\n  // cvk-ignore\n  --x: red;\n}";
+        let result = test_parse(css);
+        let prop = result
+            .properties
+            .iter()
+            .find(|p| p.ident.raw.as_str() == "--x")
+            .expect("--x should still be parsed");
+        assert!(prop.ignore_comments.is_empty());
     }
 
     // CSS escape sequence tests
