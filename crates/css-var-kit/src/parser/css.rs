@@ -325,6 +325,12 @@ impl<'a> Scanner<'a> {
                     }
                     return end;
                 }
+                b'/' if self.peek_at(1) == Some(b'*') && interp_depth > 0 => {
+                    // Inside `#{ … }` a block comment must be skipped wholesale,
+                    // otherwise a `}` inside it would be mistaken for the
+                    // interpolation closer and pop interp_depth prematurely.
+                    self.skip_comment();
+                }
                 b'\n' | b'\r' if paren_depth <= 0 && interp_depth <= 0 => {
                     // Check if the next non-whitespace looks like a new property
                     let mut skip = 1;
@@ -827,6 +833,20 @@ mod tests {
             "#{\n        $a\n    }"
         );
         assert_eq!(result.properties[1].value.raw.as_str(), "2");
+    }
+
+    #[test]
+    fn scss_interpolation_with_block_comment_brace() {
+        // A `}` inside a block comment within `#{ … }` must be invisible to
+        // interp-depth tracking; otherwise the surrounding rule's brace
+        // tracking gets thrown off and trailing properties are dropped.
+        let css = ":root { --x: #{ /* } */ $a }; --y: 1; }";
+        let result = test_parse(css);
+        assert_eq!(result.properties.len(), 2);
+        assert_eq!(result.properties[0].ident.raw.as_str(), "--x");
+        assert_eq!(result.properties[0].value.raw.as_str(), "#{ /* } */ $a }");
+        assert_eq!(result.properties[1].ident.raw.as_str(), "--y");
+        assert_eq!(result.properties[1].value.raw.as_str(), "1");
     }
 
     #[test]
