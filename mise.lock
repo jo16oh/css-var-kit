@@ -108,81 +108,81 @@ checksum = "sha256:cc5149eabd53779ce1e7bdc5401643622d0c7e6800ade18928a767e940bb0
 url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-win-x64.zip"
 
 [[tools.pinact]]
-version = "3.9.0"
+version = "3.9.2"
 backend = "aqua:suzuki-shunsuke/pinact"
 
 [tools.pinact."platforms.linux-arm64"]
-checksum = "sha256:34a957423002662c6289782b571660beda6a37449a76d763c8ad8b1b9a500a54"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_linux_arm64.tar.gz"
+checksum = "sha256:468bf7afd0f22b30ecb17fcf02f76d8b5c3bca59bb85a29017d7daebde96b33f"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_linux_arm64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.linux-arm64-musl"]
-checksum = "sha256:34a957423002662c6289782b571660beda6a37449a76d763c8ad8b1b9a500a54"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_linux_arm64.tar.gz"
+checksum = "sha256:468bf7afd0f22b30ecb17fcf02f76d8b5c3bca59bb85a29017d7daebde96b33f"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_linux_arm64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.linux-x64"]
-checksum = "sha256:3829da718de38b1e914b974c3e77045a256999af84789437a7305b09130d8a6a"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_linux_amd64.tar.gz"
+checksum = "sha256:6adcc8a2217e4114e0841f8bca0cddf9958a9c52e3e89760c35b791cdba1a916"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_linux_amd64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.linux-x64-musl"]
-checksum = "sha256:3829da718de38b1e914b974c3e77045a256999af84789437a7305b09130d8a6a"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_linux_amd64.tar.gz"
+checksum = "sha256:6adcc8a2217e4114e0841f8bca0cddf9958a9c52e3e89760c35b791cdba1a916"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_linux_amd64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.macos-arm64"]
-checksum = "sha256:23c8a4eda8fd7949c8cbb1cfe6f3d01279402fe6201e9cb0a90447a5ecfdef89"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_darwin_arm64.tar.gz"
+checksum = "sha256:4a6b481b16b7bb67153f96aaf60cbe61d3a739bdce35b1cb3fd3de5372f58c31"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_darwin_arm64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.macos-x64"]
-checksum = "sha256:70f68407a05fa88843fbf9b400d979e6205489ef8af251dacc21841a07989df4"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_darwin_amd64.tar.gz"
+checksum = "sha256:5facbcd8cd4e20fb88c4ef3ace9c54b7d295735563634ef4373694cd286be67a"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_darwin_amd64.tar.gz"
 provenance = "github-attestations"
 
 [tools.pinact."platforms.windows-x64"]
-checksum = "sha256:b923a567f88417d79ce183e59c2a2372d9cae9b697a472ce1f95d745932746b1"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.0/pinact_windows_amd64.zip"
+checksum = "sha256:a7f82e352eb4f706addfb864a7c4853f34bdcfc604ebef8733adecbbbacaaeef"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v3.9.2/pinact_windows_amd64.zip"
 provenance = "github-attestations"
 
 [[tools.prek]]
-version = "0.3.10"
+version = "0.3.11"
 backend = "aqua:j178/prek"
 
 [tools.prek."platforms.linux-arm64"]
-checksum = "sha256:50e585ce98988b70d79ec782b2cf6c787c2f0a97a448ba8594448b4a6a688943"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:057484ce99ccbe8ecad17ca78748098cfa209d4018fa0182181d95b2e63057ff"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-aarch64-unknown-linux-musl.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-arm64-musl"]
-checksum = "sha256:50e585ce98988b70d79ec782b2cf6c787c2f0a97a448ba8594448b4a6a688943"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:057484ce99ccbe8ecad17ca78748098cfa209d4018fa0182181d95b2e63057ff"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-aarch64-unknown-linux-musl.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-x64"]
-checksum = "sha256:60a873474e2ff2f70a5ad524d1b51abb6fdf5991900001eb7c8979877d75dacd"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:7671b1b17dd5a3c01e1772323b2688ab2956d737f2b5fdd15f49a7eb14eff837"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-x86_64-unknown-linux-musl.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.linux-x64-musl"]
-checksum = "sha256:60a873474e2ff2f70a5ad524d1b51abb6fdf5991900001eb7c8979877d75dacd"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:7671b1b17dd5a3c01e1772323b2688ab2956d737f2b5fdd15f49a7eb14eff837"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-x86_64-unknown-linux-musl.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.macos-arm64"]
-checksum = "sha256:e885e023ddb765ba31a2859bd4b9683f9b40fee3195c189a749bc4b28535ab5c"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-aarch64-apple-darwin.tar.gz"
+checksum = "sha256:a01aebbb7fcebeb1cb5c074e1a3d00cc51a283a5bd8990fce6765c5d350ac602"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-aarch64-apple-darwin.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.macos-x64"]
-checksum = "sha256:313882a8bfd76eb6930949ded36b23ce194ccb5431f474c62ae3fde12df100ae"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-x86_64-apple-darwin.tar.gz"
+checksum = "sha256:53cd52b8ed1192d6a183775027e9d68a39e8e2470932c4caf20ea548c0bd9633"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-x86_64-apple-darwin.tar.gz"
 provenance = "github-attestations"
 
 [tools.prek."platforms.windows-x64"]
-checksum = "sha256:43b85e061bbcf6febb9973a7859d029f29f5ddeeb7722bd234422d8b6bee4406"
-url = "https://github.com/j178/prek/releases/download/v0.3.10/prek-x86_64-pc-windows-msvc.zip"
+checksum = "sha256:a40604c7a10e6876423fb53ce3325615a2e90b5b3f09e15676b1d2fe74e56948"
+url = "https://github.com/j178/prek/releases/download/v0.3.11/prek-x86_64-pc-windows-msvc.zip"
 provenance = "github-attestations"
 
 [[tools.rust]]
@@ -222,33 +222,33 @@ checksum = "sha256:8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e7
 url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip"
 
 [[tools.tombi]]
-version = "0.9.24"
+version = "0.10.2"
 backend = "aqua:tombi-toml/tombi"
 
 [tools.tombi."platforms.linux-arm64"]
-checksum = "sha256:abf65df01b3a16e059c18b5b8fdb9931c0b941a5bebb4f577cfd4ca46c05011d"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:9cb16ec45802bc84cb76bb955facb4f1c5de9bd36f349075765ed12d180ceccf"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-arm64-musl"]
-checksum = "sha256:abf65df01b3a16e059c18b5b8fdb9931c0b941a5bebb4f577cfd4ca46c05011d"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:9cb16ec45802bc84cb76bb955facb4f1c5de9bd36f349075765ed12d180ceccf"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-aarch64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-x64"]
-checksum = "sha256:b1e7cec2c165fd5cf2f6c97e607a4ac8870120c3d1163ad6e354198fc67443d5"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:c4268eaaea8a7eb23c8578b5d8976b2490e748670a3725db4f5e4352f9d3076c"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-x86_64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.linux-x64-musl"]
-checksum = "sha256:b1e7cec2c165fd5cf2f6c97e607a4ac8870120c3d1163ad6e354198fc67443d5"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:c4268eaaea8a7eb23c8578b5d8976b2490e748670a3725db4f5e4352f9d3076c"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-x86_64-unknown-linux-musl.tar.gz"
 
 [tools.tombi."platforms.macos-arm64"]
-checksum = "sha256:860ebb82ec47049239fb52a20c537489100ec1a3a1c1f42d59a5dde647c88d78"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-aarch64-apple-darwin.tar.gz"
+checksum = "sha256:e456b5518923f1c3b3b136aa92c57aa9ffc6f27d8ce155af337509d3f5a3a619"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-aarch64-apple-darwin.tar.gz"
 
 [tools.tombi."platforms.macos-x64"]
-checksum = "sha256:d07b4241de3e58dbdc93304cc2575a694f0468b2323f6dc312809329b6e1574f"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-apple-darwin.tar.gz"
+checksum = "sha256:b3ed94dc4396f565728a7ccb08de466de13607b3f4e73741ab5a3d13571e46f7"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-x86_64-apple-darwin.tar.gz"
 
 [tools.tombi."platforms.windows-x64"]
-checksum = "sha256:ed619035f4669802a10eac25944f1706b3993bf44727e056ac290d7c9b3b2336"
-url = "https://github.com/tombi-toml/tombi/releases/download/v0.9.24/tombi-cli-0.9.24-x86_64-pc-windows-msvc.zip"
+checksum = "sha256:8ecfb32d7fe90612a626a25500fa92a9b4e42dbad6a00f202849901a058dd6a7"
+url = "https://github.com/tombi-toml/tombi/releases/download/v0.10.2/tombi-cli-0.10.2-x86_64-pc-windows-msvc.zip"
