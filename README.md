@@ -90,7 +90,7 @@ language-servers = ["css-var-kit"]
 
 ### Zed
 
-Coming soon...
+👉 [css-var-kit — Zed Extension](https://zed.dev/extensions/css-var-kit-lsp)
 
 ## Planned Features 📝
 
