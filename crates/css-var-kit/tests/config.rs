@@ -18,14 +18,22 @@ fn root_dir_is_relative_to_config_file() {
 fn config_with_trailing_commas_is_discovered_and_parsed() {
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
     cmd.current_dir(format!("{FIXTURES}/trailing-comma"));
-    cmd.arg("lint").assert().success();
+    cmd.arg("lint")
+        .assert()
+        .success()
+        .stderr(predicates::str::is_empty());
 }
 
 #[test]
-fn config_with_trailing_commas_is_parsed_when_specified() {
+fn config_with_unterminated_block_comment_is_rejected() {
+    // unterminated-comment/cvk.json disables the rules before an unclosed `/*`,
+    // so lint would pass if the dangling comment were silently accepted.
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
-    cmd.current_dir(format!("{FIXTURES}/trailing-comma"));
-    cmd.args(["lint", "-c", "cvk.jsonc"]).assert().success();
+    cmd.current_dir(format!("{FIXTURES}/unterminated-comment"));
+    cmd.arg("lint")
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("failed to parse"));
 }
 
 #[test]
@@ -53,12 +61,15 @@ fn unreadable_config_is_reported_instead_of_falling_back() {
 fn cvk_json_takes_precedence_over_cvk_jsonc_with_warning() {
     // multiple-configs/cvk.json disables no-undefined-variable-use while cvk.jsonc is empty,
     // so lint passes only if cvk.json is used.
+    let root = std::path::Path::new(FIXTURES).join("multiple-configs");
     let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
-    cmd.current_dir(format!("{FIXTURES}/multiple-configs"));
+    cmd.current_dir(&root);
     cmd.arg("lint")
         .assert()
         .success()
-        .stderr(predicates::str::contains(
-            "warning: multiple config files found",
-        ));
+        .stderr(predicates::str::contains(format!(
+            "warning: multiple config files found; using {} and ignoring {}",
+            root.join("cvk.json").display(),
+            root.join("cvk.jsonc").display(),
+        )));
 }

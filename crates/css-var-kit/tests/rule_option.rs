@@ -1,7 +1,6 @@
 mod common;
 
 use common::cvk;
-use predicates::prelude::PredicateBooleanExt;
 
 #[test]
 fn rule_off_disables_rule() {
@@ -139,12 +138,20 @@ fn multiple_rule_overrides() {
 
 #[test]
 fn enforce_variable_use_jsonc_with_trailing_commas() {
+    // default/components/button.css has a literal `1px` border width.
     cvk()
         .args([
             "lint",
             "--rule",
-            r#"enforce-variable-use={"types":["color",],/* comment */}"#,
+            "no-undefined-variable-use=off",
+            "--rule",
+            "no-variable-type-mismatch=off",
+            "--rule",
+            r#"enforce-variable-use={"types":["length",],/* comment */}"#,
         ])
         .assert()
-        .stderr(predicates::str::contains("invalid --rule value").not());
+        .failure()
+        .stderr(predicates::str::contains(
+            "use a CSS variable instead of the literal length `1px`",
+        ));
 }

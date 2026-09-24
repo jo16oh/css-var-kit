@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -87,6 +88,8 @@ impl RawConfig {
 ///
 /// Strips the whole content at once because the streaming `StripComments` reader
 /// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
+/// The in-place `strip` does not report a comment left open at EOF, so the streaming
+/// reader is still run first to reject it.
 pub(super) fn parse_jsonc<T: DeserializeOwned>(mut raw: String) -> serde_json::Result<T> {
     let bom_len = if raw.starts_with(UTF8_BOM) {
         UTF8_BOM.len_utf8()
@@ -94,9 +97,13 @@ pub(super) fn parse_jsonc<T: DeserializeOwned>(mut raw: String) -> serde_json::R
         0
     };
     let json = &mut raw[bom_len..];
-    json_strip_comments::strip(json)
-        .map_err(serde_json::Error::io)
-        .and_then(|()| serde_json::from_str(json))
+    io::copy(
+        &mut json_strip_comments::StripComments::new(json.as_bytes()),
+        &mut io::sink(),
+    )
+    .and_then(|_| json_strip_comments::strip(json))
+    .map_err(serde_json::Error::io)
+    .and_then(|()| serde_json::from_str(json))
 }
 
 #[derive(Debug, Clone, Deserialize)]
