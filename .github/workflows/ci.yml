@@ -12,20 +12,20 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   TMPDIR: /dev/shm
+  # The MSRV, as in `mise.toml`, `rust-version` and `release.yml`. Every Rust job uses it, so a new
+  # stable's lints cannot block merges until the toolchain bump PR.
+  RUST_TOOLCHAIN: "1.98"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: [stable, "1.98"]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
       - run: cargo test --workspace
 
   clippy:
@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: clippy
       - run: cargo clippy --workspace -- -D warnings
 
@@ -48,7 +48,7 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt
       - run: cargo fmt --all --check
 
@@ -107,7 +107,7 @@ jobs:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           target: wasm32-wasip2
       - working-directory: crates/zed-extension
         run: cargo build --release --target wasm32-wasip2
