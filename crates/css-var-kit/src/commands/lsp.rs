@@ -18,16 +18,16 @@ use crossbeam_channel::Receiver;
 use lsp_server::{Connection, Message, Notification};
 use lsp_types::notification::{
     DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
-    Notification as _, PublishDiagnostics,
+    Notification as _, PublishDiagnostics, ShowMessage,
 };
 use lsp_types::{
     CompletionOptions, DiagnosticOptions, DiagnosticServerCapabilities, HoverProviderCapability,
-    InitializeParams, OneOf, PublishDiagnosticsParams, RenameOptions, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    InitializeParams, MessageType, OneOf, PublishDiagnosticsParams, RenameOptions,
+    ServerCapabilities, ShowMessageParams, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
 };
 
 use crate::commands::lint;
-use crate::config::{Config, RawConfig};
+use crate::config::{Config, ConfigError, RawConfig};
 use crate::file_kinds::is_config_filename;
 use crate::owned_types::OwnedStr;
 use crate::parser::ParseResult;
@@ -77,7 +77,13 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         .and_then(|folder| uri_to_path(&folder.uri))
         .unwrap_or_else(|| cwd.to_path_buf());
 
-    let config = Config::load_for_lsp(&root_dir, init_options.clone())?;
+    let (config, config_error) = match Config::load_for_lsp(&root_dir, init_options.clone()) {
+        Ok(config) => (config, None),
+        Err(e) => (
+            Config::without_rules_for_lsp(&root_dir, init_options.as_ref())?,
+            Some(e),
+        ),
+    };
 
     let logger = (log || config.lsp_log_file.is_some()).then(|| {
         let l = Logger::new(config.lsp_log_file.as_deref());
@@ -124,7 +130,9 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         logger: logger.as_ref(),
     };
 
-    let result = server.main_loop();
+    let result = config_error
+        .map_or(Ok(()), |e| server.report_config_error(&e))
+        .and_then(|()| server.main_loop());
 
     if let Some(l) = &logger {
         match &result {
@@ -363,26 +371,33 @@ impl Server<'_> {
     }
 
     fn reload_config(&mut self) -> Result<(), Box<dyn Error>> {
-        match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
-            Ok(new_config) => {
-                self.config = new_config;
-                let mut source_cache = load_all_sources(&self.config);
-                for (uri, text) in &self.opened_documents {
-                    if let Some(rel_path) = self.uri_to_rel_path(uri) {
-                        source_cache.insert(Rc::<Path>::from(rel_path), OwnedStr::from(text));
-                    }
-                }
-                self.source_cache = source_cache;
-                self.parse_cache = build_parse_cache(&self.source_cache);
-                self.searcher = build_searcher(&self.parse_cache, &self.config);
-                self.log("config reloaded");
-                self.publish_all_diagnostics()?;
-            }
+        self.config = match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
+            Ok(config) => config,
             Err(e) => {
-                self.log(&format!("config reload failed: {e}"));
+                self.report_config_error(&e)?;
+                Config::without_rules_for_lsp(&self.lsp_root_dir, self.init_options.as_ref())?
+            }
+        };
+        let mut source_cache = load_all_sources(&self.config);
+        for (uri, text) in &self.opened_documents {
+            if let Some(rel_path) = self.uri_to_rel_path(uri) {
+                source_cache.insert(Rc::<Path>::from(rel_path), OwnedStr::from(text));
             }
         }
-        Ok(())
+        self.source_cache = source_cache;
+        self.parse_cache = build_parse_cache(&self.source_cache);
+        self.searcher = build_searcher(&self.parse_cache, &self.config);
+        self.log("config reloaded");
+        self.publish_all_diagnostics()
+    }
+
+    fn report_config_error(&self, error: &ConfigError) -> Result<(), Box<dyn Error>> {
+        let message = format!("cvk: {error}. Diagnostics are disabled until the config is fixed.");
+        self.log(&message);
+        self.send_notification::<ShowMessage>(ShowMessageParams {
+            typ: MessageType::ERROR,
+            message,
+        })
     }
 
     fn send_notification<N: lsp_types::notification::Notification>(

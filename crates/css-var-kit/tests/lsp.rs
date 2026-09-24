@@ -865,6 +865,82 @@ fn config_reload_updates_rules_via_watched_files() {
 }
 
 #[test]
+fn broken_config_on_startup_disables_diagnostics_and_shows_error() {
+    // Without a usable config the default rules would report --spacing-md in button.css.
+    let tmp = copy_fixture_to_tempdir("default");
+    fs::write(tmp.path().join("cvk.json"), "{ broken").unwrap();
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+
+    let diagnostics = client.collect_diagnostics();
+    let completion = client.request_completion(&button_uri, 1, 13);
+    client.shutdown();
+
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.is_empty(),
+        "broken config should disable diagnostics, got: {messages:?}"
+    );
+    assert!(
+        client
+            .shown_messages()
+            .iter()
+            .any(|m| m.contains("failed to parse") && m.contains("cvk.json")),
+        "expected a config error message, got: {:?}",
+        client.shown_messages()
+    );
+    assert!(
+        completion.get("result").is_some(),
+        "server should keep serving requests, got: {completion}"
+    );
+}
+
+#[test]
+fn config_reload_to_broken_config_clears_diagnostics_and_shows_error() {
+    let tmp = copy_fixture_to_tempdir("default");
+
+    let mut client = LspClient::spawn(tmp.path());
+    client.initialize();
+
+    let button_uri = client.file_uri("components/button.css");
+    let button_text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&button_uri, &button_text);
+    let _ = client.collect_diagnostics();
+
+    fs::write(tmp.path().join("cvk.json"), "{ broken").unwrap();
+    let config_uri = client.file_uri("cvk.json");
+    client.notify_watched_files_changed(&[&config_uri]);
+
+    let diagnostics = client.collect_diagnostics();
+    client.shutdown();
+
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        diagnostics
+            .iter()
+            .any(|p| p.uri.ends_with("components/button.css")),
+        "expected button.css diagnostics to be republished after reload"
+    );
+    assert!(
+        messages.is_empty(),
+        "broken config should clear diagnostics, got: {messages:?}"
+    );
+    assert!(
+        client
+            .shown_messages()
+            .iter()
+            .any(|m| m.contains("failed to parse") && m.contains("cvk.json")),
+        "expected a config error message, got: {:?}",
+        client.shown_messages()
+    );
+}
+
+#[test]
 fn config_reload_updates_rules_via_server_watcher() {
     let tmp = copy_fixture_to_tempdir("default");
 

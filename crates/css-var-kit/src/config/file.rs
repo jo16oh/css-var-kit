@@ -1,13 +1,16 @@
 use std::fs;
-use std::path::Path;
+use std::io;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
-use serde::de::{self, Deserializer};
+use serde::de::{self, DeserializeOwned, Deserializer};
 
 use super::ConfigError;
 use crate::file_kinds::CONFIG_FILENAMES;
 use crate::rules::Severity;
 use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
+
+const UTF8_BOM: char = '\u{feff}';
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,16 +52,23 @@ impl Default for RawConfig {
 impl RawConfig {
     /// Searches for `cvk.json` or `cvk.jsonc` in `project_root`.
     /// Returns `Ok(Some(config))` if found, `Ok(None)` if no config file exists.
+    /// If both exist, `cvk.json` is used and a warning is printed.
     pub fn load(project_root: &Path) -> Result<Option<Self>, ConfigError> {
-        CONFIG_FILENAMES
+        let existing: Vec<PathBuf> = CONFIG_FILENAMES
             .iter()
             .map(|name| project_root.join(name))
-            .find_map(|path| fs::read_to_string(&path).ok().map(|raw| (path, raw)))
-            .map(|(path, raw)| {
-                let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-                serde_json::from_reader(stripped)
-                    .map_err(|e| ConfigError::Parse { path, source: e })
-            })
+            .filter(|path| path.is_file())
+            .collect();
+
+        if let [used, ignored @ ..] = existing.as_slice()
+            && !ignored.is_empty()
+        {
+            warn_multiple_config_files(used, ignored);
+        }
+
+        existing
+            .first()
+            .map(|path| Self::load_from(path))
             .transpose()
     }
 
@@ -67,12 +77,33 @@ impl RawConfig {
             path: path.to_path_buf(),
             source: e,
         })?;
-        let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-        serde_json::from_reader(stripped).map_err(|e| ConfigError::Parse {
+        parse_jsonc(raw).map_err(|e| ConfigError::Parse {
             path: path.to_path_buf(),
             source: e,
         })
     }
+}
+
+/// Parses JSON that may contain a leading BOM, comments and trailing commas.
+///
+/// Strips the whole content at once because the streaming `StripComments` reader
+/// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
+/// The in-place `strip` does not report a comment left open at EOF, so the streaming
+/// reader is still run first to reject it.
+pub(super) fn parse_jsonc<T: DeserializeOwned>(mut raw: String) -> serde_json::Result<T> {
+    let bom_len = if raw.starts_with(UTF8_BOM) {
+        UTF8_BOM.len_utf8()
+    } else {
+        0
+    };
+    let json = &mut raw[bom_len..];
+    io::copy(
+        &mut json_strip_comments::StripComments::new(json.as_bytes()),
+        &mut io::sink(),
+    )
+    .and_then(|_| json_strip_comments::strip(json))
+    .map_err(serde_json::Error::io)
+    .and_then(|()| serde_json::from_str(json))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -129,6 +160,18 @@ impl<'de> Deserialize<'de> for SeverityToggle {
             )),
         }
     }
+}
+
+fn warn_multiple_config_files(used: &Path, ignored: &[PathBuf]) {
+    let ignored_names = ignored
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    eprintln!(
+        "warning: multiple config files found; using {} and ignoring {ignored_names}",
+        used.display()
+    );
 }
 
 fn default_root_dir() -> String {

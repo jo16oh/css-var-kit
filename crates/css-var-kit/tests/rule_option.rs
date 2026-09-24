@@ -135,3 +135,23 @@ fn multiple_rule_overrides() {
         .assert()
         .success();
 }
+
+#[test]
+fn enforce_variable_use_jsonc_with_trailing_commas() {
+    // default/components/button.css has a literal `1px` border width.
+    cvk()
+        .args([
+            "lint",
+            "--rule",
+            "no-undefined-variable-use=off",
+            "--rule",
+            "no-variable-type-mismatch=off",
+            "--rule",
+            r#"enforce-variable-use={"types":["length",],/* comment */}"#,
+        ])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains(
+            "use a CSS variable instead of the literal length `1px`",
+        ));
+}

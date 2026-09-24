@@ -40,6 +40,15 @@ impl Rules {
         Ok(rules)
     }
 
+    pub(in crate::config) fn disabled() -> Self {
+        Self {
+            no_undefined_variable_use: None,
+            enforce_variable_use: None,
+            no_variable_type_mismatch: None,
+            no_inconsistent_variable_definition: None,
+        }
+    }
+
     fn validate_dependencies(&self) -> Result<(), ConfigError> {
         if self.no_variable_type_mismatch.is_some() {
             if self.no_undefined_variable_use.is_none() {

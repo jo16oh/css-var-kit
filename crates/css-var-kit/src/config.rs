@@ -195,6 +195,27 @@ impl Config {
             raw.lsp.log_file = init_lsp_log_file;
         }
 
+        Self::from_raw_for_lsp(&project_root, raw)
+    }
+
+    /// Config for LSP to fall back on while the config file is broken. Files are still
+    /// indexed for completion and hover, but no rule runs, so rules the user turned off
+    /// do not flood the editor with diagnostics.
+    pub fn without_rules_for_lsp(
+        root_dir: &Path,
+        init_options: Option<&file::RawConfig>,
+    ) -> Result<Self, ConfigError> {
+        let raw = file::RawConfig {
+            lsp: init_options.map(|c| c.lsp.clone()).unwrap_or_default(),
+            ..Default::default()
+        };
+        Self::from_raw_for_lsp(&find_project_root(root_dir), raw).map(|config| Self {
+            rules: Rules::disabled(),
+            ..config
+        })
+    }
+
+    fn from_raw_for_lsp(project_root: &Path, raw: file::RawConfig) -> Result<Self, ConfigError> {
         let resolved_root_dir = project_root.join(&raw.root_dir);
 
         let definition_patterns = raw.definition_files.as_deref().unwrap_or(&raw.lookup_files);
@@ -265,7 +286,7 @@ impl RawRules {
                 SeverityToggle::Warn,
             )),
             "off" => Ok(RawEnforceVariableUse::Off),
-            v if v.starts_with('{') => serde_json::from_str(v)
+            v if v.starts_with('{') => file::parse_jsonc(v.to_owned())
                 .map(RawEnforceVariableUse::Config)
                 .map_err(|e| e.to_string()),
             _ => Err("expected 'error', 'warn', 'on', 'off', or a JSON object".into()),

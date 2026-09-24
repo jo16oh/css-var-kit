@@ -1,0 +1,9 @@
+{
+  // trailing commas are allowed in jsonc
+  "lookupFiles": ["**/*.css",],
+  "rules": {
+    "no-undefined-variable-use": "off",
+    "no-variable-type-mismatch": "off",
+    "enforce-variable-use": "off", /* comment after trailing comma */
+  },
+}

@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "no-undefined-variable-use": "off",
+    "no-variable-type-mismatch": "off"
+  }
+}
