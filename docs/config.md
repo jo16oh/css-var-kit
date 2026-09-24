@@ -1,6 +1,7 @@
 # Configuration
 
 Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
+Comments and trailing commas are allowed in both. If both files exist, `cvk.json` takes precedence and a warning is printed.
 
 ```jsonc
 // Default configuration (all fields are optional).

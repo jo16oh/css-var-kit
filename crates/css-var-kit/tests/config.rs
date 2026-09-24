@@ -48,3 +48,17 @@ fn unreadable_config_is_reported_instead_of_falling_back() {
         .failure()
         .stderr(predicates::str::contains("cannot read config file"));
 }
+
+#[test]
+fn cvk_json_takes_precedence_over_cvk_jsonc_with_warning() {
+    // multiple-configs/cvk.json disables no-undefined-variable-use while cvk.jsonc is empty,
+    // so lint passes only if cvk.json is used.
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(format!("{FIXTURES}/multiple-configs"));
+    cmd.arg("lint")
+        .assert()
+        .success()
+        .stderr(predicates::str::contains(
+            "warning: multiple config files found",
+        ));
+}

@@ -1,6 +1,5 @@
 use std::fs;
-use std::io::ErrorKind;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use serde::de::{self, Deserializer};
@@ -52,15 +51,23 @@ impl Default for RawConfig {
 impl RawConfig {
     /// Searches for `cvk.json` or `cvk.jsonc` in `project_root`.
     /// Returns `Ok(Some(config))` if found, `Ok(None)` if no config file exists.
+    /// If both exist, `cvk.json` is used and a warning is printed.
     pub fn load(project_root: &Path) -> Result<Option<Self>, ConfigError> {
-        CONFIG_FILENAMES
+        let existing: Vec<PathBuf> = CONFIG_FILENAMES
             .iter()
             .map(|name| project_root.join(name))
-            .find_map(|path| match fs::read_to_string(&path) {
-                Ok(raw) => Some(Self::parse(&path, raw)),
-                Err(e) if e.kind() == ErrorKind::NotFound => None,
-                Err(e) => Some(Err(ConfigError::ReadFile { path, source: e })),
-            })
+            .filter(|path| path.is_file())
+            .collect();
+
+        if let [used, ignored @ ..] = existing.as_slice()
+            && !ignored.is_empty()
+        {
+            warn_multiple_config_files(used, ignored);
+        }
+
+        existing
+            .first()
+            .map(|path| Self::load_from(path))
             .transpose()
     }
 
@@ -145,6 +152,18 @@ impl<'de> Deserialize<'de> for SeverityToggle {
             )),
         }
     }
+}
+
+fn warn_multiple_config_files(used: &Path, ignored: &[PathBuf]) {
+    let ignored_names = ignored
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    eprintln!(
+        "warning: multiple config files found; using {} and ignoring {ignored_names}",
+        used.display()
+    );
 }
 
 fn default_root_dir() -> String {
