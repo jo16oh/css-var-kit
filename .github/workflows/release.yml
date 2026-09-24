@@ -29,6 +29,7 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
       due: ${{ steps.tag.outputs.due }}
+      release-pr: ${{ steps.release-pr.outputs.number }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -50,18 +51,21 @@ jobs:
 
       # A version bump that did not come through `just bump-version` stops here instead of releasing.
       - name: Verify commit is a merged release PR
+        id: release-pr
         if: steps.tag.outputs.due == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" |
-            jq -e --arg tag "$TAG" 'any(.[];
+          number=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" |
+            jq -r --arg tag "$TAG" 'first(.[] | select(
               .merged_at != null
               and .head.repo.full_name == .base.repo.full_name
               and .head.ref == "chore/release-\($tag[1:])"
-              and .title == "chore: release \($tag)")' > /dev/null ||
+              and .title == "chore: release \($tag)") | .number) // empty')
+          [ -n "$number" ] ||
             { echo "::error::$GITHUB_SHA is not a merged chore/release-${TAG#v} PR titled \"chore: release $TAG\""; exit 1; }
+          echo "number=$number" >> "$GITHUB_OUTPUT"
 
       - name: Verify tag matches package versions
         env:
@@ -329,10 +333,9 @@ jobs:
       # grouped by `.github/release.yml`; edit them on the release page afterwards if needed.
       - name: Create GitHub Release
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" |
-            jq -r --arg ref "chore/release-${TAG#v}" '.[] | select(.merged_at != null and .head.ref == $ref) | .body // ""' \
-            > "$RUNNER_TEMP/release-pr-body.md"
+          gh pr view "$RELEASE_PR" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-pr-body.md"
           gh release create "$TAG" --verify-tag --notes-file "$RUNNER_TEMP/release-pr-body.md" --generate-notes dist/*
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.verify.outputs.tag }}
+          RELEASE_PR: ${{ needs.verify.outputs.release-pr }}
