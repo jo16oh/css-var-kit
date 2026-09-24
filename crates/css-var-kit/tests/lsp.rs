@@ -803,6 +803,62 @@ fn initialization_options_ignored_when_config_file_exists() {
 }
 
 #[test]
+fn invalid_initialization_options_disable_diagnostics_and_show_error() {
+    let fixture_dir = Path::new(common::FIXTURES).join("no-config");
+    let mut client = LspClient::spawn(&fixture_dir);
+
+    client.initialize_with_options(Some(serde_json::json!({ "rootDir": 1 })));
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(fixture_dir.join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let diagnostics = client.collect_diagnostics();
+    client.shutdown();
+
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.is_empty(),
+        "invalid initializationOptions should disable diagnostics, got: {messages:?}"
+    );
+    assert!(
+        client
+            .shown_messages()
+            .iter()
+            .any(|m| m.contains("invalid initializationOptions")),
+        "expected an initializationOptions error message, got: {:?}",
+        client.shown_messages()
+    );
+}
+
+#[test]
+fn invalid_initialization_options_ignored_when_config_file_exists() {
+    let tmp = copy_fixture_to_tempdir("default");
+
+    let mut client = LspClient::spawn(tmp.path());
+
+    client.initialize_with_options(Some(serde_json::json!({ "rootDir": 1 })));
+
+    let uri = client.file_uri("components/button.css");
+    let text = fs::read_to_string(tmp.path().join("components/button.css")).unwrap();
+    client.open_document(&uri, &text);
+
+    let diagnostics = client.collect_diagnostics();
+    client.shutdown();
+
+    let messages = collect_messages_for(&diagnostics, "components/button.css");
+    assert!(
+        messages.iter().any(|m| m.contains("--spacing-md")),
+        "cvk.json should be used regardless of initializationOptions, got: {messages:?}"
+    );
+    assert!(
+        client.shown_messages().is_empty(),
+        "expected no error message, got: {:?}",
+        client.shown_messages()
+    );
+}
+
+#[test]
 fn excluded_file_produces_no_diagnostics_on_open() {
     let tmp = copy_fixture_to_tempdir("default");
     fs::write(

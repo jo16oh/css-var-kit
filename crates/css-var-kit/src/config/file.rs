@@ -72,6 +72,10 @@ impl RawConfig {
             .transpose()
     }
 
+    pub fn from_init_options(value: &serde_json::Value) -> Result<Self, ConfigError> {
+        Self::deserialize(value).map_err(|e| ConfigError::InitOptions { source: e })
+    }
+
     pub(super) fn load_from(path: &Path) -> Result<Self, ConfigError> {
         let raw = fs::read_to_string(path).map_err(|e| ConfigError::ReadFile {
             path: path.to_path_buf(),
