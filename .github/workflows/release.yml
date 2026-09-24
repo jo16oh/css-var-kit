@@ -165,6 +165,8 @@ jobs:
   publish:
     needs: tag
     runs-on: ubuntu-latest
+    # npm and crates.io trust only this environment, so only `main` can publish.
+    environment: release
     permissions:
       contents: read
       id-token: write
