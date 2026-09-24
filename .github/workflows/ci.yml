@@ -12,8 +12,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   TMPDIR: /dev/shm
-  # The MSRV, as in `mise.toml` and `rust-version`. Every Rust job uses it, so a new stable's lints
-  # cannot block merges until the toolchain bump PR.
+  # The MSRV, as in `mise.toml`, `rust-version` and `release.yml`. Every Rust job uses it, so a new
+  # stable's lints cannot block merges until the toolchain bump PR.
   RUST_TOOLCHAIN: "1.98"
 
 jobs:
