@@ -18,8 +18,9 @@ jobs:
   tag:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: release
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -61,9 +62,17 @@ jobs:
               and .title == "chore(zed): release \($tag | ltrimstr("zed-"))")' > /dev/null ||
             { echo "::error::$GITHUB_SHA is not a merged chore/release-${TAG#zed-v} PR titled \"chore(zed): release ${TAG#zed-}\""; exit 1; }
 
+      # Only deploy keys may create release tags (the tag ruleset), so the push goes over SSH with the
+      # `release` environment's key. The agent holding it ends with this step, and the key never hits disk.
       - name: Create tag
         if: steps.tag.outputs.due == 'true'
-        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+        run: |
+          eval "$(ssh-agent -s)" > /dev/null
+          trap 'ssh-agent -k > /dev/null' EXIT
+          ssh-add -q - <<< "$RELEASE_TAG_KEY"
+          curl -fsS https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com \(.)"' > "$RUNNER_TEMP/known_hosts"
+          git -c core.sshCommand="ssh -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts" \
+            push "git@github.com:$GITHUB_REPOSITORY.git" "$GITHUB_SHA:refs/tags/$TAG"
         env:
-          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_KEY: ${{ secrets.RELEASE_TAG_KEY }}
           TAG: ${{ steps.tag.outputs.tag }}
