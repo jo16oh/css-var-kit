@@ -1,30 +1,51 @@
-pkgs := "packages/css-var-kit \
-         packages/vscode \
-         packages/cli-darwin-arm64 \
-         packages/cli-darwin-x64 \
-         packages/cli-linux-arm64 \
-         packages/cli-linux-x64 \
-         packages/cli-win32-x64"
+package-jsons := "packages/css-var-kit/package.json \
+                 packages/vscode/package.json \
+                 packages/cli-darwin-arm64/package.json \
+                 packages/cli-darwin-x64/package.json \
+                 packages/cli-linux-arm64/package.json \
+                 packages/cli-linux-x64/package.json \
+                 packages/cli-win32-x64/package.json"
 
 zed-pkg := "crates/zed-extension"
 
-bump-version level:
+# Bumps the version on a release branch cut from the latest main and opens its PR; without `level`, bumpp prompts for it.
+bump-version level="":
     #!/usr/bin/env sh
-    for dir in {{pkgs}}; do
-      (cd "$dir" && pnpm bumpp --release {{level}} --yes --no-commit --no-tag --no-push)
-    done
-    cargo set-version --bump {{level}} --workspace
-    wait
+    set -eu
+
+    git diff --quiet HEAD -- || { echo 'tracked files differ from HEAD; commit them first'; exit 1; }
+
+    git switch main
+    git pull --ff-only
+
+    pnpm bumpp {{package-jsons}} --no-commit --no-tag --no-push {{ if level == "" { "" } else { "--release " + level } }}
+    version=$(node -p "require('./packages/css-var-kit/package.json').version")
+    cargo set-version --workspace "$version"
 
     just sync-optional-deps
     pnpm install --lockfile-only
     cargo generate-lockfile
 
-    version=$(node -p "require('./packages/css-var-kit/package.json').version")
-
+    # bumpp only picks the version; the branch is named after it, so it is cut afterwards.
+    git switch -c "chore/release-$version"
     git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
-    git commit -m "chore: bump version to $version"
-    git tag "v$version"
+    git commit -m "chore: release v$version"
+    git push -u origin HEAD
+    gh pr create --fill --label skip-changelog
+
+# Tags the merged release on main; the pushed tag triggers the release workflow.
+push-tag:
+    #!/usr/bin/env sh
+    set -eu
+
+    git diff --quiet HEAD -- || { echo 'tracked files differ from HEAD; commit them before tagging'; exit 1; }
+
+    git switch main
+    git pull --ff-only
+
+    tag="v$(node -p "require('./packages/css-var-kit/package.json').version")"
+    git tag "$tag"
+    git push origin "$tag"
 
 bump-zed-version level:
     #!/usr/bin/env sh
