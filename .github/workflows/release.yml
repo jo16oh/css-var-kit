@@ -142,13 +142,24 @@ jobs:
   tag:
     needs: [verify, build]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    environment: release
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      # Only deploy keys may create release tags (the tag ruleset), so the push goes over SSH with the
+      # `release` environment's key. The agent holding it ends with this step, and the key never hits disk.
       - name: Create tag
-        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+        run: |
+          eval "$(ssh-agent -s)" > /dev/null
+          trap 'ssh-agent -k > /dev/null' EXIT
+          ssh-add -q - <<< "$RELEASE_TAG_KEY"
+          curl -fsS https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com \(.)"' > "$RUNNER_TEMP/known_hosts"
+          git -c core.sshCommand="ssh -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts" \
+            push "git@github.com:$GITHUB_REPOSITORY.git" "$GITHUB_SHA:refs/tags/$TAG"
         env:
-          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG_KEY: ${{ secrets.RELEASE_TAG_KEY }}
           TAG: ${{ needs.verify.outputs.tag }}
 
   publish:
