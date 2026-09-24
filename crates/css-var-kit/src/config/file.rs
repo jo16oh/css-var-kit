@@ -9,6 +9,8 @@ use crate::file_kinds::CONFIG_FILENAMES;
 use crate::rules::Severity;
 use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 
+const UTF8_BOM: char = '\u{feff}';
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawConfig {
@@ -69,9 +71,15 @@ impl RawConfig {
     /// Strips the whole content at once because the streaming `StripComments` reader
     /// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
     fn parse(path: &Path, mut raw: String) -> Result<Self, ConfigError> {
-        json_strip_comments::strip(&mut raw)
+        let bom_len = if raw.starts_with(UTF8_BOM) {
+            UTF8_BOM.len_utf8()
+        } else {
+            0
+        };
+        let json = &mut raw[bom_len..];
+        json_strip_comments::strip(json)
             .map_err(serde_json::Error::io)
-            .and_then(|()| serde_json::from_str(&raw))
+            .and_then(|()| serde_json::from_str(json))
             .map_err(|e| ConfigError::Parse {
                 path: path.to_path_buf(),
                 source: e,

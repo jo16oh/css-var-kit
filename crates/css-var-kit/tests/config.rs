@@ -27,3 +27,12 @@ fn config_with_trailing_commas_is_parsed_when_specified() {
     cmd.current_dir(format!("{FIXTURES}/trailing-comma"));
     cmd.args(["lint", "-c", "cvk.jsonc"]).assert().success();
 }
+
+#[test]
+fn config_with_utf8_bom_is_parsed() {
+    // bom/cvk.json starts with a UTF-8 BOM and disables no-undefined-variable-use,
+    // so style.css (which uses an undefined variable) should pass.
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(format!("{FIXTURES}/bom"));
+    cmd.arg("lint").assert().success();
+}
