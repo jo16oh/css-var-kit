@@ -1,32 +1,69 @@
 name: Release
 
+# Merging a release PR bumps this file; the run releases whatever version main carries that has no tag yet.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: [packages/css-var-kit/package.json]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Every publish below trusts the tag, so a tag that is off main or ahead of the versions stops here.
   verify:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      due: ${{ steps.tag.outputs.due }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify tag is on main
+      - name: Resolve tag
+        id: tag
         run: |
-          git fetch --quiet origin main
-          git merge-base --is-ancestor HEAD FETCH_HEAD ||
-            { echo "::error::tag $GITHUB_REF_NAME is not reachable from main"; exit 1; }
+          tag="v$(node -p "require('./packages/css-var-kit/package.json').version")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # ls-remote exits 2 when the tag is absent; any other failure must not pass for "absent".
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
+          case $status in
+            0) echo "::notice::$tag already exists; nothing to release"; echo "due=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "due=true" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$status" ;;
+          esac
+
+      # A version bump that did not come through `just bump-version` stops here instead of releasing.
+      - name: Verify commit is a merged release PR
+        if: steps.tag.outputs.due == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" |
+            jq -e --arg tag "$TAG" 'any(.[];
+              .merged_at != null
+              and .head.repo.full_name == .base.repo.full_name
+              and .head.ref == "chore/release-\($tag[1:])"
+              and .title == "chore: release \($tag)")' > /dev/null ||
+            { echo "::error::$GITHUB_SHA is not a merged chore/release-${TAG#v} PR titled \"chore: release $TAG\""; exit 1; }
 
       - name: Verify tag matches package versions
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -o pipefail
           {
@@ -40,10 +77,11 @@ jobs:
             '
             cargo metadata --format-version 1 --no-deps |
               jq -r '.packages[] | select(.name == "css-var-kit") | "Cargo.toml \(.version)"'
-          } | awk -v tag="${GITHUB_REF_NAME#v}" '$NF != tag { print "::error::" $0 " != " tag; failed = 1 } END { exit failed }'
+          } | awk -v tag="${TAG#v}" '$NF != tag { print "::error::" $0 " != " tag; failed = 1 } END { exit failed }'
 
   build:
     needs: verify
+    if: needs.verify.outputs.due == 'true'
     strategy:
       matrix:
         include:
@@ -100,8 +138,21 @@ jobs:
           name: ${{ matrix.npm-pkg }}
           path: packages/${{ matrix.npm-pkg }}/${{ matrix.binary }}
 
+  # Tags are immutable, so tagging only after the builds pass keeps a broken build from burning its version.
+  tag:
+    needs: [verify, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create tag
+        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+
   publish:
-    needs: build
+    needs: tag
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -170,7 +221,7 @@ jobs:
           fi
 
   publish-vscode:
-    needs: build
+    needs: tag
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -235,7 +286,7 @@ jobs:
           path: packages/vscode/*.vsix
 
   github-release:
-    needs: [build, publish-vscode]
+    needs: [verify, publish-vscode]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -261,6 +312,7 @@ jobs:
       # The notes come from the PRs merged since the previous tag, grouped by `.github/release.yml`;
       # edit them on the release page afterwards if needed.
       - name: Create GitHub Release
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes dist/*
+        run: gh release create "$TAG" --verify-tag --generate-notes dist/*
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}

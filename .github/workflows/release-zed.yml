@@ -1,0 +1,69 @@
+name: Release Zed extension
+
+# Merging a Zed release PR bumps this file; the run tags whatever version main carries that has no tag yet.
+on:
+  push:
+    branches: [main]
+    paths: [crates/zed-extension/extension.toml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-zed
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Resolve tag
+        id: tag
+        working-directory: crates/zed-extension
+        run: |
+          crate_version=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')
+          extension_version=$(sed -n 's/^version = "\(.*\)"/\1/p' extension.toml)
+          [ "$crate_version" = "$extension_version" ] ||
+            { echo "::error::Cargo.toml $crate_version != extension.toml $extension_version"; exit 1; }
+
+          tag="zed-v$crate_version"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # ls-remote exits 2 when the tag is absent; any other failure must not pass for "absent".
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
+          case $status in
+            0) echo "::notice::$tag already exists; nothing to release"; echo "due=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "due=true" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$status" ;;
+          esac
+
+      # A version bump that did not come through `just bump-zed-version` stops here instead of tagging.
+      - name: Verify commit is a merged release PR
+        if: steps.tag.outputs.due == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" |
+            jq -e --arg tag "$TAG" 'any(.[];
+              .merged_at != null
+              and .head.repo.full_name == .base.repo.full_name
+              and .head.ref == "chore/release-zed-\($tag | ltrimstr("zed-v"))"
+              and .title == "chore(zed): release \($tag | ltrimstr("zed-"))")' > /dev/null ||
+            { echo "::error::$GITHUB_SHA is not a merged chore/release-${TAG#zed-v} PR titled \"chore(zed): release ${TAG#zed-}\""; exit 1; }
+
+      - name: Create tag
+        if: steps.tag.outputs.due == 'true'
+        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
