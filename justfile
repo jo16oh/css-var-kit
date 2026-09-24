@@ -8,7 +8,8 @@ package-jsons := "packages/css-var-kit/package.json \
 
 zed-pkg := "crates/zed-extension"
 
-# Bumps the version on a release branch cut from the latest main and opens its PR; without `level`, bumpp prompts for it.
+# Bumps the version on a release branch cut from the latest main and opens its PR; merging it releases.
+# Without `level`, bumpp prompts for it.
 bump-version level="": _latest-main
     #!/usr/bin/env sh
     set -eu
@@ -28,15 +29,7 @@ bump-version level="": _latest-main
     git push -u origin HEAD
     gh pr create --fill --label skip-changelog
 
-# Tags the merged release on main; the pushed tag triggers the release workflow.
-push-tag: _latest-main
-    #!/usr/bin/env sh
-    set -eu
-    tag="v$(node -p "require('./packages/css-var-kit/package.json').version")"
-    git tag "$tag"
-    git push origin "$tag"
-
-# Bumps the Zed extension version on a release branch cut from the latest main and opens its PR.
+# Bumps the Zed extension version on a release branch cut from the latest main and opens its PR; merging it tags the release.
 bump-zed-version level: _latest-main
     #!/usr/bin/env sh
     set -eu
@@ -53,14 +46,6 @@ bump-zed-version level: _latest-main
     git commit -m "chore(zed): release v$version"
     git push -u origin HEAD
     gh pr create --fill --label skip-changelog
-
-# Tags the merged Zed extension release on main.
-push-zed-tag: _latest-main
-    #!/usr/bin/env sh
-    set -eu
-    tag="zed-v$(cd {{zed-pkg}} && cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')"
-    git tag "$tag"
-    git push origin "$tag"
 
 [private]
 _latest-main:
