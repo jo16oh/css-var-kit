@@ -3,7 +3,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
-use serde::de::{self, DeserializeOwned, Deserializer};
+use serde::de::{self, DeserializeOwned, Deserializer, IgnoredAny};
 
 use super::ConfigError;
 use crate::file_kinds::CONFIG_FILENAMES;
@@ -13,8 +13,10 @@ use crate::rules::enforce_variable_use::config::RawEnforceVariableUse;
 const UTF8_BOM: char = '\u{feff}';
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RawConfig {
+    #[serde(rename = "$schema", default)]
+    pub(super) _schema: Option<IgnoredAny>,
     #[serde(default = "default_root_dir")]
     pub root_dir: String,
     #[serde(default = "default_lookup_files")]
@@ -31,7 +33,7 @@ pub struct RawConfig {
 }
 
 #[derive(Debug, Default, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RawLspConfig {
     pub log_file: Option<String>,
 }
@@ -39,6 +41,7 @@ pub struct RawLspConfig {
 impl Default for RawConfig {
     fn default() -> Self {
         Self {
+            _schema: None,
             root_dir: default_root_dir(),
             lookup_files: default_lookup_files(),
             definition_files: None,
@@ -111,7 +114,7 @@ pub(super) fn parse_jsonc<T: DeserializeOwned>(mut raw: String) -> serde_json::R
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RawRules {
     #[serde(default = "default_error")]
     pub no_undefined_variable_use: SeverityToggle,

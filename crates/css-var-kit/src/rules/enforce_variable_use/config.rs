@@ -56,7 +56,7 @@ impl RawEnforceVariableUse {
     }
 }
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RawEnforceVariableUseConfig {
     #[serde(default = "default_severity")]
     pub severity: SeverityToggle,
