@@ -1,6 +1,7 @@
 mod common;
 
 use common::cvk;
+use predicates::prelude::PredicateBooleanExt;
 
 #[test]
 fn rule_off_disables_rule() {
@@ -134,4 +135,16 @@ fn multiple_rule_overrides() {
         ])
         .assert()
         .success();
+}
+
+#[test]
+fn enforce_variable_use_jsonc_with_trailing_commas() {
+    cvk()
+        .args([
+            "lint",
+            "--rule",
+            r#"enforce-variable-use={"types":["color",],/* comment */}"#,
+        ])
+        .assert()
+        .stderr(predicates::str::contains("invalid --rule value").not());
 }

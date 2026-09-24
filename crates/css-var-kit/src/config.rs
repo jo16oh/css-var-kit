@@ -265,7 +265,7 @@ impl RawRules {
                 SeverityToggle::Warn,
             )),
             "off" => Ok(RawEnforceVariableUse::Off),
-            v if v.starts_with('{') => serde_json::from_str(v)
+            v if v.starts_with('{') => file::parse_jsonc(v.to_owned())
                 .map(RawEnforceVariableUse::Config)
                 .map_err(|e| e.to_string()),
             _ => Err("expected 'error', 'warn', 'on', 'off', or a JSON object".into()),

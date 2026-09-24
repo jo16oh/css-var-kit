@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
-use serde::de::{self, Deserializer};
+use serde::de::{self, DeserializeOwned, Deserializer};
 
 use super::ConfigError;
 use crate::file_kinds::CONFIG_FILENAMES;
@@ -76,26 +76,27 @@ impl RawConfig {
             path: path.to_path_buf(),
             source: e,
         })?;
-        Self::parse(path, raw)
+        parse_jsonc(raw).map_err(|e| ConfigError::Parse {
+            path: path.to_path_buf(),
+            source: e,
+        })
     }
+}
 
-    /// Strips the whole content at once because the streaming `StripComments` reader
-    /// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
-    fn parse(path: &Path, mut raw: String) -> Result<Self, ConfigError> {
-        let bom_len = if raw.starts_with(UTF8_BOM) {
-            UTF8_BOM.len_utf8()
-        } else {
-            0
-        };
-        let json = &mut raw[bom_len..];
-        json_strip_comments::strip(json)
-            .map_err(serde_json::Error::io)
-            .and_then(|()| serde_json::from_str(json))
-            .map_err(|e| ConfigError::Parse {
-                path: path.to_path_buf(),
-                source: e,
-            })
-    }
+/// Parses JSON that may contain a leading BOM, comments and trailing commas.
+///
+/// Strips the whole content at once because the streaming `StripComments` reader
+/// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
+pub(super) fn parse_jsonc<T: DeserializeOwned>(mut raw: String) -> serde_json::Result<T> {
+    let bom_len = if raw.starts_with(UTF8_BOM) {
+        UTF8_BOM.len_utf8()
+    } else {
+        0
+    };
+    let json = &mut raw[bom_len..];
+    json_strip_comments::strip(json)
+        .map_err(serde_json::Error::io)
+        .and_then(|()| serde_json::from_str(json))
 }
 
 #[derive(Debug, Clone, Deserialize)]
