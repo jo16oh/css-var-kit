@@ -33,7 +33,8 @@ If no config file exists, you can configure rules via VS Code settings:
 | -------------------------------------------- | -------------- | -------------------------------------- |
 | `cvk.path`                                   | `null`         | Path to the `cvk` binary               |
 | `cvk.rootDir`                                | `"."`          | Root directory for analysis            |
-| `cvk.lookupFiles`                            | `["**/*.css"]` | Glob patterns for CSS files            |
+| `cvk.definitionFiles`                        | `["**/*.css"]` | Files to collect definitions and lint  |
+| `cvk.include`                                | `[]`           | Definition-only files, `!` to exclude  |
 | `cvk.rules.noUndefinedVariableUse`           | `"error"`      | Undefined variable usage               |
 | `cvk.rules.noVariableTypeMismatch`           | `"error"`      | Variable type mismatch                 |
 | `cvk.rules.noInconsistentVariableDefinition` | `"error"`      | Inconsistent variable definitions      |

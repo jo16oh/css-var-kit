@@ -53,15 +53,26 @@
           "default": [
             "**/*.css"
           ],
-          "description": "Glob patterns for CSS files to include."
+          "description": "Glob patterns for CSS files to include.",
+          "markdownDeprecationMessage": "Use `#cvk.definitionFiles#` instead. Ignored when `#cvk.definitionFiles#` is set."
         },
-        "cvk.excludeFiles": {
+        "cvk.definitionFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.css"
+          ],
+          "markdownDescription": "Glob patterns for files scanned for CSS variable definitions and linted. Supports `!` negation patterns."
+        },
+        "cvk.include": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "default": [],
-          "description": "Glob patterns for files to exclude from linting."
+          "markdownDescription": "Additional glob patterns for definition-only files (not linted). Prefix a pattern with `!` to exclude files from linting and definition collection."
         },
         "cvk.rules.noUndefinedVariableUse": {
           "type": "string",
