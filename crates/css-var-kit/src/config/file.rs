@@ -54,11 +54,7 @@ impl RawConfig {
             .iter()
             .map(|name| project_root.join(name))
             .find_map(|path| fs::read_to_string(&path).ok().map(|raw| (path, raw)))
-            .map(|(path, raw)| {
-                let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-                serde_json::from_reader(stripped)
-                    .map_err(|e| ConfigError::Parse { path, source: e })
-            })
+            .map(|(path, raw)| Self::parse(&path, raw))
             .transpose()
     }
 
@@ -67,11 +63,19 @@ impl RawConfig {
             path: path.to_path_buf(),
             source: e,
         })?;
-        let stripped = json_strip_comments::StripComments::new(raw.as_bytes());
-        serde_json::from_reader(stripped).map_err(|e| ConfigError::Parse {
-            path: path.to_path_buf(),
-            source: e,
-        })
+        Self::parse(path, raw)
+    }
+
+    /// Strips the whole content at once because the streaming `StripComments` reader
+    /// cannot detect trailing commas when `serde_json::from_reader` reads byte by byte.
+    fn parse(path: &Path, mut raw: String) -> Result<Self, ConfigError> {
+        json_strip_comments::strip(&mut raw)
+            .map_err(serde_json::Error::io)
+            .and_then(|()| serde_json::from_str(&raw))
+            .map_err(|e| ConfigError::Parse {
+                path: path.to_path_buf(),
+                source: e,
+            })
     }
 }
 

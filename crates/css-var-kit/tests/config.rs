@@ -13,3 +13,17 @@ fn root_dir_is_relative_to_config_file() {
         .assert()
         .success();
 }
+
+#[test]
+fn config_with_trailing_commas_is_discovered_and_parsed() {
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(format!("{FIXTURES}/trailing-comma"));
+    cmd.arg("lint").assert().success();
+}
+
+#[test]
+fn config_with_trailing_commas_is_parsed_when_specified() {
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(format!("{FIXTURES}/trailing-comma"));
+    cmd.args(["lint", "-c", "cvk.jsonc"]).assert().success();
+}
