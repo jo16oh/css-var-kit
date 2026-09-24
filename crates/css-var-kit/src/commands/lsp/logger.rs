@@ -25,10 +25,10 @@ impl Logger {
         let timestamp = format_timestamp();
         let line = format!("[{timestamp}] {msg}");
         eprintln!("{line}");
-        if let Some(file) = &self.file {
-            if let Ok(mut f) = file.lock() {
-                let _ = writeln!(f, "{line}");
-            }
+        if let Some(file) = &self.file
+            && let Ok(mut f) = file.lock()
+        {
+            let _ = writeln!(f, "{line}");
         }
     }
 }
@@ -92,5 +92,5 @@ fn days_to_date(mut days: u64) -> (u64, u64, u64) {
 }
 
 fn is_leap(year: u64) -> bool {
-    (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
