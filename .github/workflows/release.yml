@@ -11,7 +11,39 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Every publish below trusts the tag, so a tag that is off main or ahead of the versions stops here.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify tag is on main
+        run: |
+          git fetch --quiet origin main
+          git merge-base --is-ancestor HEAD FETCH_HEAD ||
+            { echo "::error::tag $GITHUB_REF_NAME is not reachable from main"; exit 1; }
+
+      - name: Verify tag matches package versions
+        run: |
+          set -o pipefail
+          {
+            for f in packages/*/package.json; do
+              echo "$f $(node -p "require('./$f').version")"
+            done
+            node -e '
+              const { optionalDependencies } = require("./packages/css-var-kit/package.json");
+              for (const [name, version] of Object.entries(optionalDependencies))
+                console.log("css-var-kit optionalDependencies", name, version);
+            '
+            cargo metadata --format-version 1 --no-deps |
+              jq -r '.packages[] | select(.name == "css-var-kit") | "Cargo.toml \(.version)"'
+          } | awk -v tag="${GITHUB_REF_NAME#v}" '$NF != tag { print "::error::" $0 " != " tag; failed = 1 } END { exit failed }'
+
   build:
+    needs: verify
     strategy:
       matrix:
         include:
@@ -226,8 +258,9 @@ jobs:
           done
           cp artifacts/vsix-*/*.vsix dist/ 2>/dev/null || true
 
-      # The notes come from the PRs merged since the previous tag, grouped by `.github/release.yml`.
+      # The notes come from the PRs merged since the previous tag, grouped by `.github/release.yml`;
+      # edit them on the release page afterwards if needed.
       - name: Create GitHub Release
-        run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes dist/*
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes dist/*
         env:
           GH_TOKEN: ${{ github.token }}
