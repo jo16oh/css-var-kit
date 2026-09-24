@@ -73,3 +73,37 @@ fn cvk_json_takes_precedence_over_cvk_jsonc_with_warning() {
             root.join("cvk.jsonc").display(),
         )));
 }
+
+#[test]
+fn config_with_unknown_field_is_rejected() {
+    [
+        r#"{"excludeFiles": []}"#,
+        r#"{"lsp": {"logfile": "cvk.log"}}"#,
+        r#"{"rules": {"no-undefined-variable": "off"}}"#,
+        r#"{"rules": {"enforce-variable-use": {"allowedFunction": ["calc"]}}}"#,
+    ]
+    .iter()
+    .for_each(|config| {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("cvk.json"), config).unwrap();
+        let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+        cmd.current_dir(tmp.path());
+        cmd.arg("lint")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains("unknown field"));
+    });
+}
+
+#[test]
+fn config_with_schema_field_is_accepted() {
+    let tmp = tempfile::tempdir().unwrap();
+    std::fs::write(
+        tmp.path().join("cvk.json"),
+        r#"{"$schema": "./node_modules/css-var-kit/cvk.schema.json"}"#,
+    )
+    .unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(tmp.path());
+    cmd.arg("lint").assert().success();
+}

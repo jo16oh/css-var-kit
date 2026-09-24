@@ -27,7 +27,7 @@ use lsp_types::{
 };
 
 use crate::commands::lint;
-use crate::config::{Config, ConfigError, RawConfig};
+use crate::config::{Config, ConfigError};
 use crate::file_kinds::is_config_filename;
 use crate::owned_types::OwnedStr;
 use crate::parser::ParseResult;
@@ -65,10 +65,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
     let mut init_params: InitializeParams =
         serde_json::from_value(connection.initialize(capabilities_json)?)?;
 
-    let init_options: Option<RawConfig> = init_params
-        .initialization_options
-        .take()
-        .and_then(|v| serde_json::from_value(v).ok());
+    let init_options = init_params.initialization_options.take();
 
     let root_dir = init_params
         .workspace_folders
@@ -77,7 +74,7 @@ pub fn run(cwd: &Path, log: bool) -> Result<(), Box<dyn Error>> {
         .and_then(|folder| uri_to_path(&folder.uri))
         .unwrap_or_else(|| cwd.to_path_buf());
 
-    let (config, config_error) = match Config::load_for_lsp(&root_dir, init_options.clone()) {
+    let (config, config_error) = match Config::load_for_lsp(&root_dir, init_options.as_ref()) {
         Ok(config) => (config, None),
         Err(e) => (
             Config::without_rules_for_lsp(&root_dir, init_options.as_ref())?,
@@ -148,7 +145,7 @@ struct Server<'a> {
     connection: &'a Connection,
     config: Config,
     lsp_root_dir: PathBuf,
-    init_options: Option<RawConfig>,
+    init_options: Option<serde_json::Value>,
     client_name: Option<String>,
     opened_documents: HashMap<Uri, String>,
     source_cache: HashMap<Rc<Path>, OwnedStr>,
@@ -371,7 +368,7 @@ impl Server<'_> {
     }
 
     fn reload_config(&mut self) -> Result<(), Box<dyn Error>> {
-        self.config = match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.clone()) {
+        self.config = match Config::load_for_lsp(&self.lsp_root_dir, self.init_options.as_ref()) {
             Ok(config) => config,
             Err(e) => {
                 self.report_config_error(&e)?;

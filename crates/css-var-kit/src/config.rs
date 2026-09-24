@@ -1,8 +1,6 @@
 pub mod file;
 pub mod rules;
 
-pub use file::RawConfig;
-
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobMatcher};
@@ -25,6 +23,8 @@ pub enum ConfigError {
         path: PathBuf,
         source: serde_json::Error,
     },
+    #[error("invalid initializationOptions: {source}")]
+    InitOptions { source: serde_json::Error },
     #[error("cannot read config file {path}: {source}")]
     ReadFile {
         path: PathBuf,
@@ -183,17 +183,25 @@ impl Config {
     /// settings (e.g. `logFile`) work even when a shared `cvk.json` exists.
     pub fn load_for_lsp(
         root_dir: &Path,
-        init_options: Option<file::RawConfig>,
+        init_options: Option<&serde_json::Value>,
     ) -> Result<Self, ConfigError> {
         let project_root = find_project_root(root_dir);
 
-        let init_lsp_log_file = init_options.as_ref().and_then(|c| c.lsp.log_file.clone());
-        let mut raw = file::RawConfig::load(&project_root)?
-            .or(init_options)
-            .unwrap_or_default();
-        if raw.lsp.log_file.is_none() {
-            raw.lsp.log_file = init_lsp_log_file;
-        }
+        let parsed_init_options = init_options
+            .map(file::RawConfig::from_init_options)
+            .transpose();
+        let raw = match file::RawConfig::load(&project_root)? {
+            Some(raw) if raw.lsp.log_file.is_some() => raw,
+            Some(raw) => file::RawConfig {
+                lsp: parsed_init_options
+                    .ok()
+                    .flatten()
+                    .map(|c| c.lsp)
+                    .unwrap_or_default(),
+                ..raw
+            },
+            None => parsed_init_options?.unwrap_or_default(),
+        };
 
         Self::from_raw_for_lsp(&project_root, raw)
     }
@@ -203,10 +211,13 @@ impl Config {
     /// do not flood the editor with diagnostics.
     pub fn without_rules_for_lsp(
         root_dir: &Path,
-        init_options: Option<&file::RawConfig>,
+        init_options: Option<&serde_json::Value>,
     ) -> Result<Self, ConfigError> {
         let raw = file::RawConfig {
-            lsp: init_options.map(|c| c.lsp.clone()).unwrap_or_default(),
+            lsp: init_options
+                .and_then(|v| file::RawConfig::from_init_options(v).ok())
+                .map(|c| c.lsp)
+                .unwrap_or_default(),
             ..Default::default()
         };
         Self::from_raw_for_lsp(&find_project_root(root_dir), raw).map(|config| Self {
