@@ -36,3 +36,15 @@ fn config_with_utf8_bom_is_parsed() {
     cmd.current_dir(format!("{FIXTURES}/bom"));
     cmd.arg("lint").assert().success();
 }
+
+#[test]
+fn unreadable_config_is_reported_instead_of_falling_back() {
+    // unreadable-config/cvk.json is not valid UTF-8. It must be reported as an error
+    // rather than silently skipped in favor of cvk.jsonc, which disables the rules.
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("cvk");
+    cmd.current_dir(format!("{FIXTURES}/unreadable-config"));
+    cmd.arg("lint")
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("cannot read config file"));
+}

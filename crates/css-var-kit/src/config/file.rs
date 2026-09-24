@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 
 use serde::Deserialize;
@@ -55,8 +56,11 @@ impl RawConfig {
         CONFIG_FILENAMES
             .iter()
             .map(|name| project_root.join(name))
-            .find_map(|path| fs::read_to_string(&path).ok().map(|raw| (path, raw)))
-            .map(|(path, raw)| Self::parse(&path, raw))
+            .find_map(|path| match fs::read_to_string(&path) {
+                Ok(raw) => Some(Self::parse(&path, raw)),
+                Err(e) if e.kind() == ErrorKind::NotFound => None,
+                Err(e) => Some(Err(ConfigError::ReadFile { path, source: e })),
+            })
             .transpose()
     }
 
