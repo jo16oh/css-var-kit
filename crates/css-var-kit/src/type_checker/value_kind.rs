@@ -141,10 +141,8 @@ fn token_list_to_value_kind(token_list: &TokenList, raw: &str) -> ValueKind {
         .iter()
         .any(|t| matches!(t, TokenOrValue::Function(_)));
 
-    if has_function {
-        if let Some(kind) = try_typed_parse(raw) {
-            return ValueKind::Single(kind);
-        }
+    if has_function && let Some(kind) = try_typed_parse(raw) {
+        return ValueKind::Single(kind);
     }
 
     let chunks = split_top_level(raw);

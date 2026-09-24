@@ -38,12 +38,12 @@ fn resolve_to_raw_value(
         return None;
     }
     let token_list = prop.token_list().inner();
-    if let [TokenOrValue::Var(var)] = token_list.0.as_slice() {
-        if var.fallback.is_none() {
-            let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
-            if let Some(next) = var_defs.get(&prop_id).and_then(|defs| defs.last().copied()) {
-                return resolve_to_raw_value(next, var_defs, depth + 1);
-            }
+    if let [TokenOrValue::Var(var)] = token_list.0.as_slice()
+        && var.fallback.is_none()
+    {
+        let prop_id = OwnedPropId::from(var.name.ident.0.to_string());
+        if let Some(next) = var_defs.get(&prop_id).and_then(|defs| defs.last().copied()) {
+            return resolve_to_raw_value(next, var_defs, depth + 1);
         }
     }
     Some(prop.value.raw.as_str().to_string())

@@ -78,10 +78,10 @@ fn unescape_css_ident(raw: &str) -> Option<String> {
                 while i < bytes.len() && i - start < 6 && bytes[i].is_ascii_hexdigit() {
                     i += 1;
                 }
-                if let Ok(cp) = u32::from_str_radix(&raw[start..i], 16) {
-                    if let Some(c) = char::from_u32(cp) {
-                        result.push(c);
-                    }
+                if let Ok(cp) = u32::from_str_radix(&raw[start..i], 16)
+                    && let Some(c) = char::from_u32(cp)
+                {
+                    result.push(c);
                 }
                 // Consume optional trailing whitespace
                 if i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {

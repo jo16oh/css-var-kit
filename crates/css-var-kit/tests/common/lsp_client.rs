@@ -55,10 +55,10 @@ impl LspClient {
                     break;
                 }
 
-                if let Ok(msg) = serde_json::from_slice::<Value>(&body) {
-                    if tx.send(msg).is_err() {
-                        break;
-                    }
+                if let Ok(msg) = serde_json::from_slice::<Value>(&body)
+                    && tx.send(msg).is_err()
+                {
+                    break;
                 }
             }
         });

@@ -143,12 +143,11 @@ fn collect_include_recursive(
         let path = entry.path();
         if path.is_dir() {
             collect_include_recursive(root, &path, include, files);
-        } else if is_supported_extension(&path) {
-            if let Ok(rel) = path.strip_prefix(root) {
-                if include.matches(&rel) {
-                    files.push(path);
-                }
-            }
+        } else if is_supported_extension(&path)
+            && let Ok(rel) = path.strip_prefix(root)
+            && include.matches(&rel)
+        {
+            files.push(path);
         }
     }
 }
