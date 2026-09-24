@@ -1,44 +1,74 @@
-pkgs := "packages/css-var-kit \
-         packages/vscode \
-         packages/cli-darwin-arm64 \
-         packages/cli-darwin-x64 \
-         packages/cli-linux-arm64 \
-         packages/cli-linux-x64 \
-         packages/cli-win32-x64"
+package-jsons := "packages/css-var-kit/package.json \
+                 packages/vscode/package.json \
+                 packages/cli-darwin-arm64/package.json \
+                 packages/cli-darwin-x64/package.json \
+                 packages/cli-linux-arm64/package.json \
+                 packages/cli-linux-x64/package.json \
+                 packages/cli-win32-x64/package.json"
 
 zed-pkg := "crates/zed-extension"
 
-bump-version level:
+# Bumps the version on a release branch cut from the latest main and opens its PR; without `level`, bumpp prompts for it.
+bump-version level="": _latest-main
     #!/usr/bin/env sh
-    for dir in {{pkgs}}; do
-      (cd "$dir" && pnpm bumpp --release {{level}} --yes --no-commit --no-tag --no-push)
-    done
-    cargo set-version --bump {{level}} --workspace
-    wait
+    set -eu
+
+    pnpm bumpp {{package-jsons}} --no-commit --no-tag --no-push {{ if level == "" { "" } else { "--release " + level } }}
+    version=$(node -p "require('./packages/css-var-kit/package.json').version")
+    cargo set-version --workspace "$version"
 
     just sync-optional-deps
     pnpm install --lockfile-only
     cargo generate-lockfile
 
-    version=$(node -p "require('./packages/css-var-kit/package.json').version")
-
+    # bumpp only picks the version; the branch is named after it, so it is cut afterwards.
+    git switch -c "chore/release-$version"
     git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
-    git commit -m "chore: bump version to $version"
-    git tag "v$version"
+    git commit -m "chore: release v$version"
+    git push -u origin HEAD
+    gh pr create --fill --label skip-changelog
 
-bump-zed-version level:
+# Tags the merged release on main; the pushed tag triggers the release workflow.
+push-tag: _latest-main
     #!/usr/bin/env sh
-    set -e
+    set -eu
+    tag="v$(node -p "require('./packages/css-var-kit/package.json').version")"
+    git tag "$tag"
+    git push origin "$tag"
+
+# Bumps the Zed extension version on a release branch cut from the latest main and opens its PR.
+bump-zed-version level: _latest-main
+    #!/usr/bin/env sh
+    set -eu
+
     (cd {{zed-pkg}} && cargo set-version --bump {{level}})
-    version=$(grep '^version' {{zed-pkg}}/Cargo.toml | head -1 | cut -d'"' -f2)
+    version=$(cd {{zed-pkg}} && cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')
     sed -i.bak "s/^version = \".*\"/version = \"$version\"/" {{zed-pkg}}/extension.toml
     rm {{zed-pkg}}/extension.toml.bak
     (cd {{zed-pkg}} && cargo generate-lockfile)
     tombi format {{zed-pkg}}/Cargo.toml {{zed-pkg}}/extension.toml {{zed-pkg}}/Cargo.lock
 
+    git switch -c "chore/release-zed-$version"
     git add {{zed-pkg}}/Cargo.toml {{zed-pkg}}/extension.toml {{zed-pkg}}/Cargo.lock
-    git commit -m "chore(zed): bump version to $version"
-    git tag "zed-v$version"
+    git commit -m "chore(zed): release v$version"
+    git push -u origin HEAD
+    gh pr create --fill --label skip-changelog
+
+# Tags the merged Zed extension release on main.
+push-zed-tag: _latest-main
+    #!/usr/bin/env sh
+    set -eu
+    tag="zed-v$(cd {{zed-pkg}} && cargo metadata --format-version 1 --no-deps | jq -r '.packages[0].version')"
+    git tag "$tag"
+    git push origin "$tag"
+
+[private]
+_latest-main:
+    #!/usr/bin/env sh
+    set -eu
+    git diff --quiet HEAD -- || { echo 'tracked files differ from HEAD; commit them first'; exit 1; }
+    git switch main
+    git pull --ff-only
 
 sync-optional-deps:
     @node -e "\

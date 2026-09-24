@@ -59,3 +59,11 @@ language = "system"
 entry = "actionlint"
 files = "^.github/workflows/.*\\.ya?ml$"
 pass_filenames = false
+
+[[repos.hooks]]
+id = "zizmor"
+name = "zizmor"
+language = "system"
+entry = "zizmor --offline .github"
+files = "^.github/"
+pass_filenames = false
