@@ -3,6 +3,8 @@
 Create a `cvk.json` (or `cvk.jsonc`) file in your project root.
 Comments and trailing commas are allowed in both. If both files exist, `cvk.json` takes precedence and a warning is printed.
 
+If the config file cannot be read or parsed, `cvk lint` exits with an error. The language server keeps running, shows the error, and reports no diagnostics until the file is fixed.
+
 ```jsonc
 // Default configuration (all fields are optional).
 {

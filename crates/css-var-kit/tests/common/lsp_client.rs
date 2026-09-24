@@ -14,6 +14,7 @@ pub struct LspClient {
     process: std::process::Child,
     request_id: i64,
     root_uri: String,
+    shown_messages: Vec<String>,
 }
 
 pub struct PublishedDiagnostics {
@@ -71,6 +72,7 @@ impl LspClient {
             process,
             request_id: 0,
             root_uri,
+            shown_messages: Vec::new(),
         }
     }
 
@@ -258,7 +260,7 @@ impl LspClient {
                         .unwrap_or_default();
                     by_uri.insert(uri, diagnostics);
                 }
-                Ok(_) => continue,
+                Ok(msg) => self.record_show_message(&msg),
                 Err(mpsc::RecvTimeoutError::Timeout) => break,
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             }
@@ -268,6 +270,23 @@ impl LspClient {
             .into_iter()
             .map(|(uri, diagnostics)| PublishedDiagnostics { uri, diagnostics })
             .collect()
+    }
+
+    /// Messages the server sent via `window/showMessage`, as seen while waiting for
+    /// responses or diagnostics.
+    pub fn shown_messages(&self) -> &[String] {
+        &self.shown_messages
+    }
+
+    fn record_show_message(&mut self, msg: &Value) {
+        if msg.get("method") == Some(&json!("window/showMessage")) {
+            self.shown_messages.push(
+                msg["params"]["message"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned(),
+            );
+        }
     }
 
     pub fn shutdown(&mut self) {
@@ -315,7 +334,7 @@ impl LspClient {
                 .recv_timeout(remaining.min(Duration::from_millis(500)))
             {
                 Ok(msg) if msg.get("id") == Some(&json!(expected_id)) => return msg,
-                Ok(_) => continue,
+                Ok(msg) => self.record_show_message(&msg),
                 Err(mpsc::RecvTimeoutError::Timeout) => continue,
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
                     panic!("server disconnected while waiting for response id={expected_id}");
