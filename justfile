@@ -9,12 +9,12 @@ package-jsons := "packages/css-var-kit/package.json \
 zed-pkg := "crates/zed-extension"
 
 # Bumps the version on a release branch cut from the latest main and opens its PR; merging it releases.
-# Without `level`, bumpp prompts for it.
-bump-version level="": _latest-main
+# Without `level`, bumpp prompts for it. `body-file` becomes the PR body, and `bumpp-args` go to bumpp.
+bump-version level="" body-file="/dev/null" *bumpp-args: (_readable body-file) _latest-main
     #!/usr/bin/env sh
     set -eu
 
-    pnpm bumpp {{package-jsons}} --no-commit --no-tag --no-push {{ if level == "" { "" } else { "--release " + level } }}
+    pnpm bumpp {{package-jsons}} --no-commit --no-tag --no-push {{ if level == "" { "" } else { "--release " + level } }} {{bumpp-args}}
     version=$(node -p "require('./packages/css-var-kit/package.json').version")
     cargo set-version --workspace "$version"
 
@@ -27,7 +27,7 @@ bump-version level="": _latest-main
     git add packages/*/package.json Cargo.toml Cargo.lock crates/*/Cargo.toml pnpm-lock.yaml
     git commit -m "chore: release v$version"
     git push -u origin HEAD
-    gh pr create --fill --label skip-changelog
+    gh pr create --fill --body-file {{quote(body-file)}} --label skip-changelog
 
 # Bumps the Zed extension version on a release branch cut from the latest main and opens its PR; merging it tags the release.
 bump-zed-version level: _latest-main
@@ -46,6 +46,11 @@ bump-zed-version level: _latest-main
     git commit -m "chore(zed): release v$version"
     git push -u origin HEAD
     gh pr create --fill --label skip-changelog
+
+# Checked before anything changes, so a missing file stops the release there.
+[private]
+_readable path:
+    @[ -r {{quote(path)}} ] || { echo '{{path}} is not readable'; exit 1; }
 
 [private]
 _latest-main:
